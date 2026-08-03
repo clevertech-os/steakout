@@ -85,9 +85,11 @@ body {
 
 /*
  * Default text links (STYLING §3 — blue reserved for links / info).
- * :where() keeps specificity at 0 so chrome anchors (nq-pill*, bottom-nav,
- * validator cards, learn index cards, etc.) keep their own color and
- * text-decoration. Bare prose / method links pick these up automatically.
+ *
+ * IMPORTANT: nimiq-css utilities live in @layer nq-utilities. Unlayered rules
+ * always beat layered ones, so bare `a { color }` would paint blue text on
+ * blue `.nq-pill-blue` anchors ("Choose a validator"). We still use unlayered
+ * defaults for prose links, then re-assert pill/chrome colors below.
  */
 :where(a) {
   color: var(--so-info);
@@ -127,6 +129,85 @@ body {
 :where(a.nq-arrow:focus-visible),
 :where(a.nq-arrow-back:hover),
 :where(a.nq-arrow-back:focus-visible) {
+  text-decoration: underline;
+  text-decoration-color: currentColor;
+}
+
+/*
+ * Restore nimiq pill / chrome when implemented as <a> (unlayered beat @layer).
+ * Filled pills: white label. Secondary/tertiary/white: keep dark/blue labels.
+ */
+a[class*='nq-pill'] {
+  text-decoration: none;
+}
+
+a.nq-pill-blue,
+a.nq-pill-blue:visited,
+a.nq-pill-blue:hover,
+a.nq-pill-blue:focus-visible,
+a.nq-pill-green,
+a.nq-pill-green:visited,
+a.nq-pill-green:hover,
+a.nq-pill-green:focus-visible,
+a.nq-pill-red,
+a.nq-pill-red:visited,
+a.nq-pill-red:hover,
+a.nq-pill-red:focus-visible,
+a.nq-pill-gold,
+a.nq-pill-gold:visited,
+a.nq-pill-gold:hover,
+a.nq-pill-gold:focus-visible,
+a.nq-pill-orange,
+a.nq-pill-orange:visited,
+a.nq-pill-orange:hover,
+a.nq-pill-orange:focus-visible {
+  color: #fff;
+  text-decoration: none;
+}
+
+a.nq-pill-white,
+a.nq-pill-white:visited,
+a.nq-pill-white:hover,
+a.nq-pill-white:focus-visible {
+  color: var(--colors-blue, #0582ca);
+  text-decoration: none;
+}
+
+a.nq-pill-secondary,
+a.nq-pill-secondary:visited,
+a.nq-pill-secondary:hover,
+a.nq-pill-secondary:focus-visible,
+a.nq-pill-tertiary,
+a.nq-pill-tertiary:visited,
+a.nq-pill-tertiary:hover,
+a.nq-pill-tertiary:focus-visible {
+  color: var(--colors-neutral, var(--so-ink));
+  text-decoration: none;
+}
+
+/* Bottom nav + ghost CTAs as anchors */
+a.bottom-nav-link,
+a.bottom-nav-link:visited,
+a.bottom-nav-link:hover,
+a.bottom-nav-link:focus-visible {
+  color: inherit;
+  text-decoration: none;
+}
+
+a.nq-ghost-btn,
+a.nq-ghost-btn:visited,
+a.nq-ghost-btn:hover,
+a.nq-ghost-btn:focus-visible {
+  text-decoration: none;
+}
+
+a.home-method-link,
+a.home-method-link:visited {
+  text-decoration: none;
+}
+
+a.home-method-link:hover,
+a.home-method-link:focus-visible {
   text-decoration: underline;
   text-decoration-color: currentColor;
 }
