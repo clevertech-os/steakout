@@ -1,0 +1,237 @@
+/* Validator directory (P1-10). Mobile-first; readable at 320px. */
+
+.directory-header {
+  margin-bottom: 1.25rem;
+}
+
+.directory-header h1 {
+  font-size: clamp(2rem, 9vw, 3.25rem);
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+}
+
+.directory-lede {
+  margin: 0.75rem 0 0;
+  color: var(--so-muted);
+  font-size: 1.05rem;
+  line-height: 1.45;
+  max-width: 40rem;
+}
+
+.directory-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.directory-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.directory-field .nq-label {
+  color: var(--so-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+}
+
+.directory-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.75rem;
+  color: var(--so-ink);
+  background: var(--so-card);
+  border: 1px solid var(--so-rule);
+  border-radius: 0.75rem;
+  font: inherit;
+  appearance: auto;
+}
+
+.directory-select:focus-visible {
+  outline: 2px solid var(--so-focus);
+  outline-offset: 2px;
+}
+
+.directory-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--so-rule);
+  border-radius: 0.9rem;
+  background: var(--so-card);
+  cursor: pointer;
+}
+
+.directory-checkbox {
+  flex: 0 0 auto;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.15rem;
+  accent-color: var(--so-info);
+}
+
+.directory-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.directory-toggle-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--so-ink);
+}
+
+.directory-toggle-hint {
+  margin: 0;
+  color: var(--so-muted);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.directory-explainer {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--so-info);
+  background: var(--so-info-soft);
+  color: var(--so-info-strong);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.directory-count {
+  margin: 0 0 0.75rem;
+  color: var(--so-muted);
+  font-size: 0.9rem;
+}
+
+.directory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.directory-state {
+  padding: 1.25rem 1.15rem;
+  border: 1px solid var(--so-rule);
+  border-radius: 1.25rem;
+  background: var(--so-card);
+  box-shadow: var(--so-shadow);
+}
+
+.directory-state h2 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.35rem, 5vw, 1.75rem);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.directory-state-body {
+  margin: 0 0 1rem;
+  color: var(--so-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  max-width: 42ch;
+}
+
+.directory-retry {
+  min-height: 44px;
+  cursor: pointer;
+}
+
+/* —— Skeleton loading —— */
+
+.directory-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--so-rule);
+  border-radius: 1.25rem;
+  background: var(--so-card);
+}
+
+.directory-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.directory-skeleton-avatar {
+  flex: 0 0 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: var(--so-disabled-soft);
+}
+
+.directory-skeleton-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.directory-skeleton-line {
+  display: block;
+  height: 0.7rem;
+  border-radius: 0.35rem;
+  background: var(--so-disabled-soft);
+  width: 100%;
+}
+
+.directory-skeleton-line--wide {
+  width: 70%;
+}
+
+.directory-skeleton-line--narrow {
+  width: 40%;
+}
+
+.directory-skeleton-line--mid {
+  width: 55%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .directory-skeleton-line,
+  .directory-skeleton-avatar {
+    animation: directory-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes directory-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (min-width: 600px) {
+  .directory-controls {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+
+  .directory-field {
+    flex: 1 1 16rem;
+  }
+
+  .directory-toggle {
+    flex: 1 1 14rem;
+    align-items: center;
+  }
+}

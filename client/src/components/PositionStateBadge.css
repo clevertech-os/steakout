@@ -1,0 +1,47 @@
+.so-position-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.so-position-badge--notstaked {
+  color: var(--so-disabled-ink);
+  background: var(--so-disabled-soft);
+  border-color: var(--so-disabled);
+}
+
+.so-position-badge--pending {
+  color: var(--so-info-strong);
+  background: var(--so-info-soft);
+  border-color: var(--so-info);
+}
+
+.so-position-badge--active {
+  color: var(--so-verified-strong);
+  background: var(--so-verified-soft);
+  border-color: var(--so-verified);
+}
+
+.so-position-badge--inactive {
+  color: var(--so-warn-strong);
+  background: var(--so-warn-soft);
+  border-color: var(--so-warn);
+}
+
+.so-position-badge--retiring {
+  color: var(--so-warn-strong);
+  background: var(--so-warn-soft);
+  border-color: var(--so-warn-alt);
+}
+
+.so-position-badge--withdrawable {
+  color: var(--so-info-strong);
+  background: var(--so-info-soft);
+  border-color: var(--so-info);
+}

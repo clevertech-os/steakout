@@ -1,0 +1,146 @@
+/* Style reference page — uses only --so-* tokens + confirmed nq-* utilities. */
+
+.style-ref-shell {
+  padding-top: 2rem;
+  padding-bottom: 4rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.style-ref-shell h1 {
+  font-size: clamp(2rem, 8vw, 3rem);
+}
+
+.style-ref-section {
+  padding: 1.25rem 1.5rem;
+}
+
+.style-ref-section > .nq-label:first-child,
+.style-ref-section > h2 {
+  margin-bottom: 0.5rem;
+}
+
+.style-ref-section .nq-subline {
+  margin: 0 0 1rem;
+  color: var(--so-muted);
+}
+
+.style-ref-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.style-ref-cards {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 600px) {
+  .style-ref-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .style-ref-shell {
+    padding-top: 4rem;
+  }
+}
+
+.style-ref-nested-card {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--so-rule);
+}
+
+.style-ref-mono {
+  margin: 0.75rem 0 0;
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-size: 0.875rem;
+  color: var(--so-ink);
+  overflow-wrap: anywhere;
+}
+
+.style-ref-sans {
+  margin: 0.5rem 0 0;
+  font-family: var(--nq-font-sans, 'Mulish', sans-serif);
+  color: var(--so-ink);
+  line-height: 1.5;
+}
+
+.style-ref-field {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 20rem;
+}
+
+/* Status chips — token-only stand-ins until StatusChip component (P1-09+). */
+.so-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.so-chip--verified {
+  color: var(--so-verified-strong);
+  background: var(--so-verified-soft);
+  border-color: var(--so-verified);
+}
+
+.so-chip--warn {
+  color: var(--so-warn-strong);
+  background: var(--so-warn-soft);
+  border-color: var(--so-warn);
+}
+
+.so-chip--not-observed {
+  color: var(--so-not-observed);
+  background: var(--so-not-observed-soft);
+  border-color: var(--so-accent);
+}
+
+.so-chip--info {
+  color: var(--so-info-strong);
+  background: var(--so-info-soft);
+  border-color: var(--so-info);
+}
+
+.so-chip--disabled {
+  color: var(--so-disabled-ink);
+  background: var(--so-disabled-soft);
+  border-color: var(--so-disabled);
+}
+
+.style-ref-swatches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+}
+
+.style-ref-swatch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.style-ref-swatch-chip {
+  flex: 0 0 1.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--so-rule);
+}
+
+.style-ref-swatch .style-ref-mono {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--so-muted);
+}

@@ -1,0 +1,256 @@
+/* Home dashboard (P1-09) — --so-* tokens + nimiq-css utilities. */
+
+.home {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.home-header {
+  margin-bottom: 1.5rem;
+}
+
+.home-title {
+  font-size: clamp(2rem, 9vw, 3.25rem);
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.home-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+
+.home-lede {
+  margin: 0.75rem 0 0;
+  color: var(--so-muted);
+  line-height: 1.45;
+  max-width: 36rem;
+}
+
+.home-card {
+  border: 1px solid var(--so-rule);
+  border-radius: 1.25rem;
+  background: var(--so-card);
+  box-shadow: var(--so-shadow);
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+
+.home-card > .card-kicker {
+  margin-bottom: 0.5rem;
+}
+
+.home-card h2 {
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
+  letter-spacing: -0.03em;
+  margin: 0 0 0.75rem;
+}
+
+.home-copy {
+  margin: 0 0 1rem;
+  color: var(--so-ink);
+  line-height: 1.5;
+}
+
+.home-copy strong {
+  font-weight: 600;
+}
+
+.home-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.home-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  text-align: center;
+  text-decoration: none;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Pills as anchors need button-like alignment */
+a.home-cta {
+  cursor: pointer;
+}
+
+.home-status {
+  margin: 1rem 0 0;
+  color: var(--so-muted);
+  line-height: 1.4;
+}
+
+.home-error {
+  margin: 1rem 0 0;
+  color: var(--so-not-observed);
+  line-height: 1.4;
+}
+
+.home-error-block {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.home-hint {
+  margin: 1rem 0 0;
+  color: var(--so-muted);
+}
+
+.home-amount-row {
+  margin: 0.25rem 0 0.5rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.home-address {
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-size: 0.875rem;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+
+.home-estimate {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--so-rule);
+}
+
+.home-estimate .nq-label {
+  margin: 0 0 0.5rem;
+  color: var(--so-muted);
+}
+
+.home-method-link {
+  color: var(--so-info);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.home-method-link:hover,
+.home-method-link:focus-visible {
+  text-decoration: underline;
+}
+
+.home-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+}
+
+@media (min-width: 360px) {
+  .home-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.home-stat {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--so-rule);
+  border-radius: 0.75rem;
+  background: var(--so-surface);
+  min-width: 0;
+}
+
+.home-stat dt {
+  margin: 0 0 0.35rem;
+  color: var(--so-muted);
+}
+
+.home-stat dd {
+  margin: 0;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.home-validator,
+.home-reward,
+.home-monitoring {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--so-rule);
+}
+
+.home-validator .nq-label,
+.home-reward .nq-label,
+.home-monitoring .nq-label {
+  margin: 0 0 0.35rem;
+  color: var(--so-muted);
+}
+
+.home-validator-name {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.home-validator-addr {
+  margin: 0 0 0.5rem;
+  color: var(--so-muted);
+}
+
+.home-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--so-rule);
+  line-height: 1.4;
+  font-size: 0.9rem;
+}
+
+.home-banner--warn {
+  background: var(--so-warn-soft);
+  border-color: var(--so-warn);
+  color: var(--so-ink);
+}
+
+.home-banner-retry {
+  margin-left: auto;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 600px) {
+  .home-card {
+    padding: 1.5rem 1.75rem 1.75rem;
+  }
+
+  .home-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .home-cta {
+    width: auto;
+    min-width: 10rem;
+  }
+}

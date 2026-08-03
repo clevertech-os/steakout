@@ -1,3 +1,24 @@
+/**
+ * Global CSS entry (imported once from main.tsx).
+ *
+ * Import strategy (P1-08): full framework via index.css.
+ * index.css layers (nimiq-css 1.0.0-beta.162): colors, preflight,
+ * typography, spacing, utilities, animations, atomic.
+ * Does NOT include fonts.css or static-content.css.
+ *
+ * Per-layer alternative (if we ever need explicit control):
+ *   @import 'nimiq-css/css/colors.css' layer(nq-colors);
+ *   @import 'nimiq-css/css/preflight.css' layer(nq-preflight);
+ *   @import 'nimiq-css/css/typography.css' layer(nq-typography);
+ *   @import 'nimiq-css/css/spacing.css' layer(nq-spacing);
+ *   @import 'nimiq-css/css/utilities.css' layer(nq-utilities);
+ *   @import 'nimiq-css/css/animations.css' layer(nq-animations);
+ *   @import 'nimiq-css/css/atomic.css' layer(nq-atomic);
+ * fonts.css is still separate (see base.css) because package paths
+ * do not match our self-hosted filenames.
+ *
+ * Order: nimiq-css first, Steakout tokens + base last.
+ */
 @import 'nimiq-css/css/index.css';
 @import './tokens.css';
 @import './base.css';

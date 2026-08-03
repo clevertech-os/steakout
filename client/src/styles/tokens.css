@@ -1,8 +1,62 @@
+/**
+ * Steakout semantic tokens (P1-08).
+ *
+ * Components consume only `--so-*` here. Raw nimiq-css palette vars
+ * (`--colors-*`) must not appear outside this file.
+ *
+ * Palette source: nimiq-css `dist/css/colors.css` (v1.0.0-beta.162).
+ * Each token maps to a palette custom property with a hex fallback if
+ * the colors layer is missing.
+ */
 :root {
-  --so-surface: #f7f5f1;
-  --so-card: #ffffff;
-  --so-ink: #242424;
-  --so-muted: #6f6c68;
-  --so-accent: #d9573f;
-  --so-rule: #e5e1db;
+  /* —— Surfaces —— Neutral 50–100 / white cards */
+  --so-surface: var(--colors-neutral-50, #f7f5f1);
+  --so-card: var(--colors-white, #ffffff);
+
+  /* —— Text —— Primary charcoal; secondary muted */
+  --so-ink: var(--colors-neutral, #242424);
+  --so-muted: var(--colors-neutral-700, #6f6c68);
+
+  /* —— Brand ember (Red scale; use sparingly) —— */
+  --so-accent: var(--colors-red, #d9573f);
+  --so-ember: var(--so-accent);
+  --so-accent-soft: var(--colors-red-400, #fde8e4);
+  --so-accent-strong: var(--colors-red-1100, #b33a24);
+
+  /* —— Status: verified / on-schedule (Green) —— */
+  --so-verified: var(--colors-green, #21b59a);
+  --so-verified-soft: var(--colors-green-400, #e6f7f3);
+  --so-verified-strong: var(--colors-green-1100, #1a8f7a);
+
+  /* —— Status: incomplete / irregular / warn (Gold; Orange alternate) —— */
+  --so-warn: var(--colors-gold, #e9b213);
+  --so-warn-soft: var(--colors-gold-400, #fdf6d8);
+  --so-warn-strong: var(--colors-gold-1100, #b8890c);
+  --so-warn-alt: var(--colors-orange, #f69522);
+
+  /* —— Status: not observed / needs review (muted red; never full-screen alarm) —— */
+  --so-not-observed: var(--colors-red-1100, #c44a34);
+  --so-not-observed-soft: var(--colors-red-500, #f9d4cc);
+
+  /* —— Links / neutral info (Blue) —— */
+  --so-info: var(--colors-blue, #0582ca);
+  --so-info-soft: var(--colors-blue-400, #e5f3fb);
+  --so-info-strong: var(--colors-blue-1100, #0469a4);
+
+  /* —— Rules / borders —— */
+  --so-rule: var(--colors-neutral-300, #e5e1db);
+
+  /* —— Disabled / unknown / insufficient data (Neutral 200–500) —— */
+  --so-disabled: var(--colors-neutral-500, #a39e98);
+  --so-disabled-soft: var(--colors-neutral-200, #f0eeea);
+  --so-disabled-ink: var(--colors-neutral-600, #8a8580);
+
+  /* —— Focus ring (blue info, accessible) —— */
+  --so-focus: var(--colors-blue, #0582ca);
+
+  /* —— Shadows (optional surface elevation; from nimiq preflight when present) —— */
+  --so-shadow: var(
+    --nq-shadow,
+    0 1.5rem 3rem rgb(36 36 36 / 7%)
+  );
 }

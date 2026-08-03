@@ -1,3 +1,13 @@
+/**
+ * Base document styles + self-hosted fonts (P1-08).
+ *
+ * nimiq-css `fonts.css` expects:
+ *   /assets/fonts/Mulish-VariableFont_wght.ttf
+ *   /assets/fonts/FiraMono-400.ttf
+ * We ship Mulish-Regular.ttf + FiraMono-Regular.ttf, so @font-face
+ * lives here with corrected paths instead of importing fonts.css.
+ */
+
 @font-face {
   font-family: 'Mulish';
   src: url('/assets/fonts/Mulish-Regular.ttf') format('truetype');
@@ -15,7 +25,15 @@
 }
 
 :root {
-  font-family: 'Mulish', sans-serif;
+  /* Light theme default (SPEC / STYLING). Enables light-dark() palette. */
+  color-scheme: light;
+
+  /* Steakout hosts Fira Mono; nimiq preflight defaults mono to Fira Code. */
+  --nq-font-mono:
+    'Fira Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+
+  font-family: var(--nq-font-sans, 'Mulish', sans-serif);
   color: var(--so-ink);
   background: var(--so-surface);
   font-synthesis: none;
@@ -31,6 +49,13 @@ body {
   min-height: 100vh;
   margin: 0;
   background: var(--so-surface);
+  color: var(--so-ink);
+}
+
+/* Focus defaults for custom interactive elements without nq-focusable. */
+:focus-visible {
+  outline: 2px solid var(--so-focus);
+  outline-offset: 2px;
 }
 
 .shell {
@@ -48,7 +73,7 @@ body {
 .card-kicker {
   margin: 0 0 0.75rem;
   color: var(--so-accent);
-  font-family: 'Fira Mono', monospace;
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -71,7 +96,7 @@ h1 {
   border: 1px solid var(--so-rule);
   border-radius: 1.25rem;
   background: var(--so-card);
-  box-shadow: 0 1.5rem 3rem rgb(36 36 36 / 7%);
+  box-shadow: var(--so-shadow);
 }
 
 .shell-card h2 {

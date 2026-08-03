@@ -161,8 +161,12 @@ Single client-visible enum (P1-05 owns the mapping; verify against P0-04 fixture
 
 - Registry data: server cache, refresh ≥ hourly; responses always carry `registry_updated_at`.
 - Position reads: short TTL (seconds) cache per address; never serve without `updatedAt`.
-- Public profile/observation endpoints: cache-friendly, keyed by validator address + indexer watermark.
-- Rate limit auth challenge/verify and intent/confirm strictly (ported `rate-limit.ts`); general API limits generous but present.
+- Public profile/observation endpoints: in-process response cache (`server/src/responseCache.ts`, ~45s TTL) keyed by path + query + indexer watermark (`MAX(index_cursors.updated_at)`). Watermark advance invalidates automatically. `X-Cache: HIT|MISS` for ops.
+- Rate limits (P2-13):
+  - Global `/api`: 300 req / 60s per IP.
+  - Auth challenge: 12 / 60s per IP + 12 / 60s per address; verify: 24 / 60s per IP.
+  - Staking tree `/api/staking`: 60 / 60s per IP (strict layer above global; intent/confirm use this when mounted).
+- Operator diagnostics: `GET /api/diagnostics` (token-gated via `DIAGNOSTICS_TOKEN`, Bearer or `?token=`). Indexer health/cycles, RPC metrics, cursor fingerprints (no raw addresses), DB table counts, cache stats. Excluded from public API docs.
 
 ## 10. Failure design
 

@@ -1,0 +1,29 @@
+/* App shell layout (P1-07). Spike screens keep their own .shell layout. */
+
+.app {
+  min-height: 100vh;
+  max-width: 100%;
+  /* Clip any long shell headings/copy at 320px rather than scroll sideways. */
+  overflow-x: hidden;
+}
+
+.app-main {
+  width: min(100% - 2rem, 44rem);
+  max-width: 100%;
+  min-height: 100vh;
+  margin: 0 auto;
+  /* Bottom clearance keeps content above the fixed BottomNav. */
+  padding: 2.5rem 0 calc(var(--bottom-nav-height, 4rem) + env(safe-area-inset-bottom, 0px) + 1.5rem);
+  overflow-wrap: anywhere;
+}
+
+.app-loading {
+  margin: 0;
+  color: var(--so-muted);
+}
+
+@media (min-width: 600px) {
+  .app-main {
+    padding-top: 4rem;
+  }
+}

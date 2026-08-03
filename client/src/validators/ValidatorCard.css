@@ -1,0 +1,239 @@
+/* Validator directory card (P1-10). Mobile-first; usable at 320px. */
+
+.validator-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 1rem 1.1rem;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--so-rule);
+  border-radius: 1.25rem;
+  background: var(--so-card);
+  box-shadow: var(--so-shadow);
+  overflow-wrap: anywhere;
+}
+
+.validator-card:hover,
+.validator-card:focus-visible {
+  border-color: var(--so-info);
+}
+
+.validator-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.validator-card-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.validator-card-logo,
+.validator-card-initials {
+  flex: 0 0 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--so-rule);
+  object-fit: cover;
+  background: var(--so-disabled-soft);
+}
+
+.validator-card-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--so-muted);
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.validator-card-initials[hidden] {
+  display: none;
+}
+
+.validator-card-titles {
+  min-width: 0;
+}
+
+.validator-card-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  /* Long names: clamp rather than blow out the card */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.validator-card-address {
+  margin: 0.2rem 0 0;
+  color: var(--so-muted);
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
+.validator-card-badges {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.validator-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.validator-chip--listed {
+  color: var(--so-info-strong);
+  background: var(--so-info-soft);
+  border-color: var(--so-info);
+}
+
+.validator-chip--unlisted {
+  color: var(--so-disabled-ink);
+  background: var(--so-disabled-soft);
+  border-color: var(--so-disabled);
+}
+
+/* Observation chips use StatusChip (components/StatusChip.css) as source of truth. */
+
+.validator-card-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem 0.75rem;
+  margin: 0;
+}
+
+.validator-card-metric {
+  min-width: 0;
+}
+
+.validator-card-metric .nq-label,
+.validator-card-declared .nq-label,
+.validator-card-observation-caption {
+  margin: 0 0 0.2rem;
+  color: var(--so-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+}
+
+/* Official score column: subtle info tint so it never reads as an observation chip. */
+.validator-card-metric--official {
+  padding: 0.35rem 0.45rem;
+  margin: -0.35rem -0.45rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--so-info-soft) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--so-info) 35%, transparent);
+}
+
+.validator-card-metric dd {
+  margin: 0;
+}
+
+.validator-card-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--so-ink);
+}
+
+.validator-card-value--mono {
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-weight: 400;
+  font-size: 0.9rem;
+}
+
+.validator-card-value--muted {
+  color: var(--so-disabled-ink);
+  font-weight: 500;
+}
+
+.validator-card-declared {
+  padding-top: 0.15rem;
+  border-top: 1px solid var(--so-rule);
+}
+
+.validator-card-declared-line {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--so-ink);
+}
+
+.validator-card-sep {
+  margin: 0 0.35rem;
+  color: var(--so-disabled);
+}
+
+.validator-card-schedule {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--so-muted);
+}
+
+.validator-card-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  min-height: 44px;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--so-rule);
+}
+
+.validator-card-observation {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.validator-card-observation .status-chip {
+  /* Slightly denser on cards so the footer stays one line on 375px. */
+  font-size: 0.75rem;
+  padding: 0.3rem 0.55rem 0.3rem 0.65rem;
+}
+
+.validator-card-depth {
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-size: 0.7rem;
+  color: var(--so-muted);
+  line-height: 1.2;
+}
+
+.validator-card-cta {
+  color: var(--so-info);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  align-self: center;
+}

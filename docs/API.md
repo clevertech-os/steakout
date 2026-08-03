@@ -121,10 +121,54 @@ Session check → `{ address, sessionExpiresAt }` or `WALLET_NOT_CONNECTED`.
 ```
 
 ### `GET /api/me/activity`
-Chronological personal timeline: staking txs, delegation changes, retire/remove state changes, observed direct payouts to this address, observed restake balance changes. Each item: `{ type, at, txHash?, amountLuna?, validatorAddress?, status }`.
+Chronological personal timeline: staking intents (when recorded), observed direct payouts to this address from known reward addresses, observed restake balance changes from `staker_snapshots`. Query: optional `limit` (default 50, max 100).
+
+Each item:
+
+```jsonc
+{
+  "type": "direct-payout" | "observed-position-growth" | "position-change" | "staking-intent",
+  "at": "ISO",
+  "txHash": "string | null",
+  "amountLuna": 0,                 // null when unknown; growth/change are signed deltas
+  "validatorAddress": "NQ.. | null",
+  "status": "observed" | "verified" | "pending" | "confirmed" | "failed" | "expired",
+  "label": "string",               // neutral display label
+  "growthLabel": "Observed position growth", // only on observed-position-growth
+  "validatorName": "string | null"
+}
+```
+
+Restake increases use type `observed-position-growth` and the fixed label **Observed position growth** — never "payout". Empty timeline is HTTP 200 with `items: []` (not an error).
+
+### `GET /api/activity/network`
+Public recent payout-run summaries across validators (indexer-backed). Query: optional `limit` (default 25, max 100). Envelope per §1; each item uses `type: "payout-run"` with `txCount` / `recipientCount` when present. No auth required — disconnected users can browse the network feed.
 
 ### `GET /api/me/observations`
-Personal continuity (direct-payout validators): `{ lastPaymentAt, consecutiveWindowsIncluded, windowsObserved, currentlyInKnownStakerSet }` — each field nullable with `INSUFFICIENT_HISTORY` semantics when unknown.
+Personal continuity for the authenticated wallet (METHODOLOGY.md §4.4 / §5). Always HTTP 200 when the session is valid — not staked is a clean payload, not an error. Envelope per §1 (`source` is `indexer` when continuity fields come from indexed data, else `rpc`).
+
+```jsonc
+{
+  "mode": "not-staked" | "direct-payout" | "restake" | "unknown-payout",
+  "positionState": "NotStaked" | "Pending" | "Active" | "Inactive" | "Retiring" | "Withdrawable",
+  "validatorAddress": "NQ.. | null",
+  "validatorName": "string | null",
+  // Direct-payout fields — each independently nullable (INSUFFICIENT_HISTORY semantics when unknown).
+  // Never use "missed payment" wording; null means not observed / insufficient data.
+  "lastPaymentAt": "ISO | null",
+  "consecutiveWindowsIncluded": 0,   // trailing streak of runs including this address; null if no runs
+  "windowsObserved": 0,              // total runs including this address; null if no runs
+  "timeSinceLastPaymentSeconds": 0,  // null when lastPaymentAt is null
+  "currentlyInKnownStakerSet": true, // null when known-staker set is unavailable (never invent false)
+  // Restake only: snapshot pointer. Null for direct-payout / not-staked. Never a payout claim.
+  "observedPositionGrowth": {
+    "label": "Observed position growth",
+    "latest": { "at": "ISO", "totalLuna": 0 } | null,
+    "previous": { "at": "ISO", "totalLuna": 0 } | null,
+    "deltaLuna": 0                       // null unless both snapshots present
+  } | null
+}
+```
 
 ## 6. Staking action endpoints
 

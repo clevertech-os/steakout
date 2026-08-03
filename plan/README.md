@@ -50,8 +50,8 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 | P0-03 | Testnet staking-method spike | Implementation | P0-02 | blocked: device/testnet |
 | P0-04 | RPC read-layer probe + fixtures | Implementation | P0-01 | blocked: testnet fixtures |
 | P0-05 | Validators API ingestion probe | Implementation | P0-01 | done |
-| P0-06 | Schema + payout indexer live | Implementation | P0-04, P0-05 | blocked: deployment/testnet |
-| P0-07 | Direct-payout classification spike | Implementation | P0-06 | backlog |
+| P0-06 | Schema + payout indexer live | Implementation | P0-04, P0-05 | done (24h continuity residual) |
+| P0-07 | Direct-payout classification spike | Implementation | P0-06 | done (owner explorer verify residual) |
 | P0-08 | Test fixture harness | Testing | P0-04, P0-05 | done |
 | P0-09 | Kill-decision memo + scope freeze | Owner | P0-03, P0-04, P0-06, P0-07 | backlog (owner) |
 
@@ -59,17 +59,17 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 
 | ID | Task | Team | Depends on | Status |
 |---|---|---|---|---|
-| P1-01 | Port wallet facade + helpers from VeriLock | Implementation | P0-01, P0-02 | backlog |
-| P1-02 | Auth: challenge/verify + sessions + rate limits | Implementation | P1-01 | backlog |
-| P1-03 | Server RPC client (retry/backoff/timeouts) | Implementation | P0-04 | backlog |
-| P1-04 | Validator registry sync + `/api/validators` | Implementation | P0-05, P1-03 | backlog |
-| P1-05 | Position endpoint + state normalization | Implementation | P0-04, P1-03 | backlog |
+| P1-01 | Port wallet facade + helpers from VeriLock | Implementation | P0-01, P0-02 | done 2026-08-03 |
+| P1-02 | Auth: challenge/verify + sessions + rate limits | Implementation | P1-01 | done 2026-08-03 |
+| P1-03 | Server RPC client (retry/backoff/timeouts) | Implementation | P0-04 | done 2026-08-03 |
+| P1-04 | Validator registry sync + `/api/validators` | Implementation | P0-05, P1-03 | done 2026-08-03 |
+| P1-05 | Position endpoint + state normalization | Implementation | P0-04, P1-03 | done 2026-08-03 |
 | P1-06 | Staking intent/confirm + chain matcher | Implementation | P0-03, P1-02, P1-03 | backlog |
-| P1-07 | App shell + routing + bottom nav | Implementation | P0-01 | backlog |
-| P1-08 | nimiq-css wiring + tokens + fonts | Implementation | P0-01 | backlog |
-| P1-09 | Home dashboard (3 states) | Implementation | P1-05, P1-07, P1-08 | backlog |
-| P1-10 | Validator directory + sorts | Implementation | P1-04, P1-08 | backlog |
-| P1-11 | Validator profile (summary layer) | Implementation | P1-04, P1-08 | backlog |
+| P1-07 | App shell + routing + bottom nav | Implementation | P0-01 | done |
+| P1-08 | nimiq-css wiring + tokens + fonts | Implementation | P0-01 | done 2026-08-03 |
+| P1-09 | Home dashboard (3 states) | Implementation | P1-05, P1-07, P1-08 | done 2026-08-03 |
+| P1-10 | Validator directory + sorts | Implementation | P1-04, P1-08 | done 2026-08-03 |
+| P1-11 | Validator profile (summary layer) | Implementation | P1-04, P1-08 | done 2026-08-03 |
 | P1-12 | Stake flow end-to-end | Implementation | P1-06, P1-09, P1-10, P1-11 | backlog |
 | P1-13 | Non-custodial explainer + review-screen copy | Polishing | P1-12 | backlog |
 | P1-14 | Unit tests: addresses, luna, position, intent | Testing | P1-01, P1-05, P1-06 | backlog |
@@ -80,22 +80,22 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 
 | ID | Task | Team | Depends on | Status |
 |---|---|---|---|---|
-| P2-01 | Payout-run grouping | Implementation | P0-06, P0-07 | backlog |
-| P2-02 | Schedule normalization | Implementation | P0-05 | backlog |
-| P2-03 | Schedule adherence calculator | Implementation | P2-01, P2-02 | backlog |
-| P2-04 | Recipient coverage observations | Implementation | P2-01 | backlog |
-| P2-05 | Personal continuity endpoint | Implementation | P1-02, P2-01 | backlog |
-| P2-06 | Observations/evidence endpoints | Implementation | P2-03, P2-04 | backlog |
-| P2-07 | History depth + freshness across APIs | Implementation | P2-06 | backlog |
-| P2-08 | Evidence layer UI | Implementation | P1-11, P2-06 | backlog |
-| P2-09 | Status labels + official-vs-observed UI | Implementation | P2-08 | backlog |
-| P2-10 | Activity timeline (personal + network) | Implementation | P1-05, P2-05 | backlog |
+| P2-01 | Payout-run grouping | Implementation | P0-06, P0-07 | done 2026-08-03 |
+| P2-02 | Schedule normalization | Implementation | P0-05 | done |
+| P2-03 | Schedule adherence calculator | Implementation | P2-01, P2-02 | done 2026-08-03 |
+| P2-04 | Recipient coverage observations | Implementation | P2-01 | done 2026-08-03 |
+| P2-05 | Personal continuity endpoint | Implementation | P1-02, P2-01 | done 2026-08-03 |
+| P2-06 | Observations/evidence endpoints | Implementation | P2-03, P2-04 | done 2026-08-03 |
+| P2-07 | History depth + freshness across APIs | Implementation | P2-06 | done 2026-08-03 |
+| P2-08 | Evidence layer UI | Implementation | P1-11, P2-06 | done 2026-08-03 |
+| P2-09 | Status labels + official-vs-observed UI | Implementation | P2-08 | done 2026-08-03 |
+| P2-10 | Activity timeline (personal + network) | Implementation | P1-05, P2-05 | done 2026-08-03 |
 | P2-11 | Change-delegation lifecycle action | Implementation | P0-03, P1-06 | backlog |
-| P2-12 | Learn: staking, methodology, limitations | Polishing | P1-07 | backlog |
-| P2-13 | Caching, rate limits, indexer diagnostics | Implementation | P2-06 | backlog |
-| P2-14 | Unit tests: classifier, scoring, cursor | Testing | P2-01, P2-02, P2-03, P2-04 | backlog |
+| P2-12 | Learn: staking, methodology, limitations | Polishing | P1-07 | done 2026-08-03 |
+| P2-13 | Caching, rate limits, indexer diagnostics | Implementation | P2-06 | done 2026-08-03 |
+| P2-14 | Unit tests: classifier, scoring, cursor | Testing | P2-01, P2-02, P2-03, P2-04 | done 2026-08-03 |
 | P2-15 | Integration: indexer, dupes, evidence links | Testing | P0-06, P0-08, P2-06 | backlog |
-| P2-16 | Shareable validator profile URLs + meta | Implementation | P2-08 | backlog |
+| P2-16 | Shareable validator profile URLs + meta | Implementation | P2-08 | done 2026-08-03 |
 
 ### Phase 3 — Polish & public beta (Aug 24–30) → [cards](phase-3-polish.md)
 

@@ -1,0 +1,84 @@
+/* BottomNav — primary navigation (P1-07, STYLING.md §5/§7).
+   Fixed bottom bar; ≥ 44px targets; safe-area inset on iOS. */
+
+:root {
+  /* Bar content height (safe-area inset is added on top of this).
+     Consumed by App.css for content clearance. */
+  --bottom-nav-height: 4rem;
+}
+
+.bottom-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  border-top: 1px solid var(--so-rule);
+  background: var(--so-card);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.bottom-nav-list {
+  display: flex;
+  width: min(100%, 30rem);
+  height: var(--bottom-nav-height);
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.bottom-nav-item {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.bottom-nav-link {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  height: 100%;
+  /* STYLING.md §7: touch targets ≥ 44px (bar itself is 4rem). */
+  min-height: 44px;
+  color: var(--so-muted);
+  font-size: 0.75rem;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.bottom-nav-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Active destination: ember accent + top indicator, so the state is
+   distinct by more than color alone. */
+.bottom-nav-link.is-active {
+  color: var(--so-accent);
+  font-weight: 700;
+}
+
+.bottom-nav-link.is-active::before {
+  position: absolute;
+  top: 0;
+  width: 2rem;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--so-accent);
+  content: '';
+}
+
+@media (hover: hover) {
+  .bottom-nav-link:hover {
+    color: var(--so-ink);
+  }
+
+  .bottom-nav-link.is-active:hover {
+    color: var(--so-accent);
+  }
+}

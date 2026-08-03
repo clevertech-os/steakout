@@ -191,7 +191,8 @@ Board: [README.md](README.md#phase-0--de-risk-spike-aug-29)
 **Verification:** `tests/integration` cursor/restart test (with P0-08 harness); deploy logs pasted in Notes.
 
 **Notes:**
-- Local schema, incremental indexer, retry/cursor logic, scheduler entry, health fields, and regression tests are complete. Cursor advancement was corrected for existing cursors. Deployment continuity (24 hours) and live testnet reward-address indexing remain blocked; see `docs/spikes/indexer.md`.
+- Local schema, incremental indexer, retry/cursor logic, scheduler entry, health fields, and regression tests are complete. Cursor advancement was corrected for existing cursors.
+- **Deployed 2026-08-03** to Railway project `steakout`, service domain https://steakout-production.up.railway.app, volume `/data` for SQLite, `INDEXER_ENABLED=true` on mainnet (`rpc.nimiqwatch.com`), seed reward addresses from P0-07. Evidence: `docs/spikes/indexer.md`. Residual: re-check health after ≥ 24 h for continuous operation; testnet path still DNS-blocked (mainnet is the accumulation path).
 
 ---
 
@@ -211,15 +212,20 @@ Board: [README.md](README.md#phase-0--de-risk-spike-aug-29)
 - Recommendation for adherence thresholds (input to METHODOLOGY.md §3 defaults)
 
 **Acceptance criteria:**
-- [ ] Report shows observed payout runs for ≥ 1 real validator with tx hashes + block ranges
-- [ ] Run-window choice justified with before/after grouping examples
-- [ ] No fee/intent/good-bad judgments anywhere in the report
+- [x] Report shows observed payout runs for ≥ 1 real validator with tx hashes + block ranges
+- [x] Run-window choice justified with before/after grouping examples
+- [x] No fee/intent/good-bad judgments anywhere in the report
 - [ ] At least one explorer link manually verified by owner
 
 **Verification:** re-running the script reproduces the report from the DB alone (no refetch).
 
 **Notes:**
--
+- Agent close-out 2026-08-03: classifier v0, `server/scripts/classify.ts`, spike report, and unit tests are complete on real mainnet-indexed data (ObsidianStake + Nimiq.Fun).
+- Deliverables: `server/src/payoutClassifier.ts`, `server/scripts/classify.ts` (`npm run classify` in `server/package.json`), `docs/spikes/payout-classification.md`, `tests/unit/server/payout-classifier.test.ts` (29 tests).
+- Verification: `npm run test:server` — 43/43 passed including 29 classifier tests. `DATA_DIR=./data npm run classify --prefix server -- --reward-address "…" …` reproduces run tables from local SQLite only (no RPC).
+- Report: 60-minute run window kept (gap distribution bimodal; 15–240 min windows yield identical run counts); first-tx hashes + block ranges for both validators; adherence threshold recommendations for METHODOLOGY.md §3; neutral language only.
+- Residual (owner human gate): open one explorer link (e.g. https://nimiq.watch/#3645E6FC44DC3E329A3FA0D30331C84958E9BD95227235E7AFD334FDAE1C1D18) and confirm it matches the indexed ObsidianStake run-1 first tx. RPC re-fetch already matches; page render not agent-verifiable.
+
 
 ---
 

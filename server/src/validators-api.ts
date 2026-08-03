@@ -1,4 +1,5 @@
 import { getValidatorByAddress } from './nimiq-rpc.js'
+import { normalizeSchedule } from './payoutClassifier.js'
 
 export type ValidatorMode = 'known-only' | 'all-observable'
 export type NormalizedPayoutType = 'direct' | 'restake' | 'unknown'
@@ -10,7 +11,14 @@ export interface NormalizedValidator {
   description: string | null
   fee: string | null
   payoutType: NormalizedPayoutType
+  /** Raw registry declaration; never replaced by a normalized form. */
   payoutSchedule: string | null
+  /**
+   * METHODOLOGY.md §4.2 interval when `payoutSchedule` is unambiguous;
+   * null when missing or not normalizable. Maps to `validators.schedule_every_hours`
+   * when P1-04 `validatorSync` upserts rows.
+   */
+  scheduleEveryHours: number | null
   officialScore: number | null
   dominanceRatio: number | null
   stakeLuna: number | null
@@ -97,6 +105,7 @@ export function normalizeValidator(
   const fee = typeof value.fee === 'number' && Number.isFinite(value.fee)
     ? String(value.fee)
     : nullableString(value.fee)
+  const payoutSchedule = nullableString(value.payoutSchedule)
 
   return {
     address: value.address,
@@ -105,7 +114,8 @@ export function normalizeValidator(
     description: nullableString(value.description),
     fee: fee === '-1' ? null : fee,
     payoutType: normalizePayoutType(value.payoutType),
-    payoutSchedule: nullableString(value.payoutSchedule),
+    payoutSchedule,
+    scheduleEveryHours: normalizeSchedule(payoutSchedule).everyHours,
     officialScore: normalizeOfficialScore(score ?? value.score),
     dominanceRatio: nullableNumber(value.dominanceRatio),
     stakeLuna: nullableNumber(value.balance),

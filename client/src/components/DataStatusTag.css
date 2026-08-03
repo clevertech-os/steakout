@@ -1,0 +1,60 @@
+/* Data status tag — neutral small tag (STYLING §5); icon + caption text. */
+
+.data-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--so-rule);
+  background: var(--so-disabled-soft);
+  color: var(--so-disabled-ink);
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  text-transform: none;
+  overflow-wrap: anywhere;
+}
+
+.data-status-tag-mark {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0.7rem;
+  opacity: 0.85;
+  font-size: 0.6rem;
+  line-height: 1;
+}
+
+.data-status-tag-label {
+  min-width: 0;
+}
+
+.data-status-tag--verified {
+  color: var(--so-verified-strong);
+  background: var(--so-verified-soft);
+  border-color: var(--so-verified);
+}
+
+.data-status-tag--registry {
+  color: var(--so-info-strong);
+  background: var(--so-info-soft);
+  border-color: var(--so-info);
+}
+
+.data-status-tag--inferred {
+  color: var(--so-warn-strong);
+  background: var(--so-warn-soft);
+  border-color: var(--so-warn);
+}
+
+.data-status-tag--insufficient,
+.data-status-tag--unavailable {
+  color: var(--so-disabled-ink);
+  background: var(--so-disabled-soft);
+  border-color: var(--so-disabled);
+}

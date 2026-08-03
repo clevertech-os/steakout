@@ -1,0 +1,18 @@
+.so-amount {
+  display: inline-block;
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-variant-numeric: tabular-nums;
+  color: var(--so-ink);
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  max-width: 100%;
+  overflow-x: auto;
+  vertical-align: baseline;
+}
+
+.so-amount--lg {
+  font-size: clamp(1.5rem, 6vw, 2.25rem);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}

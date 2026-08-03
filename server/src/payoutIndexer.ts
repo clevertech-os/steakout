@@ -1,12 +1,15 @@
 import Database from 'better-sqlite3'
+import { classifyObservationsForRewardAddress } from './observationScoring.js'
 import { fetchTransactionsByAddress, type NimiqTransaction } from './nimiq-rpc.js'
 
 const MAX_RPC_PAGE_SIZE = 500
 const DEFAULT_PAGE_SIZE = 500
-const DEFAULT_MAX_PAGES = 20
+/** Deep first-pass backfill. History older than the cursor is never re-fetched on later cycles. */
+const DEFAULT_MAX_PAGES = 100
 const DEFAULT_MAX_ATTEMPTS = 5
 const DEFAULT_RETRY_BASE_MS = 2_000
 const DEFAULT_RETRY_MAX_MS = 5 * 60_000
+const DEFAULT_ADDRESS_CONCURRENCY = 1
 
 export interface NormalizedTransaction {
   hash: string
@@ -33,6 +36,8 @@ export interface PayoutIndexerOptions {
   rpcUrl?: string
   pageSize?: number
   maxPages?: number
+  /** Concurrent addresses per cycle (public RPC rate limits favor 1). */
+  addressConcurrency?: number
   backfillFloorBlock?: number
   maxAttempts?: number
   retryBaseMs?: number
@@ -59,10 +64,22 @@ export interface AddressIndexResult {
   milliseconds: number
 }
 
+/** Last-cycle aggregate stats (no per-address PII). */
+export interface IndexerLastCycleStats {
+  addressCount: number
+  fetched: number
+  inserted: number
+  errorCount: number
+  durationMs: number
+}
+
 export interface IndexerHealth {
   lastRunAt: string | null
   addressesIndexed: number
   lagBlocks: number | null
+  /** Total successful runCycle invocations since process start. */
+  cycleCount: number
+  lastCycle: IndexerLastCycleStats | null
 }
 
 interface CursorRow {
@@ -154,6 +171,7 @@ export class PayoutIndexer {
   private readonly rpcUrl: string | undefined
   private readonly pageSize: number
   private readonly maxPages: number
+  private readonly addressConcurrency: number
   private readonly backfillFloorBlock: number
   private readonly fetchTransactions: NonNullable<PayoutIndexerOptions['fetchTransactions']>
   private readonly logger: (line: string) => void
@@ -163,6 +181,8 @@ export class PayoutIndexer {
     lastRunAt: null,
     addressesIndexed: 0,
     lagBlocks: null,
+    cycleCount: 0,
+    lastCycle: null,
   }
 
   public constructor(options: PayoutIndexerOptions) {
@@ -171,6 +191,10 @@ export class PayoutIndexer {
     this.rpcUrl = options.rpcUrl
     this.pageSize = Math.min(Math.max(1, options.pageSize ?? DEFAULT_PAGE_SIZE), MAX_RPC_PAGE_SIZE)
     this.maxPages = Math.max(1, options.maxPages ?? DEFAULT_MAX_PAGES)
+    this.addressConcurrency = Math.min(
+      4,
+      Math.max(1, options.addressConcurrency ?? DEFAULT_ADDRESS_CONCURRENCY),
+    )
     this.backfillFloorBlock = Math.max(0, options.backfillFloorBlock ?? 0)
     this.fetchTransactions = options.fetchTransactions ?? fetchTransactionsByAddress
     this.getCurrentBlock = options.getCurrentBlock
@@ -183,13 +207,50 @@ export class PayoutIndexer {
   }
 
   public async runCycle(addresses: readonly string[]): Promise<AddressIndexResult[]> {
+    const cycleStarted = performance.now()
     const uniqueAddresses = [...new Set(addresses.map((address) => address.trim()).filter(Boolean))]
-    const results = await mapWithConcurrency(uniqueAddresses, 2, (address) => this.runAddress(address))
+    this.logger(
+      JSON.stringify({
+        indexer: 'cycle-start',
+        addresses: uniqueAddresses.length,
+        maxPages: this.maxPages,
+        pageSize: this.pageSize,
+        addressConcurrency: this.addressConcurrency,
+      }),
+    )
+    const results = await mapWithConcurrency(uniqueAddresses, this.addressConcurrency, (address) =>
+      this.runAddress(address),
+    )
+    const inserted = results.reduce((sum, row) => sum + row.inserted, 0)
+    const fetched = results.reduce((sum, row) => sum + row.fetched, 0)
+    const errorCount = results.flatMap((row) => row.errors).length
+    const durationMs = Math.round(performance.now() - cycleStarted)
     this.health = {
       lastRunAt: new Date().toISOString(),
       addressesIndexed: results.filter((result) => result.errors.length === 0).length,
       lagBlocks: await this.calculateLagBlocks(),
+      cycleCount: this.health.cycleCount + 1,
+      lastCycle: {
+        addressCount: uniqueAddresses.length,
+        fetched,
+        inserted,
+        errorCount,
+        durationMs,
+      },
     }
+    this.logger(
+      JSON.stringify({
+        indexer: 'cycle-end',
+        lastRunAt: this.health.lastRunAt,
+        addressesIndexed: this.health.addressesIndexed,
+        lagBlocks: this.health.lagBlocks,
+        cycleCount: this.health.cycleCount,
+        fetched,
+        inserted,
+        errors: errorCount,
+        durationMs,
+      }),
+    )
     return results
   }
 
@@ -298,6 +359,29 @@ export class PayoutIndexer {
       result.cursorAdvanced = nextCursor !== null && (
         cursor === null || cursor.lastBlock !== nextCursor.lastBlock || cursor.lastTxHash !== nextCursor.lastTxHash
       )
+
+      // DATA-MODEL.md §2 step 6: classify after successful ingest
+      // (runs + adherence + recipient coverage). Skips when no validators row
+      // exists (FK); never invents a validator or staker set.
+      const { runs: classification, adherence, coverage } = classifyObservationsForRewardAddress(
+        this.database,
+        address,
+      )
+      this.logger(JSON.stringify({
+        address,
+        classify: {
+          skipped: classification.skipped,
+          skipReason: classification.skipReason,
+          validatorAddress: classification.validatorAddress,
+          runCount: classification.runCount,
+          inserted: classification.inserted,
+          updated: classification.updated,
+          removed: classification.removed,
+          calcVersion: classification.calcVersion,
+          adherenceStatus: adherence?.status ?? null,
+          coverageCount: coverage?.coverageCount ?? null,
+        },
+      }))
     } catch (error) {
       result.errors.push(errorMessage(error))
     }
@@ -360,16 +444,52 @@ async function mapWithConcurrency<T, R>(
   return results
 }
 
+/**
+ * Reward addresses the payout indexer should poll.
+ *
+ * - Always includes rows from `validators` with a non-empty `reward_address`
+ *   (populated by registry sync + RPC resolve).
+ * - Optionally merges `INDEXER_REWARD_ADDRESSES` (comma-separated) as seeds so
+ *   a deploy can start indexing before the first sync finishes.
+ * - When `INDEXER_LISTED_ONLY=true` (default), only listed validators' rewards
+ *   are taken from the DB (SPEC §8.8: start with listed; expand later).
+ * - Env-only mode (legacy): set `INDEXER_REWARD_ADDRESSES_ONLY=true` to ignore
+ *   the DB and use the env list alone (useful for spikes).
+ */
 export function configuredRewardAddresses(database: Database.Database): string[] {
-  const configured = process.env.INDEXER_REWARD_ADDRESSES
-  if (configured !== undefined) {
-    return [...new Set(configured.split(',').map((address) => address.trim()).filter(Boolean))]
+  const envList = (process.env.INDEXER_REWARD_ADDRESSES ?? '')
+    .split(',')
+    .map((address) => address.trim())
+    .filter(Boolean)
+
+  if (process.env.INDEXER_REWARD_ADDRESSES_ONLY === 'true') {
+    return [...new Set(envList)]
   }
-  const rows = database.prepare(`
-    SELECT reward_address FROM validators
-    WHERE reward_address IS NOT NULL AND trim(reward_address) <> ''
-  `).all() as Array<{ reward_address: string }>
-  return [...new Set(rows.map((row) => row.reward_address.trim()).filter(Boolean))]
+
+  const listedOnly = process.env.INDEXER_LISTED_ONLY !== 'false'
+  const rows = database
+    .prepare(
+      listedOnly
+        ? `
+          SELECT reward_address FROM validators
+          WHERE reward_address IS NOT NULL AND trim(reward_address) <> ''
+            AND is_listed = 1
+        `
+        : `
+          SELECT reward_address FROM validators
+          WHERE reward_address IS NOT NULL AND trim(reward_address) <> ''
+        `,
+    )
+    .all() as Array<{ reward_address: string }>
+
+  const fromDb = rows.map((row) => row.reward_address.trim()).filter(Boolean)
+  return [...new Set([...envList, ...fromDb])]
+}
+
+/** Clear address cursors so the next cycle re-walks history newest→oldest (INSERT OR IGNORE keeps txs). */
+export function clearIndexCursors(database: Database.Database): number {
+  const result = database.prepare('DELETE FROM index_cursors').run()
+  return result.changes
 }
 
 export function startPayoutIndexerScheduler(
@@ -393,4 +513,24 @@ export function startPayoutIndexerScheduler(
   void run()
   const timer = setInterval(() => void run(), intervalMs)
   return { stop: () => clearInterval(timer) }
+}
+
+/** Read indexer knobs from env (production / Railway). */
+export function indexerOptionsFromEnv(): {
+  pageSize: number
+  maxPages: number
+  addressConcurrency: number
+} {
+  const pageSize = Number(process.env.INDEXER_PAGE_SIZE ?? DEFAULT_PAGE_SIZE)
+  const maxPages = Number(process.env.INDEXER_MAX_PAGES ?? DEFAULT_MAX_PAGES)
+  const addressConcurrency = Number(
+    process.env.INDEXER_ADDRESS_CONCURRENCY ?? DEFAULT_ADDRESS_CONCURRENCY,
+  )
+  return {
+    pageSize: Number.isFinite(pageSize) ? pageSize : DEFAULT_PAGE_SIZE,
+    maxPages: Number.isFinite(maxPages) ? maxPages : DEFAULT_MAX_PAGES,
+    addressConcurrency: Number.isFinite(addressConcurrency)
+      ? addressConcurrency
+      : DEFAULT_ADDRESS_CONCURRENCY,
+  }
 }

@@ -8,12 +8,14 @@
     "start": "node --import tsx src/index.ts",
     "build": "tsc --noEmit",
     "index:payouts": "tsx scripts/index-payouts.ts",
+    "classify": "tsx scripts/classify.ts",
     "probe:rpc": "tsx scripts/probe-rpc.ts"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
+    "@nimiq/core": "^2.7.2",
     "better-sqlite3": "^11.8.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

@@ -1,0 +1,798 @@
+/**
+ * Pay + Hub wallet facade: provider warmup, connection, message signing,
+ * Hub redirect login, generic tx broadcast/poll, explorer-adjacent helpers.
+ *
+ * Ported from VeriLock `client/src/nimiq.ts` (P1-01); product-specific flows removed.
+ *
+ * Non-custodial: never constructs or signs staking txs outside the provider.
+ * Staking writes go through `@nimiq/mini-app-sdk` methods only (P1-06+).
+ */
+
+import HubApi from '@nimiq/hub-api'
+import type { ChooseAddressResult, SignedMessage, SignedTransaction } from '@nimiq/hub-api'
+import { init } from '@nimiq/mini-app-sdk'
+import { createHubRedirectBehavior } from './hubRedirectBehavior'
+import { processLenientHubRedirect } from './hubLoginRedirect'
+import { saveHubReturnPath, savePayReturnPath } from './hubReturnPath'
+import {
+  clearStaleHubRpcStateIfIdle,
+  getHubReturnUrl,
+  peekHubRedirectInUrl,
+  RPC_ID_SEARCH_PARAM,
+} from './hubRedirectParse'
+import { walletLog, walletWarn } from './walletDebug'
+
+export { peekHubRedirectInUrl, RPC_ID_SEARCH_PARAM }
+
+const { RequestType } = HubApi
+
+const HUB_ENDPOINT = import.meta.env.VITE_NIMIQ_HUB_URL ?? 'https://hub.nimiq.com'
+const NIMIQ_RPC_URL = import.meta.env.VITE_NIMIQ_RPC_URL ?? 'https://rpc.nimiqwatch.com'
+/** Shown in Nimiq Hub / Pay when approving login and transactions. */
+const APP_NAME = 'Steakout'
+
+export type WalletMode = 'nimiq-pay' | 'hub'
+
+let hubApi: HubApi | null = null
+let hubRedirectHandlersReady = false
+
+export function getProviderErrorMessage(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null || !('error' in value)) return null
+  const maybeError = (value as { error?: { message?: unknown } }).error
+  if (maybeError && typeof maybeError.message === 'string') return maybeError.message
+  return 'Provider request failed.'
+}
+
+export function getWalletMode(): WalletMode {
+  if (isNimiqPayHost() || (typeof window !== 'undefined' && window.nimiq)) return 'nimiq-pay'
+  return 'hub'
+}
+
+/** Nimiq Pay injects `window.nimiqPay` before page scripts — reliable host detection. */
+export function isNimiqPayHost(): boolean {
+  return typeof window !== 'undefined' && Boolean(window.nimiqPay)
+}
+
+export async function probeNimiqPay(timeoutMs = 2_500): Promise<boolean> {
+  if (typeof window === 'undefined') return false
+  if (window.nimiq) return true
+  const timeout = isNimiqPayHost() ? Math.max(timeoutMs, 20_000) : timeoutMs
+  try {
+    await init({ timeout })
+    return Boolean(window.nimiq)
+  } catch {
+    return false
+  }
+}
+
+/** Pre-warm the injected provider as soon as the Nimiq Pay host is detected. */
+export function warmNimiqProvider(): void {
+  if (!isNimiqPayHost() || window.nimiq) return
+  void init({ timeout: 30_000 }).catch(() => {
+    /* user may connect manually */
+  })
+}
+
+function getHubApi(): HubApi {
+  if (!hubApi) hubApi = new HubApi(HUB_ENDPOINT)
+  return hubApi
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
+}
+
+export async function ensureNimiqProvider(existing: Awaited<ReturnType<typeof init>> | null = null) {
+  if (existing) return existing
+  if (typeof window !== 'undefined' && window.nimiq) return window.nimiq
+  const inPay = await probeNimiqPay(isNimiqPayHost() ? 30_000 : 10_000)
+  if (!inPay) {
+    throw new Error(
+      'Nimiq Pay wallet not found. On desktop, connect via Nimiq Hub instead.',
+    )
+  }
+  const { nimiq } = await connectNimiq()
+  return nimiq
+}
+
+/**
+ * First native Pay sheet: account access (`connect` → `listAccounts`).
+ * Callers that also need a login signature should issue the server challenge
+ * *before* this, then call `signChallenge` immediately after — never await
+ * network between the two sheets (WebView can reclaim focus and hide Approve).
+ */
+export async function connectNimiq() {
+  const timeout = isNimiqPayHost() ? 30_000 : 10_000
+  const nimiq = await init({ timeout })
+  // connect() prompts the native Nimiq Pay account dialog when needed.
+  await nimiq.connect()
+  const accountsResult = await nimiq.listAccounts()
+  const accountsError = getProviderErrorMessage(accountsResult)
+  if (accountsError) throw new Error(accountsError)
+  const accounts = accountsResult as string[]
+  if (!accounts.length) throw new Error('No Nimiq accounts returned.')
+  return { nimiq, address: accounts[0] }
+}
+
+export async function signChallenge(nimiq: Awaited<ReturnType<typeof init>>, nonce: string) {
+  // Pass as object with isHex:false so the provider treats the nonce as a plain text/UTF-8 message
+  // (not a hex string). This must match the isHex:false passed to verifySignature on the server for 'pay'.
+  const signatureResult = await nimiq.sign({ message: nonce, isHex: false })
+  const signatureError = getProviderErrorMessage(signatureResult)
+  if (signatureError) throw new Error(signatureError)
+  const { publicKey, signature } = signatureResult as { publicKey: string; signature: string }
+  return { publicKey, signature }
+}
+
+export function isPopupBlockedError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err)
+  return /failed to open popup|popup blocked|blocked/i.test(message)
+}
+
+export function popupBlockedHelp(): string {
+  return (
+    'Pop-up blocked. Allow pop-ups for this site in your browser settings, ' +
+    'or open Steakout inside the Nimiq Pay app (recommended — no pop-ups needed).'
+  )
+}
+
+/** Non-deprecated CallOptions redirect (avoids hub-api callAndSaveLocalState warn). */
+function hubRedirectBehavior(localState: Record<string, unknown>) {
+  return createHubRedirectBehavior(getHubReturnUrl(), localState)
+}
+
+/** Hub redirect is the supported desktop flow; popup is opt-in only. */
+export function shouldUseHubRedirect(options?: { useRedirect?: boolean; usePopup?: boolean }): boolean {
+  if (options?.usePopup === true) return false
+  if (options?.useRedirect === false) return false
+  // Per integration guide: prefer redirects for mobile/kiosk to avoid popup blockers.
+  if (isMobileDevice()) return true
+  return true
+}
+
+export const HUB_REDIRECT_MESSAGE = 'Redirecting to Nimiq Hub…'
+
+export function isHubRedirectError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err)
+  return message === HUB_REDIRECT_MESSAGE
+}
+
+/** Friendly copy when the user dismisses Hub / Pay login. */
+export const LOGIN_CANCELED_MESSAGE = 'Login Canceled'
+
+/**
+ * Per Nimiq Hub integration guide: explicit cancel vs error.
+ * Hub/Pay may surface "Request was cancelled", "CANCELED", or similar.
+ */
+export function isHubCancelError(err: unknown): boolean {
+  const message = (err instanceof Error ? err.message : String(err)).trim()
+  if (!message) return false
+  if (message === 'Request was cancelled') return true
+  if (/^cancell?ed$/i.test(message)) return true
+  if (/cancell?ed by user/i.test(message)) return true
+  if (/request was cancell?ed/i.test(message)) return true
+  if (/user cancell?ed/i.test(message)) return true
+  return false
+}
+
+// ── Client-side RPC helpers (broadcast / poll only; not identity) ──────────
+
+function normalizeTxHash(hash: string): string {
+  return hash.replace(/^0x/i, '').toLowerCase()
+}
+
+function signedTxHash(signed: SignedTransaction): string {
+  if (signed.hash) return normalizeTxHash(signed.hash)
+  throw new Error('Hub did not return a transaction hash.')
+}
+
+function formatRpcError(error: { message?: string; data?: unknown }): string {
+  const message = error.message?.trim() || 'Nimiq RPC error'
+  const data = typeof error.data === 'string' ? error.data.trim() : ''
+  if (!data || message.toLowerCase().includes(data.toLowerCase())) return message
+  return `${message}: ${data}`
+}
+
+function isTransactionNotFoundError(message: string): boolean {
+  return message.toLowerCase().includes('not found')
+}
+
+async function nimiqRpcCall<T>(
+  method: string,
+  params: unknown[],
+  options?: { allowEmpty?: boolean },
+): Promise<T> {
+  const res = await fetch(NIMIQ_RPC_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
+  })
+  if (!res.ok) throw new Error(`Nimiq RPC HTTP ${res.status}`)
+  const json = (await res.json()) as {
+    result?: { data: T }
+    error?: { message: string; data?: unknown }
+  }
+  if (json.error) throw new Error(formatRpcError(json.error))
+  if (json.result?.data === undefined || json.result?.data === null) {
+    if (options?.allowEmpty) return undefined as T
+    throw new Error(`Empty Nimiq RPC response (${method})`)
+  }
+  return json.result.data
+}
+
+async function transactionKnownOnNetwork(hash: string): Promise<boolean> {
+  const clean = normalizeTxHash(hash)
+  try {
+    await nimiqRpcCall<Record<string, unknown>>('getTransactionByHash', [clean])
+    return true
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (!isTransactionNotFoundError(message)) {
+      walletWarn('hub:transactionLookupFailed', { hash: clean, message })
+    }
+  }
+  try {
+    await nimiqRpcCall<Record<string, unknown>>('getTransactionFromMempool', [clean])
+    return true
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (!isTransactionNotFoundError(message)) {
+      walletWarn('hub:mempoolLookupFailed', { hash: clean, message })
+    }
+    return false
+  }
+}
+
+const BROADCAST_POLL_MS = 1_500
+const BROADCAST_VERIFY_MS = 4_000
+const BROADCAST_VERIFY_POLL_MS = 500
+const HUB_CHECKOUT_NETWORK_WAIT_MS = 30_000
+const RELAY_NETWORK_SOFT_WAIT_MS = 20_000
+
+async function waitForTransactionOnNetwork(
+  hash: string,
+  timeoutMs: number,
+  options?: { required?: boolean },
+): Promise<boolean> {
+  const started = Date.now()
+  while (Date.now() - started < timeoutMs) {
+    if (await transactionKnownOnNetwork(hash)) {
+      walletLog('hub:transactionVisibleOnNetwork', { hash })
+      return true
+    }
+    await new Promise(resolve => setTimeout(resolve, BROADCAST_POLL_MS))
+  }
+  if (options?.required) {
+    throw new Error(
+      'Transaction was signed in Hub but did not reach the Nimiq network. Try again.',
+    )
+  }
+  return false
+}
+
+export type TransactionBroadcastFallback = (serializedTx: string) => Promise<void>
+
+function normalizeRawTransactionHex(rawTx: string): string {
+  const clean = rawTx.replace(/^0x/i, '').trim()
+  if (!/^[0-9a-fA-F]+$/.test(clean) || clean.length % 2 !== 0) {
+    throw new Error('Invalid serialized transaction from Hub')
+  }
+  return clean.toLowerCase()
+}
+
+function serializedTxFromSigned(signed: SignedTransaction): string {
+  if (signed.serializedTx) return normalizeRawTransactionHex(signed.serializedTx)
+  if (signed.transaction instanceof Uint8Array && signed.transaction.length > 0) {
+    return bytesToHex(signed.transaction)
+  }
+  throw new Error('Hub did not return a serialized transaction.')
+}
+
+async function broadcastViaServer(
+  serialized: string,
+  broadcastFallback: TransactionBroadcastFallback,
+  label: string,
+): Promise<void> {
+  walletLog(label, { bytes: serialized.length / 2 })
+  await broadcastFallback(serialized)
+}
+
+async function waitForTransactionVisible(
+  hash: string,
+  timeoutMs: number,
+  pollMs: number,
+): Promise<boolean> {
+  const started = Date.now()
+  while (Date.now() - started < timeoutMs) {
+    if (await transactionKnownOnNetwork(hash)) return true
+    await new Promise(resolve => setTimeout(resolve, pollMs))
+  }
+  return false
+}
+
+async function broadcastRawTransaction(
+  serialized: string,
+  broadcastFallback?: TransactionBroadcastFallback,
+  options?: { preferServer?: boolean },
+): Promise<void> {
+  const clean = normalizeRawTransactionHex(serialized)
+
+  if (options?.preferServer && broadcastFallback) {
+    await broadcastViaServer(clean, broadcastFallback, 'hub:broadcastViaServer')
+    return
+  }
+
+  walletLog('hub:broadcastRawTransaction', { bytes: clean.length / 2 })
+  let acceptedHash: string | null = null
+  try {
+    const hash = await nimiqRpcCall<string>('sendRawTransaction', [clean])
+    if (hash) {
+      acceptedHash = normalizeTxHash(hash)
+      walletLog('hub:broadcastAccepted', { hash: acceptedHash })
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    walletWarn('hub:clientBroadcastFailed', { message })
+  }
+
+  if (acceptedHash && broadcastFallback) {
+    const visible = await waitForTransactionVisible(
+      acceptedHash,
+      BROADCAST_VERIFY_MS,
+      BROADCAST_VERIFY_POLL_MS,
+    )
+    if (visible) return
+    walletWarn('hub:clientBroadcastNotVisible', { hash: acceptedHash })
+    await broadcastViaServer(clean, broadcastFallback, 'hub:broadcastViaServerRetry')
+    return
+  }
+
+  if (acceptedHash) return
+
+  if (broadcastFallback) {
+    await broadcastViaServer(clean, broadcastFallback, 'hub:broadcastViaServer')
+    return
+  }
+
+  throw new Error('Could not broadcast transaction to the Nimiq network.')
+}
+
+/** Relay a Hub-signed transaction to the network; returns normalized tx hash. */
+export async function relaySignedTransaction(
+  signed: SignedTransaction,
+  broadcastFallback?: TransactionBroadcastFallback,
+): Promise<string> {
+  const hash = signedTxHash(signed)
+  if (await transactionKnownOnNetwork(hash)) {
+    walletLog('hub:relaySkipped (already known)', { hash })
+    return hash
+  }
+
+  const serialized = serializedTxFromSigned(signed)
+  walletLog('hub:relaySignedTransaction', { hash })
+  let broadcastAttempted = false
+  try {
+    await broadcastRawTransaction(serialized, broadcastFallback, { preferServer: true })
+    broadcastAttempted = true
+  } catch (err) {
+    if (await transactionKnownOnNetwork(hash)) {
+      walletLog('hub:relayRecovered (broadcast race)', { hash })
+      return hash
+    }
+    throw err
+  }
+  if (await waitForTransactionOnNetwork(hash, RELAY_NETWORK_SOFT_WAIT_MS)) {
+    return hash
+  }
+  if (broadcastAttempted) {
+    walletWarn('hub:relayProceedingBeforeVisible', { hash })
+    return hash
+  }
+  throw new Error('Could not broadcast transaction to the Nimiq network.')
+}
+
+/**
+ * Finalize a Hub-signed transaction (checkout already broadcasts; signTransaction does not).
+ * Returns the normalized tx hash for server-side confirm matching (P1-06).
+ */
+export async function finalizeHubTransaction(
+  signed: SignedTransaction,
+  options?: {
+    hubBroadcast?: boolean
+    broadcastFallback?: TransactionBroadcastFallback
+  },
+): Promise<string> {
+  const hash = signedTxHash(signed)
+  if (await transactionKnownOnNetwork(hash)) {
+    walletLog('hub:txAlreadyOnNetwork', { hash })
+    return hash
+  }
+
+  if (options?.hubBroadcast) {
+    walletLog('hub:checkoutAwaitNetwork', { hash })
+    if (await waitForTransactionOnNetwork(hash, HUB_CHECKOUT_NETWORK_WAIT_MS)) {
+      return hash
+    }
+    walletWarn('hub:checkoutNotVisibleYet', { hash })
+    try {
+      return await relaySignedTransaction(signed, options?.broadcastFallback)
+    } catch (err) {
+      walletWarn('hub:checkoutRelayFallbackFailed', err)
+      return hash
+    }
+  }
+
+  return relaySignedTransaction(signed, options?.broadcastFallback)
+}
+
+// ── Hub redirect login ─────────────────────────────────────────────────────
+
+const hubRedirectDeps = () => ({
+  appName: APP_NAME,
+  getHubApi,
+  bytesToHex,
+})
+
+function registerHubLoginHandlers(
+  hub: HubApi,
+  getChallenge: (address?: string | null) => Promise<{ token: string; nonce: string }>,
+  onComplete: (result: {
+    address: string
+    publicKey: string
+    signature: string
+    token: string
+  }) => void,
+  onError: (err: Error) => void,
+): void {
+  /**
+   * Hub login trip 1 → 2: chooseAddress returns an address (and auto-opens
+   * onboard when the user has no wallet). Then challenge + signMessage.
+   * Single-trip signMessage-without-signer skips Hub’s empty-wallet onboard.
+   */
+  hub.on(RequestType.CHOOSE_ADDRESS, async chosen => {
+    try {
+      const { address } = chosen as ChooseAddressResult
+      const { token, nonce } = await getChallenge(address)
+      const behavior = hubRedirectBehavior({ token, flow: 'login' })
+      await hub.signMessage(
+        { appName: APP_NAME, message: nonce, signer: address },
+        behavior as Parameters<typeof hub.signMessage>[1],
+      )
+    } catch (err) {
+      onError(err instanceof Error ? err : new Error(String(err)))
+    }
+  })
+  hub.on(RequestType.SIGN_MESSAGE, (signed, state) => {
+    try {
+      const token = state?.token as string | undefined
+      if (!token) throw new Error('Login session expired - try again.')
+      const msg = signed as SignedMessage
+      onComplete({
+        token,
+        address: msg.signer,
+        publicKey: bytesToHex(msg.signerPublicKey),
+        signature: bytesToHex(msg.signature),
+      })
+    } catch (err) {
+      onError(err instanceof Error ? err : new Error(String(err)))
+    }
+  })
+}
+
+export type HubRedirectSetupResult = {
+  redirectHandled: boolean
+  loginHandled: boolean
+}
+
+/**
+ * Call on app load to finish Hub redirect login round-trips.
+ * Requires a challenge issuer (wired by P1-02 auth API).
+ */
+export async function setupHubRedirectHandlers(
+  getChallenge: (address?: string | null) => Promise<{ token: string; nonce: string }>,
+  onComplete: (result: {
+    address: string
+    publicKey: string
+    signature: string
+    token: string
+  }) => void,
+  onError: (err: Error) => void,
+): Promise<HubRedirectSetupResult> {
+  const hub = getHubApi()
+  let loginRedirectHandled = false
+
+  const handleLoginComplete = (result: {
+    address: string
+    publicKey: string
+    signature: string
+    token: string
+  }) => {
+    loginRedirectHandled = true
+    onComplete(result)
+  }
+
+  const lenientHandled = processLenientHubRedirect(
+    hubRedirectDeps(),
+    getChallenge,
+    handleLoginComplete,
+    onError,
+  )
+
+  if (!hubRedirectHandlersReady) {
+    hubRedirectHandlersReady = true
+    registerHubLoginHandlers(hub, getChallenge, handleLoginComplete, onError)
+  }
+
+  if (lenientHandled) {
+    walletLog('hub:lenientRedirectHandled', {
+      loginHandled: loginRedirectHandled,
+    })
+    return {
+      redirectHandled: true,
+      loginHandled: loginRedirectHandled,
+    }
+  }
+
+  walletLog('hub:checkRedirectResponse', {
+    href: window.location.href,
+    rpcId: new URLSearchParams(window.location.search).get(RPC_ID_SEARCH_PARAM),
+  })
+  await hub.checkRedirectResponse()
+  walletLog('hub:redirectHandlersReady', {
+    redirectHandled: loginRedirectHandled,
+    loginRedirectHandled,
+  })
+  return {
+    redirectHandled: loginRedirectHandled,
+    loginHandled: loginRedirectHandled,
+  }
+}
+
+/**
+ * Hub login via chooseAddress → signMessage (two Hub trips on redirect).
+ *
+ * Why not signMessage alone? Hub’s Sign Message view does **not** auto-open
+ * onboard when the user has zero wallets. Choose Address does.
+ *
+ * Redirect: chooseAddress → (onboard if needed) → return → challenge → signMessage.
+ * Popup: chooseAddress → challenge → signMessage (same window chain).
+ *
+ * Requires auth challenge issuer (P1-02). For address-only connect without auth,
+ * use `chooseAddressViaHub` instead.
+ */
+export async function connectViaHub(
+  getChallenge: (address?: string | null) => Promise<{ token: string; nonce: string }>,
+  options?: { preferRedirect?: boolean },
+): Promise<{
+  token: string
+  address: string
+  publicKey: string
+  signature: string
+  authScheme: 'hub'
+}> {
+  const hub = getHubApi()
+  const preferRedirect = options?.preferRedirect ?? true
+
+  clearStaleHubRpcStateIfIdle()
+
+  if (preferRedirect) {
+    saveHubReturnPath()
+    walletLog('hub:redirectChooseAddress', { returnUrl: getHubReturnUrl() })
+    const behavior = hubRedirectBehavior({ flow: 'login' })
+    await hub.chooseAddress(
+      { appName: APP_NAME },
+      behavior as Parameters<typeof hub.chooseAddress>[1],
+    )
+    throw new Error(HUB_REDIRECT_MESSAGE)
+  }
+
+  try {
+    walletLog('hub:popupChooseAddress')
+    const chosen = await hub.chooseAddress({ appName: APP_NAME })
+    const address = chosen.address
+    const { token, nonce } = await getChallenge(address)
+    walletLog('hub:popupSignMessageLogin', { address })
+    const signed = await hub.signMessage({
+      appName: APP_NAME,
+      message: nonce,
+      signer: address,
+    })
+    return {
+      token,
+      address: signed.signer,
+      publicKey: bytesToHex(signed.signerPublicKey),
+      signature: bytesToHex(signed.signature),
+      authScheme: 'hub',
+    }
+  } catch (err) {
+    if (isPopupBlockedError(err)) {
+      throw new Error(popupBlockedHelp())
+    }
+    throw err
+  }
+}
+
+/**
+ * Address-only Hub connect (no server challenge). Used until P1-02 wires auth.
+ * Prefer `connectViaHub` once challenge/verify endpoints exist.
+ */
+export async function chooseAddressViaHub(options?: {
+  preferRedirect?: boolean
+}): Promise<{ address: string }> {
+  const hub = getHubApi()
+  const preferRedirect = options?.preferRedirect ?? true
+
+  clearStaleHubRpcStateIfIdle()
+
+  if (preferRedirect) {
+    saveHubReturnPath()
+    walletLog('hub:redirectChooseAddressOnly', { returnUrl: getHubReturnUrl() })
+    const behavior = hubRedirectBehavior({ flow: 'choose_address' })
+    await hub.chooseAddress(
+      { appName: APP_NAME },
+      behavior as Parameters<typeof hub.chooseAddress>[1],
+    )
+    throw new Error(HUB_REDIRECT_MESSAGE)
+  }
+
+  try {
+    const chosen = await hub.chooseAddress({ appName: APP_NAME })
+    return { address: chosen.address }
+  } catch (err) {
+    if (isPopupBlockedError(err)) {
+      throw new Error(popupBlockedHelp())
+    }
+    throw err
+  }
+}
+
+/** Sign an arbitrary UTF-8 message via Hub (popup). Requires a known signer address. */
+export async function signMessageViaHub(
+  address: string,
+  message: string,
+): Promise<{ publicKey: string; signature: string; signer: string }> {
+  const hub = getHubApi()
+  try {
+    const signed = await hub.signMessage({
+      appName: APP_NAME,
+      message,
+      signer: address,
+    })
+    return {
+      publicKey: bytesToHex(signed.signerPublicKey),
+      signature: bytesToHex(signed.signature),
+      signer: signed.signer,
+    }
+  } catch (err) {
+    if (isPopupBlockedError(err)) {
+      throw new Error(popupBlockedHelp())
+    }
+    throw err
+  }
+}
+
+// ── Mini-app / mobile helpers ──────────────────────────────────────────────
+
+/**
+ * Build a Nimiq Pay mini-app target URL.
+ * Prefer full path+query+hash so SPA deep links survive Pay open.
+ */
+export function normalizeMiniAppUrl(appUrl: string): string {
+  try {
+    const base =
+      typeof window !== 'undefined' ? window.location.href : 'https://steakout.app/'
+    const parsed = new URL(appUrl, base)
+    const path = parsed.pathname === '/' ? '' : parsed.pathname
+    const search = parsed.search || ''
+    const hash = parsed.hash || ''
+    return `${parsed.origin}${path}${search}${hash}`
+  } catch {
+    return appUrl.replace(/\/+$/, '')
+  }
+}
+
+/** Current page as a mini-app URL. */
+export function currentMiniAppUrl(): string {
+  if (typeof window === 'undefined') return 'https://steakout.app'
+  return `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`
+}
+
+export const NIMIQ_PAY_IOS_URL = 'https://apps.apple.com/us/app/nimiq-pay/id6471844738'
+export const NIMIQ_PAY_ANDROID_URL =
+  'https://play.google.com/store/apps/details?id=com.nimiq.pay'
+
+/**
+ * Whether this client is a phone/tablet for login & Pay deeplinks.
+ *
+ * Uses **browser-reported identity only** (UA / platform / touch points) — never
+ * CSS viewport width. Docking DevTools or shrinking a desktop window must not
+ * flip this.
+ */
+export function isMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false
+  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return true
+  // iPadOS 13+ often reports as Macintosh (desktop UA) with multi-touch.
+  return (
+    navigator.platform === 'MacIntel' &&
+    typeof navigator.maxTouchPoints === 'number' &&
+    navigator.maxTouchPoints > 1
+  )
+}
+
+export function getMiniAppWebUrl(appUrl?: string): string {
+  return normalizeMiniAppUrl(appUrl ?? currentMiniAppUrl())
+}
+
+/**
+ * Origin used in QR / share links that a **phone** must open.
+ * Locally `window.location.origin` is often `http://localhost:5173` — the phone
+ * cannot reach desktop localhost. Set `VITE_PUBLIC_APP_URL` to a tunnel or LAN URL.
+ */
+export function getPublicAppOrigin(): string {
+  const fromEnv = (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.trim()
+  if (fromEnv) {
+    try {
+      return new URL(fromEnv).origin
+    } catch {
+      /* fall through */
+    }
+  }
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin
+  }
+  return ''
+}
+
+/** True when the public origin is loopback (phone cannot open desktop localhost). */
+export function isLoopbackAppOrigin(origin = getPublicAppOrigin()): boolean {
+  try {
+    const host = new URL(origin).hostname
+    return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1'
+  } catch {
+    return true
+  }
+}
+
+/**
+ * `nimiqpay://miniapp?url=<https url>`
+ * @see https://www.nimiq.dev/mini-apps - Sharing Your Mini App
+ */
+export function nimiqPayDeepLink(appUrl: string): string {
+  const target = normalizeMiniAppUrl(appUrl)
+  return `nimiqpay://miniapp?url=${encodeURIComponent(target)}`
+}
+
+export type NimiqPayLaunchResult = 'already-in-pay' | 'launched' | 'unavailable'
+
+/**
+ * Only attempts `nimiqpay://` on mobile — desktop browsers log a scheme error and
+ * never leave the tab. Callers must treat “launched” as best-effort and fall back
+ * if the page stays visible (see useWallet scheduleDeeplinkFallback).
+ */
+export function launchNimiqPayMiniApp(appUrl?: string): NimiqPayLaunchResult {
+  if (isNimiqPayHost()) return 'already-in-pay'
+  if (!isMobileDevice()) return 'unavailable'
+  const target = appUrl ?? currentMiniAppUrl()
+  try {
+    const parsed = new URL(normalizeMiniAppUrl(target), window.location.origin)
+    const path = `${parsed.pathname}${parsed.search}${parsed.hash}`
+    if (path && path !== '/') savePayReturnPath(path)
+  } catch {
+    savePayReturnPath()
+  }
+  const deeplink = nimiqPayDeepLink(target)
+  try {
+    window.location.assign(deeplink)
+  } catch {
+    return 'unavailable'
+  }
+  return 'launched'
+}
+
+export async function copyNimiqPayDeepLink(appUrl?: string): Promise<string> {
+  const link = nimiqPayDeepLink(appUrl ?? currentMiniAppUrl())
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(link)
+  }
+  return link
+}

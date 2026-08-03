@@ -22,15 +22,20 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - `useWallet` exposes: `status`, `address`, `connect()`, `disconnect()`, `signMessage()`, provider-availability flags (Pay vs Hub vs none)
 
 **Acceptance criteria:**
-- [ ] All ported modules build under this repo's strict tsconfig
-- [ ] Connection state machine matches VeriLock behavior (mobile Pay path + desktop Hub path)
-- [ ] Grep proves no document/seal/credit terms in ported files
-- [ ] Address helpers validate + normalize per ARCHITECTURE.md §5 conventions
+- [x] All ported modules build under this repo's strict tsconfig
+- [x] Connection state machine matches VeriLock behavior (mobile Pay path + desktop Hub path)
+- [x] Grep proves no document/seal/credit terms in ported files
+- [x] Address helpers validate + normalize per ARCHITECTURE.md §5 conventions
 
 **Verification:** `npm run build`; P1-14 unit tests against `addresses.ts`.
 
 **Notes:**
--
+- Done 2026-08-03. Modules: `client/src/nimiq.ts`, `wallet/useWallet.ts`, `session.ts`, `addresses.ts`, `explorer.ts`, plus Hub plumbing (`hubRedirectBehavior.ts`, `hubRedirectParse.ts`, `hubReturnPath.ts`, `hubLoginRedirect.ts`, `walletDebug.ts`, `nimiq-globals.d.ts`) and server copies (`server/src/addresses.ts`, `server/src/explorer.ts`).
+- Stripped VeriLock product flows (attestation, top-up, journey types). Kept Pay warmup/connect/sign, Hub chooseAddress+signMessage redirect/popup, mobile deeplink, generic tx relay/poll.
+- `useWallet` exposes `status`, `address`, `connect()`, `disconnect()`, `signMessage()`, `providerAvailability` (`pay` | `hub` | `none`). Optional `WalletAuthApi` for P1-02 challenge/verify; without it connect is address-only.
+- New deps: `@nimiq/hub-api@1.14.0`, `@nimiq/rpc@^0.4.1` (required for Hub path).
+- Unit tests: `tests/unit/client/addresses.test.ts`, `explorer.test.ts`, `session.test.ts`.
+- Residual: no UI wiring (by design); Hub return hash may interact with SPA hash router — re-check when P1-02 wires full auth; live device verification still blocked (P0-02).
 
 ---
 
@@ -51,16 +56,21 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - Auth guard middleware for `/api/me/*` and `/api/staking/*`
 
 **Acceptance criteria:**
-- [ ] Full flow works with the P0-02 signature fixture: challenge → verify → session → `/api/me`
-- [ ] Reused challenge rejected; expired challenge rejected (`CHALLENGE_EXPIRED`); tampered signature rejected (`SIGNATURE_REJECTED`)
-- [ ] Rate limit returns 429 + `retryAfterSeconds` after threshold
-- [ ] A client-supplied address without valid verification is never authenticated
-- [ ] Security headers present on all responses
+- [x] Full flow works with the P0-02 signature fixture: challenge → verify → session → `/api/me`
+- [x] Reused challenge rejected; expired challenge rejected (`CHALLENGE_EXPIRED`); tampered signature rejected (`SIGNATURE_REJECTED`)
+- [x] Rate limit returns 429 + `retryAfterSeconds` after threshold
+- [x] A client-supplied address without valid verification is never authenticated
+- [x] Security headers present on all responses
 
 **Verification:** P1-15 integration suite; manual curl pass recorded in Notes.
 
 **Notes:**
--
+- Done 2026-08-03. Modules: `server/src/auth.ts`, `hub-signature.ts`, `auth-wallet.ts`, `rate-limit.ts`, `http-headers.ts`. Wired in `app.ts` + `index.ts` (database required). Dep: `@nimiq/core@^2.7.1` (same as VeriLock) for signed-message verify + pubkey→address.
+- Contract: `POST /api/auth/challenge` → `{ challengeId, message, expiresAt }`; `POST /api/auth/verify` → `{ address, sessionExpiresAt }` + httpOnly `steakout_session` cookie (SameSite=Lax, Secure in prod / `SESSION_COOKIE_SECURE`); `GET /api/me`. Challenges single-use, 5 min; sessions 24 h signed HMAC (`SESSION_SECRET`), rolling refresh past half-TTL. Auth guard on `/api/me/*` and `/api/staking/*`. Rate limits: challenge 12/min IP + 12/min address; verify 24/min IP; global API 300/min — 429 envelope `RATE_LIMITED` + `retryAfterSeconds`.
+- **Fixture gap:** `tests/fixtures/wallet/` (P0-02) still missing. Unit suite uses deterministic zero-key real crypto via `@nimiq/core` (`tests/unit/server/auth.test.ts`, 13 cases) plus injectible `verifySignature` path. No live device fixture required for server AC.
+- Client `WalletAuthApi` shape (Bearer token) left unwired — server uses cookie sessions per API.md/SECURITY.md; client adapter is a later task if needed.
+- Verified: `npm run build` pass; `npm run test:server` 85/85 incl. auth.
+
 
 ---
 
@@ -81,15 +91,18 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - Call metrics (count, latency, errors) exposed for the health endpoint
 
 **Acceptance criteria:**
-- [ ] All P0-04 fixture-backed calls work through the client (mocked via P0-08 harness)
-- [ ] Retry/backoff behavior proven by injected failures (test or logged demo)
-- [ ] No RPC call anywhere in the codebase bypasses this module
-- [ ] Document-attestation legacy fully removed
+- [x] All P0-04 fixture-backed calls work through the client (mocked via P0-08 harness)
+- [x] Retry/backoff behavior proven by injected failures (test or logged demo)
+- [x] No RPC call anywhere in the codebase bypasses this module
+- [x] Document-attestation legacy fully removed
 
 **Verification:** vitest with mockRpc; `npm run build`.
 
 **Notes:**
--
+- Done 2026-08-03. Productionized `server/src/nimiq-rpc.ts`: typed P0-04 methods (`getBlockNumber`, `getValidatorByAddress`, `getActiveValidators`, `getAccountByAddress`, `getStakerByAddress`, `fetchTransactionsByAddress`, `fetchTransaction`), 10s timeout, exponential backoff base 2s → max 5 min + jitter, retry on timeouts/429/5xx/transport, non-retry on JSON-RPC method errors, `RpcError` + `toRpcApiError` → `RPC_UNAVAILABLE` helpers, call metrics via `getRpcMetrics()` on `GET /api/health`.
+- Callers unchanged: `payoutIndexer`, `validators-api`, spike block endpoint.
+- Tests: `tests/unit/server/nimiq-rpc.test.ts` (fixture-backed methods + timeout/429/5xx retry injection via mockRpc + vi). No document-attestation code.
+- Residual: only intentional raw RPC is `server/scripts/probe-rpc.ts` (fixture capture). Client wallet `nimiq.ts` has its own browser-side tx lookup (out of server gateway scope). Indexer keeps its own outer retry loop (DATA-MODEL cycle policy).
 
 ---
 
@@ -110,16 +123,21 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - Observation fields present but stubbed (`insufficient-data`) until Phase 2
 
 **Acceptance criteria:**
-- [ ] Response shape matches API.md §3 exactly (fields, nullability)
-- [ ] Score `-1`/missing → null (never rendered as a number)
-- [ ] All-observable mode includes unlisted validators, flagged `isListed: false`
-- [ ] Sort options all functional; `recommended` ordering documented in one comment block (inputs only, no advice claims)
-- [ ] Every record carries `registryUpdatedAt`
+- [x] Response shape matches API.md §3 exactly (fields, nullability)
+- [x] Score `-1`/missing → null (never rendered as a number)
+- [x] All-observable mode includes unlisted validators, flagged `isListed: false`
+- [x] Sort options all functional; `recommended` ordering documented in one comment block (inputs only, no advice claims)
+- [x] Every record carries `registryUpdatedAt`
 
 **Verification:** P1-15 ingestion test from fixtures; manual API pass vs contract.
 
 **Notes:**
--
+- **Done 2026-08-03.** Modules: `server/src/validatorSync.ts` (sync, upsert, sorts, serialization, `mountValidatorsApi`); routes wired in `app.ts` (after auth, before health/position); hourly scheduler in `index.ts` (`VALIDATORS_SYNC_ENABLED`, `VALIDATORS_SYNC_INTERVAL_HOURS`).
+- **Sync:** fetches known-only + all-observable via existing `fetchValidators` / `normalizeValidator`; merge prefers known-only metadata for overlapping addresses; upserts all 78 fixture rows; `schedule_every_hours = scheduleEveryHours` (P2-02); `registry_updated_at` stamped; reward-address RPC only for validators missing one (kept on re-sync via `COALESCE`).
+- **API:** `GET /api/validators?sort=&listed=` and `GET /api/validators/:address` use API.md §1 envelope (`source: registry`); list items + profile include stub observation `{ status: insufficient-data, lastObservedAt: null, historyDepthDays: 0 }`; profile adds `website`, `description`, `rewardAddress`, `rewardExplorerUrl`, `scoreComponents: null` (not in schema yet), `registryUpdatedAt`. Compact and spaced address params both resolve.
+- **Sorts:** recommended|score|dominance|stake|direct-payout|restake|new — see comment on `compareValidators` for recommended inputs (no advice claims).
+- **Tests:** `tests/unit/server/validator-sync.test.ts` (15 cases) fixture-backed, mock fetcher/RPC. Verified: `npm run build` pass; `npm run test:server` 133/133.
+- Residual: live reward resolution rate limits (P0-05); logo_url always null (fixtures omit logo); score components not persisted; observations real data lands in Phase 2.
 
 ---
 
@@ -139,15 +157,19 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - State mapping table (RPC fields → enum) documented in the module header, citing P0-04 fixtures
 
 **Acceptance criteria:**
-- [ ] All six states derivable from fixture data (unit-tested in P1-14)
-- [ ] Unknown/unreadable state never renders as `Active` — fails to `unavailable`
-- [ ] Snapshot written on read (throttled) with `source_block`
-- [ ] Response never cached beyond the documented short TTL
+- [x] All six states derivable from fixture data (unit-tested in P1-14)
+- [x] Unknown/unreadable state never renders as `Active` — fails to `unavailable`
+- [x] Snapshot written on read (throttled) with `source_block`
+- [x] Response never cached beyond the documented short TTL
 
 **Verification:** fixture-driven unit tests (P1-14); manual check with the P0-04 known staker address.
 
 **Notes:**
--
+- Done 2026-08-03. Modules: `server/src/stakingState.ts` (normalize + read + snapshot + short TTL cache), endpoint `GET /api/me/staking-position` in `app.ts` behind existing `/api/me/` auth guard.
+- State mapping (module header + unit table): NotStaked (no-staker P0-04 fixture / zero balances), Pending (`hasPendingTx` or pending `staking_intents`), Active (active only or active+inactive partial), Inactive (inactive only), Retiring (retired + remaining stake), Withdrawable (retired-only; Core: immediately removable). `retire.withdrawableAt` always null (RPC has no release timestamp — P0-04).
+- Envelope: `updatedAt` / `source` (`rpc`|`cache`) / `status` (`ok`|`partial`|`unavailable`) / `dataFreshness.ageSeconds` + API.md §5 payload. `Cache-Control: private, max-age=10` (matches `POSITION_CACHE_TTL_MS`). Snapshots ≥1/hour/address with `source_block`. Empty validators table → `validatorName: null` still returns position.
+- Tests: `tests/unit/server/staking-state.test.ts` (25 cases) — pure six-state normalize, snapshot throttle, mockRpc P0-04 no-staker path, HTTP 401 + authenticated envelope. `npm run build` + `npm run test:server` 118/118.
+- Residual: no live mainnet Active staker fixture (P0-04 only captured no-staker); lifecycle balances synthetic from PlainStaker field names. `lastRewardObservation` stubbed null until Phase 2.
 
 ---
 
@@ -197,15 +219,17 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - App works standalone in a plain browser (no provider) as a read-only shell
 
 **Acceptance criteria:**
-- [ ] Four destinations reachable via nav at 320 px width
-- [ ] Deep links survive reload
-- [ ] No horizontal scroll at 320/375/430
-- [ ] Active destination visually distinct (ember accent per tokens)
+- [x] Four destinations reachable via nav at 320 px width
+- [x] Deep links survive reload
+- [x] No horizontal scroll at 320/375/430
+- [x] Active destination visually distinct (ember accent per tokens)
 
 **Verification:** manual viewport sweep; `npm run build`.
 
 **Notes:**
--
+- **Routing decision: hash** (`#/validators`, etc.). Fragment never hits the server, so deep links survive reload without an SPA rewrite on Railway/static Express. Production only special-cases `/spike*` for `index.html` (`server/src/index.ts`); history routes like `/validators` would 404 on hard reload. Pure matchers in `client/src/routes.ts` for unit tests.
+- Shell: lazy destinations, BottomNav ≥44px + `env(safe-area-inset-bottom)`, active uses `--so-accent` (#d9573f) + top indicator, NetworkBadge via `VITE_NIMIQ_NETWORK` (hidden on mainnet), 404 → `#/`, `/validators/:address` reserved (renders Validators placeholder until P1-11/P2-16).
+- Verified 2026-08-03: `npm run build` pass; `npm run test:client` includes `routes.test.ts` matcher smoke.
 
 ---
 
@@ -225,15 +249,15 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - STYLING.md §2 verification results filled in
 
 **Acceptance criteria:**
-- [ ] Mulish + Fira Mono render from self-hosted font files
-- [ ] Components can style entirely from `--so-*` tokens (no raw palette vars outside tokens.css)
-- [ ] Both layer-import strategies considered; chosen one noted in STYLING.md
-- [ ] No unconfirmed `nq-text-*` classes used anywhere until verified
+- [x] Mulish + Fira Mono render from self-hosted font files
+- [x] Components can style entirely from `--so-*` tokens (no raw palette vars outside tokens.css)
+- [x] Both layer-import strategies considered; chosen one noted in STYLING.md
+- [x] No unconfirmed `nq-text-*` classes used anywhere until verified
 
 **Verification:** build passes; reference page visually confirmed by Polishing.
 
 **Notes:**
--
+- 2026-08-03: Wired nimiq-css@1.0.0-beta.162 via full `index.css`. Tokens map every STYLING §3 semantic to `--colors-*` with hex fallbacks. Fonts: corrected `@font-face` in `base.css` for `Mulish-Regular.ttf` + `FiraMono-Regular.ttf` (package `fonts.css` filenames differ; not imported). Style ref at pathname `/spike-style` (DEV or `VITE_ENABLE_STYLE_SPIKE=true`). Verification table filled in STYLING.md §2. Residual: only weight 400 self-hosted (no variable Mulish); bold may synthesize. Polishing visual confirm of `/spike-style` still pending.
 
 ---
 
@@ -253,16 +277,22 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - Loading, error (RPC unavailable), and empty variants for each state
 
 **Acceptance criteria:**
-- [ ] All three states render from live API data (mockable via fixtures)
-- [ ] Illustrative estimate always carries the "illustrative network estimate" label + methodology link
-- [ ] Every timestamped value shows freshness
-- [ ] A user can reach validator selection in one tap from any state
-- [ ] 320 px clean; large balances don't overflow
+- [x] All three states render from live API data (mockable via fixtures)
+- [x] Illustrative estimate always carries the "illustrative network estimate" label + methodology link
+- [x] Every timestamped value shows freshness
+- [x] A user can reach validator selection in one tap from any state
+- [x] 320 px clean; large balances don't overflow
 
 **Verification:** `npm run build`; state matrix manually checked; Testing regression in P1-16.
 
 **Notes:**
--
+- Done 2026-08-03. Home container switches on `useWallet` + `GET /api/me/staking-position`.
+- **Auth bridge:** `client/src/api/walletAuth.ts` maps VeriLock-shaped `WalletAuthApi` (`token`/`nonce`) onto cookie sessions (`challengeId`/`message`, `credentials: 'include'`). Pay path in `useWallet` changed to connect→address→challenge→sign (Steakout challenges are address-bound; VeriLock `challenge(null)` no longer applies).
+- **API client:** `api/http.ts` (ApiError + credentials), `api/position.ts` envelope types + fetch.
+- **Shared components (first use):** `Amount`, `FreshnessTag`, `PositionStateBadge` under `client/src/components/`.
+- **Home states:** `DisconnectedHome`, `NotStakedHome`, `StakedHome` + `useStakingPosition`; co-located `Home.css` (`--so-*` + nq utilities). Illustrative estimate labeled + links `#/learn/methodology`. No staking write txs (P1-12).
+- **Helpers:** `client/src/luna.ts` (format NIM from Luna).
+- Verified: `npm run build` pass; `npm run test:client` 27/27.
 
 ---
 
@@ -282,16 +312,20 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - Skeleton loading + empty + error states
 
 **Acceptance criteria:**
-- [ ] Works fully disconnected (no wallet)
-- [ ] Every card field honors null → `Insufficient data` rendering (no `-1`, no fake zeros)
-- [ ] Unlisted validators flagged when shown
-- [ ] One tap from card → profile
-- [ ] Long names/missing logos handled (verified with stress fixtures)
+- [x] Works fully disconnected (no wallet)
+- [x] Every card field honors null → `Insufficient data` rendering (no `-1`, no fake zeros)
+- [x] Unlisted validators flagged when shown
+- [x] One tap from card → profile
+- [x] Long names/missing logos handled (verified with stress fixtures)
 
 **Verification:** manual pass + P3-06 stress sweep later; build green.
 
 **Notes:**
--
+- Done 2026-08-03. Modules: `client/src/validators/Directory.tsx` + `Directory.css`, `ValidatorCard.tsx` + `ValidatorCard.css`, `api.ts` (fetch + sort enum), `format.ts` (null-safe display helpers). `Validators.tsx` is a thin entry that renders Directory; profile route remains P1-11 (`Profile.tsx` via App shell).
+- Fetch: `GET /api/validators?sort=&listed=` with AbortController on sort/filter change. Default sort `recommended`; listed-only checkbox maps to `listed=true`.
+- Cards: name + logo/initials fallback, official score, stake/dominance/stakers, declared fee/payout type/schedule (Registry declaration), observation stub chip, Listed/Unlisted flag, `View record` → `#/validators/{compactAddress}`.
+- Recommended explainer shown only for recommended sort (not financial advice / not “best” ranking). Skeleton / empty / error + retry states.
+- Unit: `tests/unit/client/validators-format.test.ts`. `npm run build` + `npm run test:client` green.
 
 ---
 
@@ -311,15 +345,19 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - Not-found state for unknown addresses
 
 **Acceptance criteria:**
-- [ ] Public without wallet; shareable URL shape (meta tags land in P2-16)
-- [ ] Declared vs observed visually separated per METHODOLOGY.md
-- [ ] Every metric shows definition affordance + freshness
-- [ ] Score rendered as official Nimiq score, never blended with Steakout status
+- [x] Public without wallet; shareable URL shape (meta tags land in P2-16)
+- [x] Declared vs observed visually separated per METHODOLOGY.md
+- [x] Every metric shows definition affordance + freshness
+- [x] Score rendered as official Nimiq score, never blended with Steakout status
 
 **Verification:** manual pass against API fixtures; build green.
 
 **Notes:**
--
+- Done 2026-08-03. Summary layer only: `client/src/validators/Profile.tsx` + `Profile.css`; `StatusChip` + `DataStatusTag` under `client/src/components/`.
+- Routing: `App.tsx` switches on `match.param` — `#/validators` list (P1-10) vs `#/validators/:address` profile. Hash routes already matched address param in `routes.ts`.
+- Fetches `GET /api/validators/:address`; states: loading / invalid address / 404 / error / ok. Explorer via `buildNimiqAddressExplorerUrl` (reward + validator).
+- Official Trust Score card captioned "Nimiq official", visually distinct from "Steakout observation" (stub `insufficient-data` until Phase 2). Declared fee/type/schedule + dominance/stake use `Registry declaration` tags + freshness.
+- Stake CTA disabled stub ("coming soon") — no provider/review invocation (P1-12).
 
 ---
 

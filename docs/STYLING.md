@@ -18,32 +18,54 @@ Steakout styles with **[nimiq-css](https://onmax.github.io/nimiq-ui/nimiq-css/ge
 npm install nimiq-css --prefix client
 ```
 
+Installed: **nimiq-css@1.0.0-beta.162** (workspace-hoisted under root `node_modules/`).
+
 `client/src/styles/nimiq.css`:
 
 ```css
-/* Full framework: */
+/* Chosen strategy: full framework index (see verification below). */
 @import 'nimiq-css/css/index.css';
 
-/* — or, if we want explicit layer control, the documented per-layer form:
-@import 'nimiq-css/css/preflights.css' @layer nq-preflights;
-@import 'nimiq-css/css/colors.css'    @layer nq-colors;
-@import 'nimiq-css/css/fonts.css'     @layer nq-fonts;
-@import 'nimiq-css/css/utilities.css' @layer nq-utilities;
+/*
+  Per-layer alternative (package names as of beta.162 — not the older docs names):
+  @import 'nimiq-css/css/colors.css' layer(nq-colors);
+  @import 'nimiq-css/css/preflight.css' layer(nq-preflight);
+  @import 'nimiq-css/css/typography.css' layer(nq-typography);
+  @import 'nimiq-css/css/spacing.css' layer(nq-spacing);
+  @import 'nimiq-css/css/utilities.css' layer(nq-utilities);
+  @import 'nimiq-css/css/animations.css' layer(nq-animations);
+  @import 'nimiq-css/css/atomic.css' layer(nq-atomic);
+  fonts.css and static-content.css are never in index — import separately if needed.
 */
 
 @import './tokens.css';
 @import './base.css';
 ```
 
+**Chosen import strategy: full `index.css`.** Reasons: one import, matches package README primary path, already pulls typography/prose/utilities. Per-layer form is reserved if we need to drop animations/atomic or add `static-content.css`. Fonts are handled in `base.css` (see below), not via `fonts.css`.
+
 Import order matters: nimiq-css layers first, Steakout overrides last. `main.tsx` imports `styles/nimiq.css` once; no other global CSS entry points.
 
-**Fonts (Vite):** place the nimiq-css font files in `client/public/assets/fonts/` (the documented default path): Mulish (variable weight) for UI text, Fira Mono for numbers/hashes. If `fonts.css` paths don't resolve, copy the documented `@font-face` blocks into `base.css` with corrected paths.
+**Fonts (Vite):** self-hosted in `client/public/assets/fonts/`:
+- `Mulish-Regular.ttf` → family `Mulish` weight 400
+- `FiraMono-Regular.ttf` → family `Fira Mono` weight 400
 
-**Verify at install time (record results in this file):**
-- Exact CSS custom property names exposed by the colors layer (`node_modules/nimiq-css/css/colors.css`)
-- The typography class inventory (`nq-text-*` from the getting-started example is **unconfirmed** — check before use)
-- The prose escape-hatch class (`nq-not-prose` vs `not-prose` — docs show both)
-- Whether `index.css` includes typography/prose or only the four core layers
+Package `fonts.css` expects different filenames (`Mulish-VariableFont_wght.ttf`, `FiraMono-400.ttf`) and is **not** imported. Corrected `@font-face` blocks live in `base.css`. `--nq-font-mono` is overridden to prefer Fira Mono (preflight defaults to Fira Code).
+
+**Hidden style reference:** pathname `/spike-style` (`client/src/spike/StyleReference.tsx`). Enabled in DEV or when `VITE_ENABLE_STYLE_SPIKE=true`.
+
+### Verify-at-install results (2026-08-03, nimiq-css@1.0.0-beta.162)
+
+Inspected: `node_modules/nimiq-css/dist/css/` (package exports map `./css/*` → `./dist/css/*`).
+
+| Check | Result |
+|---|---|
+| Color custom properties | Named `--colors-{scale}-{step}` and bare `--colors-{scale}`. Scales: Neutral (0, 50–900, 1100 + bare), Blue / Green / Red / Orange / Gold / Purple (400, 500, 600, 1100 + bare). Plus gradient tokens. Values use `light-dark(oklch(...), oklch(...))`. Example: `--colors-neutral-50`, `--colors-red`, `--colors-green-1100`. |
+| Typography classes `nq-text-*` | **Not present** in modern layers. Only legacy `dist/css/legacy/typography.css` has `.nq-text-s`. **Do not use `nq-text-*` until/unless we adopt legacy or they reappear.** Use `nq-label`, `nq-subline`, `nq-heading` / `nq-heading-lg`, and prose instead. |
+| Prose escape hatch | **`.nq-not-prose`** (also respected as a descendant selector). Plain `not-prose` is **not** defined. Prose classes: `.nq-prose`, `.nq-prose-compact` (attribute forms `[nq-prose]`, `[nq-prose-compact]` also work). |
+| What `index.css` includes | `colors` → `preflight` → `typography` → `spacing` → `utilities` → `animations` → `atomic`. **Includes typography/prose.** Does **not** include `fonts.css` or `static-content.css` (static-content is commented out with a note to import yourself). |
+| Layer names (actual) | `nq-colors`, `nq-preflight` (singular), `nq-typography`, `nq-spacing`, `nq-utilities`, `nq-animations`, `nq-atomic`. Older docs that say `preflights` / four-layer-only are outdated. |
+| Confirmed utility samples | `nq-card`, `nq-card-lg`, `nq-pill-*` (blue/white/gold/green/orange/red/secondary/tertiary + `nq-pill-lg`/`xl`), `nq-ghost-btn`, `nq-close-btn`, `nq-label`, `nq-subline`, `nq-arrow`, `nq-arrow-back`, `nq-input-box`, `nq-switch`, `nq-focusable`, `nq-hoverable`, `nq-hoverable-cta`, `nq-curtain-y`, scrollbar utils. |
 
 ## 3. Palette mapping
 
@@ -61,7 +83,24 @@ nimiq-css ships scales (50–1100) for: **Neutral, Blue, Green, Red, Orange, Gol
 | Links / neutral info | Blue 400–600 | All links, explorer references, info notices |
 | Disabled / unknown | Neutral 200–400 | `Insufficient data`, `Unavailable` states |
 
-`tokens.css` defines Steakout semantic tokens (`--so-surface`, `--so-ink`, `--so-accent`, `--so-verified`, `--so-warn`, `--so-info`, …) referencing the nimiq-css palette variables. **Components consume `--so-*` tokens, never raw palette variables** — one mapping layer, one place to re-theme.
+`tokens.css` defines Steakout semantic tokens referencing the nimiq-css palette variables (with hex fallbacks). **Components consume `--so-*` tokens, never raw palette variables** — one mapping layer, one place to re-theme.
+
+| Token | Maps to (palette) | Role |
+|---|---|---|
+| `--so-surface` | `--colors-neutral-50` | Page background |
+| `--so-card` | `--colors-white` | Card / elevated surface |
+| `--so-ink` | `--colors-neutral` | Primary text |
+| `--so-muted` | `--colors-neutral-700` | Secondary text, timestamps |
+| `--so-accent` / `--so-ember` | `--colors-red` | Brand ember (sparing) |
+| `--so-accent-soft` / `--so-accent-strong` | red-400 / red-1100 | Soft fill / strong accent text |
+| `--so-verified` (+ soft/strong) | green / green-400 / green-1100 | On-schedule, verified only |
+| `--so-warn` (+ soft/strong/alt) | gold / gold-400 / gold-1100 / orange | Incomplete, irregular, stale |
+| `--so-not-observed` (+ soft) | red-1100 / red-500 | Needs review (muted, not alarm) |
+| `--so-info` (+ soft/strong) | blue / blue-400 / blue-1100 | Links, explorer, info notices |
+| `--so-rule` | `--colors-neutral-300` | Dividers, borders |
+| `--so-disabled` (+ soft/ink) | neutral-500 / 200 / 600 | Insufficient / unavailable |
+| `--so-focus` | `--colors-blue` | Focus ring |
+| `--so-shadow` | `--nq-shadow` (preflight) | Soft elevation |
 
 ## 4. Component mapping (nimiq-css utilities)
 
