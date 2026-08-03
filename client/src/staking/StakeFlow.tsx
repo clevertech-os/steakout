@@ -79,6 +79,7 @@ import {
   STAKE_CONTINUE_REVIEW,
   STAKE_DONE,
   STAKE_FEE_HEADROOM_NOTE,
+  STAKE_WALLET_BUDGET_NOTE,
   STAKE_IN_PROGRESS,
   STAKE_INTENT_GONE,
   STAKE_NON_CUSTODIAL,
@@ -132,8 +133,15 @@ export interface StakeFlowProps {
   nimiq?: NimiqProvider | null
   /** Current position state when known. */
   positionState?: PositionState | null
-  /** Account liquid balance in Luna (for stake presets). */
+  /**
+   * Stake budget in Luna (presets + max-safe). Prefer Pay-aligned wallet total
+   * (free + open HTLC as sender) so we can test whether Pay funds stake from contracts.
+   */
   availableLuna?: number | null
+  /** Free basic-account balance (display only when stake budget includes HTLCs). */
+  freeBalanceLuna?: number | null
+  /** Open HTLC-as-sender balance included in availableLuna (display only). */
+  htlcBalanceLuna?: number | null
   /** Current delegation if already a staker. */
   currentDelegation?: string | null
   /** Staker bucket balances for retire/remove pool sizes. */
@@ -177,6 +185,8 @@ export default function StakeFlow(props: StakeFlowProps) {
     nimiq,
     positionState,
     availableLuna,
+    freeBalanceLuna,
+    htlcBalanceLuna,
     currentDelegation,
     stakerBalances,
     mode = 'stake',
@@ -945,7 +955,7 @@ export default function StakeFlow(props: StakeFlowProps) {
                   ? 'Retirable (active + inactive)'
                   : isRemove
                     ? 'Removable (retired)'
-                    : 'Free on address'}
+                    : 'Wallet balance (stake budget)'}
               </p>
               <Amount
                 luna={isLifecycle ? poolLuna : (availableLuna ?? null)}
@@ -954,9 +964,22 @@ export default function StakeFlow(props: StakeFlowProps) {
                     ? 'Retirable stake'
                     : isRemove
                       ? 'Removable stake'
-                      : 'Free on address'
+                      : 'Wallet balance'
                 }
               />
+              {!isLifecycle &&
+              (htlcBalanceLuna ?? 0) > 0 &&
+              freeBalanceLuna != null ? (
+                <p className="stake-flow-muted">
+                  Free on address{' '}
+                  <span className="mono">{formatNimFromLuna(freeBalanceLuna)} NIM</span>
+                  {' · '}
+                  In Pay contracts{' '}
+                  <span className="mono">
+                    {formatNimFromLuna(htlcBalanceLuna ?? 0)} NIM
+                  </span>
+                </p>
+              ) : null}
               <p className="stake-flow-muted">
                 Maximum:{' '}
                 <span className="mono">{formatNimFromLuna(maxSafe)} NIM</span>
@@ -966,11 +989,7 @@ export default function StakeFlow(props: StakeFlowProps) {
                   {isRetire ? RETIRE_POOL_NOTE : REMOVE_POOL_NOTE}
                 </p>
               ) : (
-                <p className="stake-flow-muted">
-                  Stake amounts use free on-address balance (not Pay payment
-                  contracts). Wallet total in Pay may be higher when NIM is in
-                  HTLCs for fast transfers.
-                </p>
+                <p className="stake-flow-muted">{STAKE_WALLET_BUDGET_NOTE}</p>
               )}
             </div>
 
@@ -1246,9 +1265,14 @@ export default function StakeFlow(props: StakeFlowProps) {
   )
 }
 
-/** Load available balance + staker buckets for stake/retire/remove flows. */
+/**
+ * Load stake budget + staker buckets for stake/retire/remove flows.
+ * Stake budget prefers Pay-aligned wallet total (free + open HTLC as sender).
+ */
 export async function loadAvailableLunaForStake(): Promise<{
   availableLuna: number | null
+  freeBalanceLuna: number | null
+  htlcBalanceLuna: number
   positionState: PositionState | null
   currentDelegation: string | null
   validatorName: string | null
@@ -1256,9 +1280,19 @@ export async function loadAvailableLunaForStake(): Promise<{
   withdrawableAt: string | null
 }> {
   try {
-    const env = await fetchStakingPosition()
+    const env = await fetchStakingPosition({ fresh: true })
+    const free = env.data.accountBalanceLuna
+    const htlc = env.data.htlcBalanceLuna ?? 0
+    const wallet =
+      env.data.walletBalanceLuna != null
+        ? env.data.walletBalanceLuna
+        : free == null
+          ? null
+          : free + htlc
     return {
-      availableLuna: env.data.accountBalanceLuna,
+      availableLuna: wallet,
+      freeBalanceLuna: free,
+      htlcBalanceLuna: htlc,
       positionState: env.data.state,
       currentDelegation: env.data.staker.delegation,
       validatorName: env.data.staker.validatorName,
@@ -1272,6 +1306,8 @@ export async function loadAvailableLunaForStake(): Promise<{
   } catch {
     return {
       availableLuna: null,
+      freeBalanceLuna: null,
+      htlcBalanceLuna: 0,
       positionState: null,
       currentDelegation: null,
       validatorName: null,

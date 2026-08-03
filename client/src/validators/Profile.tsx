@@ -171,9 +171,17 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
   const [stakeFlowMode, setStakeFlowMode] = useState<StakeFlowMode>('stake')
   const [stakeBalance, setStakeBalance] = useState<{
     availableLuna: number | null
+    freeBalanceLuna: number | null
+    htlcBalanceLuna: number
     positionState: PositionState | null
     currentDelegation: string | null
-  }>({ availableLuna: null, positionState: null, currentDelegation: null })
+  }>({
+    availableLuna: null,
+    freeBalanceLuna: null,
+    htlcBalanceLuna: 0,
+    positionState: null,
+    currentDelegation: null,
+  })
 
   const wallet = useWallet({ auth: walletAuthApi })
 
@@ -688,6 +696,8 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           nimiq={wallet.nimiq}
           positionState={stakeBalance.positionState}
           availableLuna={stakeBalance.availableLuna}
+          freeBalanceLuna={stakeBalance.freeBalanceLuna}
+          htlcBalanceLuna={stakeBalance.htlcBalanceLuna}
           currentDelegation={stakeBalance.currentDelegation}
           onClose={() => setStakeOpen(false)}
           onConnectedRequest={() => {

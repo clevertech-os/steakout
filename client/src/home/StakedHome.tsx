@@ -282,7 +282,11 @@ export default function StakedHome({
           walletAddress={address}
           nimiq={nimiq}
           positionState={state}
-          availableLuna={data.accountBalanceLuna}
+          availableLuna={
+            data.walletBalanceLuna ?? data.accountBalanceLuna
+          }
+          freeBalanceLuna={data.accountBalanceLuna}
+          htlcBalanceLuna={data.htlcBalanceLuna ?? 0}
           currentDelegation={staker.delegation}
           stakerBalances={{
             activeLuna: staker.activeLuna,

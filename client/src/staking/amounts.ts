@@ -20,7 +20,11 @@ export const MIN_STAKE_LUNA = 1
 export type AmountPresetId = '25' | '50' | 'max-safe' | 'custom'
 
 /**
- * Maximum Luna the user may stake from an available account balance.
+ * Maximum Luna the user may stake from an available wallet budget.
+ *
+ * Callers pass Pay-aligned wallet total when known (free basic + open HTLC as
+ * sender). That lets us test whether Nimiq Pay can fund stake txs from payment
+ * contracts; chain/wallet remains authoritative at approve time.
  * Returns 0 when balance cannot cover headroom + minimum stake.
  */
 export function maxSafeStakeLuna(availableLuna: number | null | undefined): number {

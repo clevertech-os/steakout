@@ -19,7 +19,7 @@ export interface WalletBalanceProps {
 }
 
 const EXPLAINER =
-  'Nimiq Pay may hold NIM in payment contracts (HTLCs) for fast transfers. That still counts as your wallet balance in Pay. Free on-address balance is what new stake amounts use first.'
+  'Nimiq Pay may hold NIM in payment contracts (HTLCs) for fast transfers. Wallet total (free + contracts) is used as the stake budget so we can test whether Pay funds stake from contracts. If approve fails, free NIM on-address first.'
 
 export default function WalletBalance({
   accountBalanceLuna,

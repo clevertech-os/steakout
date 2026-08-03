@@ -123,7 +123,14 @@ export const STAKE_BACK_HOME = 'View position'
 
 /** Fee headroom note under presets. */
 export const STAKE_FEE_HEADROOM_NOTE =
-  'Maximum safe reserves 1 NIM of available balance so fees and leftover spending room are not zeroed out by accident.'
+  'Maximum safe reserves 1 NIM of available wallet balance so fees and leftover spending room are not zeroed out by accident.'
+
+/**
+ * Stake budget includes open Pay HTLCs (as sender). Hypothesis: Pay may resolve
+ * contracts when funding a stake approval. If approve fails, free the NIM in Pay first.
+ */
+export const STAKE_WALLET_BUDGET_NOTE =
+  'Amount uses wallet total (free on-address + open Pay payment contracts). If Nimiq Pay cannot fund the stake from contracts, free NIM on-address and try again.'
 
 /** Retire stake flow (P3-01). */
 export const RETIRE_AMOUNT_TITLE = 'Retire stake'
