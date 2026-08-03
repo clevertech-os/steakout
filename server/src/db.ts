@@ -101,6 +101,17 @@ const schema = `
     used_at     TEXT
   );
 
+  -- Desktop browser session handoff: phone (Pay) approves, desktop claims cookie.
+  CREATE TABLE IF NOT EXISTS desktop_pairings (
+    id          TEXT PRIMARY KEY,
+    status      TEXT NOT NULL DEFAULT 'waiting',
+    address     TEXT,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    expires_at  TEXT NOT NULL,
+    approved_at TEXT,
+    claimed_at  TEXT
+  );
+
   -- P3-04: aggregate product counters only (no addresses / PII).
   CREATE TABLE IF NOT EXISTS metrics (
     key         TEXT PRIMARY KEY,
@@ -136,6 +147,9 @@ const requiredColumns: Record<string, readonly string[]> = {
     'created_at', 'expires_at', 'confirmed_at',
   ],
   auth_challenges: ['id', 'address', 'message', 'created_at', 'expires_at', 'used_at'],
+  desktop_pairings: [
+    'id', 'status', 'address', 'created_at', 'expires_at', 'approved_at', 'claimed_at',
+  ],
   metrics: ['key', 'value', 'updated_at'],
 }
 
@@ -182,6 +196,14 @@ const additiveColumnDefinitions: Record<string, Record<string, string>> = {
     address: "TEXT NOT NULL DEFAULT ''", message: "TEXT NOT NULL DEFAULT ''",
     created_at: "TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
     expires_at: "TEXT NOT NULL DEFAULT ''", used_at: 'TEXT',
+  },
+  desktop_pairings: {
+    status: "TEXT NOT NULL DEFAULT 'waiting'",
+    address: 'TEXT',
+    created_at: "TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+    expires_at: "TEXT NOT NULL DEFAULT ''",
+    approved_at: 'TEXT',
+    claimed_at: 'TEXT',
   },
   metrics: {
     value: 'INTEGER NOT NULL DEFAULT 0',

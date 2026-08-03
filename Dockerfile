@@ -14,6 +14,12 @@ RUN apt-get update \
 COPY client ./client
 COPY server ./server
 
+# Client bake-time env (Vite). Production defaults: mainnet + public origin for Pay QR.
+ARG VITE_NIMIQ_NETWORK=mainnet
+ARG VITE_PUBLIC_APP_URL=https://steakout-production.up.railway.app
+ENV VITE_NIMIQ_NETWORK=$VITE_NIMIQ_NETWORK
+ENV VITE_PUBLIC_APP_URL=$VITE_PUBLIC_APP_URL
+
 RUN npm run build
 
 FROM node:22-bookworm-slim

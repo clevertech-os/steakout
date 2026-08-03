@@ -61,7 +61,65 @@ interface RegistryRecord {
   [key: string]: unknown
 }
 
-const DEFAULT_API_URL = 'https://validators-api-main.je-cf9.workers.dev/api/v1/validators'
+/** Official Nimiq validators-api workers (github.com/nimiq/validators-api). */
+export const VALIDATORS_API_MAINNET =
+  'https://validators-api-main.je-cf9.workers.dev/api/v1/validators'
+export const VALIDATORS_API_TESTNET =
+  'https://validators-api-test.je-cf9.workers.dev/api/v1/validators'
+
+const DEFAULT_API_URL = VALIDATORS_API_MAINNET
+
+function isTestnetNetwork(network: string | undefined): boolean {
+  const n = (network ?? '').trim().toLowerCase()
+  return n === 'test' || n === 'testnet'
+}
+
+/**
+ * Pick the registry base URL for the configured chain.
+ * - Explicit VALIDATORS_API_URL / options.apiUrl wins when it does not clearly
+ *   contradict NIMIQ_NETWORK (main worker on testnet / test worker on main).
+ * - Otherwise defaults to the official main or test worker.
+ */
+export function resolveValidatorsApiUrl(options?: {
+  apiUrl?: string | null
+  network?: string | null
+  /** Optional logger for misconfig overrides (defaults to console.warn). */
+  warn?: (line: string) => void
+}): string {
+  const network = options?.network ?? process.env.NIMIQ_NETWORK ?? 'main'
+  const testnet = isTestnetNetwork(network)
+  const expected = testnet ? VALIDATORS_API_TESTNET : VALIDATORS_API_MAINNET
+  const explicit = (options?.apiUrl ?? process.env.VALIDATORS_API_URL)?.trim() || null
+  if (!explicit) return expected
+
+  const looksMain = /validators-api-main/i.test(explicit)
+  const looksTest = /validators-api-test/i.test(explicit)
+  if (testnet && looksMain && !looksTest) {
+    const warn = options?.warn ?? ((line: string) => console.warn(line))
+    warn(
+      JSON.stringify({
+        validatorSync: 'api-url-override',
+        reason: 'testnet-with-main-registry',
+        configured: explicit,
+        using: expected,
+      }),
+    )
+    return expected
+  }
+  if (!testnet && looksTest && !looksMain) {
+    const warn = options?.warn ?? ((line: string) => console.warn(line))
+    warn(
+      JSON.stringify({
+        validatorSync: 'api-url-override',
+        reason: 'mainnet-with-test-registry',
+        configured: explicit,
+        using: expected,
+      }),
+    )
+    return expected
+  }
+  return explicit
+}
 
 function isRecord(value: unknown): value is RegistryRecord {
   return typeof value === 'object' && value !== null
@@ -143,7 +201,7 @@ export async function fetchValidators(
   mode: ValidatorMode,
   options: FetchValidatorsOptions = {},
 ): Promise<ValidatorSnapshot> {
-  const apiUrl = options.apiUrl ?? process.env.VALIDATORS_API_URL ?? DEFAULT_API_URL
+  const apiUrl = resolveValidatorsApiUrl({ apiUrl: options.apiUrl })
   const sourceTimestamp = options.now?.() ?? new Date().toISOString()
   const endpoint = new URL(apiUrl)
   endpoint.searchParams.set('only-known', mode === 'known-only' ? 'true' : 'false')

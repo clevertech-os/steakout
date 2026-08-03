@@ -13,12 +13,16 @@ export default defineConfig({
   plugins: [react(), ...nimiq()],
   server: {
     port: 5173,
+    // cloudflared quick tunnels + LAN Mini App (Pay) hit Vite via Host headers
+    // that are not localhost — allow those without disabling host checks entirely.
+    allowedHosts: ['.trycloudflare.com', '.local'],
     proxy: {
       '/api': 'http://localhost:3000',
     },
   },
   preview: {
     port: 4173,
+    allowedHosts: ['.trycloudflare.com', '.local'],
     proxy: {
       '/api': 'http://localhost:3000',
     },

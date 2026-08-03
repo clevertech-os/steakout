@@ -20,6 +20,7 @@ import {
   peekHubRedirectInUrl,
   RPC_ID_SEARCH_PARAM,
 } from './hubRedirectParse'
+import { formatDisplayAddress } from './addresses'
 import { tryDeriveTxHash } from './txHashFromSerialized'
 import { walletLog, walletWarn } from './walletDebug'
 
@@ -42,7 +43,7 @@ const HUB_ENDPOINT =
 /** Override with VITE_NIMIQ_RPC_URL; used for client-side tx poll helpers. */
 const NIMIQ_RPC_URL =
   (import.meta.env.VITE_NIMIQ_RPC_URL as string | undefined)?.trim() ||
-  (IS_TESTNET ? 'https://rpc.testnet.nimiq.com' : 'https://rpc.nimiqwatch.com')
+  (IS_TESTNET ? 'https://rpc.testnet.nimiqwatch.com' : 'https://rpc.nimiqwatch.com')
 
 /** Shown in Nimiq Hub / Pay when approving login and transactions. */
 const APP_NAME = 'Steakout'
@@ -165,13 +166,20 @@ function hubRedirectBehavior(localState: Record<string, unknown>) {
   return createHubRedirectBehavior(getHubReturnUrl(), localState)
 }
 
-/** Hub redirect is the supported desktop flow; popup is opt-in only. */
+/**
+ * Prefer full-page Hub redirect on mobile (popup blockers).
+ * On desktop, prefer **popup**: choose-address → challenge → sign-message in one
+ * chain without putting Hub’s response in the SPA hash (hash router conflict).
+ * Explicit `useRedirect` / `usePopup` still override.
+ */
 export function shouldUseHubRedirect(options?: { useRedirect?: boolean; usePopup?: boolean }): boolean {
   if (options?.usePopup === true) return false
   if (options?.useRedirect === false) return false
-  // Per integration guide: prefer redirects for mobile/kiosk to avoid popup blockers.
+  if (options?.useRedirect === true) return true
+  // Mobile / kiosk: redirects avoid popup blockers (Nimiq integration guide).
   if (isMobileDevice()) return true
-  return true
+  // Desktop: popup keeps the two-step login inside the SPA.
+  return false
 }
 
 export const HUB_REDIRECT_MESSAGE = 'Redirecting to Nimiq Hub…'
@@ -778,6 +786,57 @@ export function isLoopbackAppOrigin(origin = getPublicAppOrigin()): boolean {
 }
 
 /**
+ * True for plain HTTP app URLs (typical LAN dev).
+ * Nimiq Pay mini-app WebViews commonly refuse cleartext `http://` loads — Pay opens
+ * but the page stays blank. Prefer HTTPS (tunnel or deployed host).
+ */
+export function isCleartextHttpAppUrl(appUrl: string): boolean {
+  try {
+    return new URL(appUrl).protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Mini-app URL a phone can open (LAN / tunnel when desktop is on localhost).
+ * Rewrites loopback origins to `VITE_PUBLIC_APP_URL` when configured.
+ */
+export function getPhoneReachableMiniAppUrl(appUrl?: string): string {
+  const raw = normalizeMiniAppUrl(appUrl ?? currentMiniAppUrl())
+  const publicOrigin = getPublicAppOrigin()
+  try {
+    const parsed = new URL(raw)
+    if (
+      isLoopbackAppOrigin(parsed.origin) &&
+      publicOrigin &&
+      !isLoopbackAppOrigin(publicOrigin)
+    ) {
+      const pub = new URL(publicOrigin)
+      parsed.protocol = pub.protocol
+      parsed.host = pub.host
+    }
+    return parsed.href
+  } catch {
+    return raw
+  }
+}
+
+/** `nimiqpay://miniapp?url=…` using a phone-reachable web URL. */
+export function getPhoneReachablePayDeepLink(appUrl?: string): string {
+  return nimiqPayDeepLink(getPhoneReachableMiniAppUrl(appUrl))
+}
+
+/**
+ * QR image URL for a payload (no extra npm dependency).
+ * Uses a public QR API; the encoded string is still shown as plain text for offline fallback.
+ */
+export function buildQrImageUrl(payload: string, size = 220): string {
+  const dim = Math.max(120, Math.min(400, Math.floor(size)))
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${dim}x${dim}&margin=8&ecc=M&data=${encodeURIComponent(payload)}`
+}
+
+/**
  * `nimiqpay://miniapp?url=<https url>`
  * @see https://www.nimiq.dev/mini-apps - Sharing Your Mini App
  */
@@ -917,7 +976,36 @@ async function withConnectedProvider(
 ): Promise<NimiqProvider> {
   const provider = await ensureNimiqProvider(existing ?? null)
   await provider.connect()
+  // App testnet vs Pay mainnet is a common blank failure — refuse early with a clear message.
+  try {
+    const active = (provider.getNetwork?.() ?? '').trim().toLowerCase()
+    if (IS_TESTNET && active && active !== 'testnet' && active !== 'test') {
+      throw new Error(
+        `Nimiq Pay is on “${active}”, but Steakout is testnet. Switch Pay to testnet and try again.`,
+      )
+    }
+    if (!IS_TESTNET && (active === 'testnet' || active === 'test')) {
+      throw new Error(
+        `Nimiq Pay is on testnet, but Steakout is mainnet. Switch Pay to mainnet (or use a testnet app build).`,
+      )
+    }
+  } catch (err) {
+    if (err instanceof Error && /Nimiq Pay is on/i.test(err.message)) throw err
+    // getNetwork may be missing on older hosts — continue.
+  }
   return provider
+}
+
+function outcomeFromThrown(err: unknown): ProviderTxOutcome {
+  const message =
+    err instanceof Error
+      ? err.message
+      : getProviderErrorMessage(err) || 'Wallet request failed.'
+  return {
+    kind: 'error',
+    message,
+    raw: formatProviderRaw(err),
+  }
 }
 
 /** Create staker + delegate. ReviewSheet must have been confirmed first. */
@@ -925,12 +1013,17 @@ export async function sendNewStakerTransaction(
   args: { delegation: string; value: number },
   existing?: NimiqProvider | null,
 ): Promise<ProviderTxOutcome> {
-  const provider = await withConnectedProvider(existing)
-  const result = await provider.sendNewStakerTransaction({
-    delegation: args.delegation,
-    value: args.value,
-  })
-  return normalizeProviderTxResult(result)
+  try {
+    const provider = await withConnectedProvider(existing)
+    // SDK docs use spaced NQ form; compact form can fail on some hosts.
+    const result = await provider.sendNewStakerTransaction({
+      delegation: formatDisplayAddress(args.delegation),
+      value: args.value,
+    })
+    return normalizeProviderTxResult(result)
+  } catch (err) {
+    return outcomeFromThrown(err)
+  }
 }
 
 /** Add stake to existing staker. */
@@ -938,21 +1031,13 @@ export async function sendStakeTransaction(
   args: { value: number },
   existing?: NimiqProvider | null,
 ): Promise<ProviderTxOutcome> {
-  const provider = await withConnectedProvider(existing)
-  const result = await provider.sendStakeTransaction({ value: args.value })
-  return normalizeProviderTxResult(result)
-}
-
-/** Set active stake balance. */
-export async function sendSetActiveStakeTransaction(
-  args: { newActiveBalance: number },
-  existing?: NimiqProvider | null,
-): Promise<ProviderTxOutcome> {
-  const provider = await withConnectedProvider(existing)
-  const result = await provider.sendSetActiveStakeTransaction({
-    newActiveBalance: args.newActiveBalance,
-  })
-  return normalizeProviderTxResult(result)
+  try {
+    const provider = await withConnectedProvider(existing)
+    const result = await provider.sendStakeTransaction({ value: args.value })
+    return normalizeProviderTxResult(result)
+  } catch (err) {
+    return outcomeFromThrown(err)
+  }
 }
 
 /** Change delegation. */
@@ -960,12 +1045,16 @@ export async function sendUpdateStakerTransaction(
   args: { newDelegation: string; reactivateAllStake?: boolean },
   existing?: NimiqProvider | null,
 ): Promise<ProviderTxOutcome> {
-  const provider = await withConnectedProvider(existing)
-  const result = await provider.sendUpdateStakerTransaction({
-    newDelegation: args.newDelegation,
-    reactivateAllStake: args.reactivateAllStake,
-  })
-  return normalizeProviderTxResult(result)
+  try {
+    const provider = await withConnectedProvider(existing)
+    const result = await provider.sendUpdateStakerTransaction({
+      newDelegation: formatDisplayAddress(args.newDelegation),
+      reactivateAllStake: args.reactivateAllStake,
+    })
+    return normalizeProviderTxResult(result)
+  } catch (err) {
+    return outcomeFromThrown(err)
+  }
 }
 
 /** Retire stake (waiting period applies). */
@@ -973,11 +1062,15 @@ export async function sendRetireStakeTransaction(
   args: { retireStake: number },
   existing?: NimiqProvider | null,
 ): Promise<ProviderTxOutcome> {
-  const provider = await withConnectedProvider(existing)
-  const result = await provider.sendRetireStakeTransaction({
-    retireStake: args.retireStake,
-  })
-  return normalizeProviderTxResult(result)
+  try {
+    const provider = await withConnectedProvider(existing)
+    const result = await provider.sendRetireStakeTransaction({
+      retireStake: args.retireStake,
+    })
+    return normalizeProviderTxResult(result)
+  } catch (err) {
+    return outcomeFromThrown(err)
+  }
 }
 
 /** Remove retired stake after waiting period. */
@@ -985,7 +1078,27 @@ export async function sendRemoveStakeTransaction(
   args: { value: number },
   existing?: NimiqProvider | null,
 ): Promise<ProviderTxOutcome> {
-  const provider = await withConnectedProvider(existing)
-  const result = await provider.sendRemoveStakeTransaction({ value: args.value })
-  return normalizeProviderTxResult(result)
+  try {
+    const provider = await withConnectedProvider(existing)
+    const result = await provider.sendRemoveStakeTransaction({ value: args.value })
+    return normalizeProviderTxResult(result)
+  } catch (err) {
+    return outcomeFromThrown(err)
+  }
+}
+
+/** Set active stake balance. */
+export async function sendSetActiveStakeTransaction(
+  args: { newActiveBalance: number },
+  existing?: NimiqProvider | null,
+): Promise<ProviderTxOutcome> {
+  try {
+    const provider = await withConnectedProvider(existing)
+    const result = await provider.sendSetActiveStakeTransaction({
+      newActiveBalance: args.newActiveBalance,
+    })
+    return normalizeProviderTxResult(result)
+  } catch (err) {
+    return outcomeFromThrown(err)
+  }
 }

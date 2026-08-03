@@ -44,6 +44,30 @@
   font-size: var(--so-text-md);
 }
 
+/* Testnet faucet — only mounted when VITE_NIMIQ_NETWORK=testnet */
+.home-faucet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--so-space-2);
+  width: 100%;
+}
+
+.home-faucet .home-cta {
+  width: 100%;
+}
+
+.home-faucet-note {
+  margin: 0;
+  color: var(--so-muted);
+  font-size: var(--so-text-sm);
+  line-height: 1.4;
+}
+
+.home-faucet .home-status,
+.home-faucet .home-error {
+  margin: 0;
+}
+
 .home-copy strong {
   font-weight: 600;
 }

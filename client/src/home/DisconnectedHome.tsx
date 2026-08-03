@@ -3,6 +3,8 @@
  * Primary headline locked to SPEC; supporting copy is methodology-safe (P3-09).
  */
 
+import OpenInNimiqPayQr from '../components/OpenInNimiqPayQr'
+
 export interface DisconnectedHomeProps {
   connecting: boolean
   walletStatus: string | null
@@ -11,6 +13,8 @@ export interface DisconnectedHomeProps {
   showOpenInPay: boolean
   onConnect: () => void
   onConnectPay?: () => void
+  /** After phone approves desktop pairing. */
+  onDesktopLinked?: (address: string) => void
 }
 
 export default function DisconnectedHome({
@@ -21,6 +25,7 @@ export default function DisconnectedHome({
   showOpenInPay,
   onConnect,
   onConnectPay,
+  onDesktopLinked,
 }: DisconnectedHomeProps) {
   return (
     <>
@@ -51,7 +56,7 @@ export default function DisconnectedHome({
             onClick={onConnect}
             disabled={connecting}
           >
-            {connecting ? 'Connecting…' : 'Connect Nimiq Pay wallet'}
+            {connecting ? 'Connecting…' : mobilePayConnect ? 'Connect Nimiq Pay wallet' : 'Connect wallet'}
           </button>
 
           {mobilePayConnect && onConnectPay ? (
@@ -91,6 +96,8 @@ export default function DisconnectedHome({
             Install Nimiq Pay, then return here, or continue with Nimiq Hub above.
           </p>
         ) : null}
+
+        <OpenInNimiqPayQr linkDesktopSession onDesktopLinked={onDesktopLinked} />
       </section>
     </>
   )

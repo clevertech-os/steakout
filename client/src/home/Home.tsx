@@ -12,9 +12,12 @@ import { ApiError } from '../api/http'
 import { isStakedState } from '../api/position'
 import { humanizeFetchError } from '../components/humanizeError'
 import { useWallet } from '../wallet/useWallet'
+import DesktopPairApprove from '../components/DesktopPairApprove'
+import { isNimiqPayHost } from '../nimiq'
 import DisconnectedHome from './DisconnectedHome'
 import NotStakedHome from './NotStakedHome'
 import StakedHome from './StakedHome'
+import TestnetFaucetButton from './TestnetFaucetButton'
 import { useStakingPosition } from './useStakingPosition'
 import './Home.css'
 
@@ -36,6 +39,22 @@ export default function Home() {
   const handleDisconnect = useCallback(() => {
     wallet.disconnect()
   }, [wallet])
+
+  const handleDesktopLinked = useCallback(
+    (address: string) => {
+      wallet.applySession(undefined, address)
+    },
+    [wallet],
+  )
+
+  const pairBanner = (
+    <DesktopPairApprove
+      enabled={isNimiqPayHost()}
+      walletConnected={wallet.status === 'connected' && Boolean(wallet.address)}
+      connecting={wallet.connecting}
+      onConnect={handleConnect}
+    />
+  )
 
   if (!wallet.bootReady) {
     return (
@@ -65,6 +84,7 @@ export default function Home() {
   if (wallet.status !== 'connected' || !wallet.address) {
     return (
       <div className="home">
+        {pairBanner}
         <DisconnectedHome
           connecting={wallet.connecting || wallet.status === 'connecting'}
           walletStatus={wallet.walletStatus}
@@ -73,6 +93,7 @@ export default function Home() {
           showOpenInPay={wallet.showOpenInPay}
           onConnect={handleConnect}
           onConnectPay={wallet.mobilePayConnect ? handleConnectPay : undefined}
+          onDesktopLinked={handleDesktopLinked}
         />
       </div>
     )
@@ -149,6 +170,9 @@ export default function Home() {
             <a className="nq-pill-secondary home-cta" href="#/validators">
               Explore validators
             </a>
+            {wallet.address ? (
+              <TestnetFaucetButton address={wallet.address} onFunded={position.refresh} />
+            ) : null}
             <button type="button" className="nq-ghost-btn home-cta" onClick={handleDisconnect}>
               Disconnect
             </button>
@@ -162,6 +186,7 @@ export default function Home() {
   if (envelope && isStakedState(envelope.data.state)) {
     return (
       <div className="home">
+        {pairBanner}
         <StakedHome
           address={wallet.address}
           envelope={envelope}
@@ -177,6 +202,7 @@ export default function Home() {
   // NotStaked (or success without envelope edge — treat as empty not-staked)
   return (
     <div className="home">
+      {pairBanner}
       <NotStakedHome
         address={wallet.address}
         envelope={envelope}

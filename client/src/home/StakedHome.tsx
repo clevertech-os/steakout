@@ -17,6 +17,7 @@ import {
   RETIRE_PROGRESS_WITHDRAWABLE,
 } from '../staking/copy'
 import { maxRemoveLuna, maxRetireLuna } from '../staking/amounts'
+import TestnetFaucetButton from './TestnetFaucetButton'
 
 export interface StakedHomeProps {
   address: string
@@ -238,6 +239,7 @@ export default function StakedHome({
             ),
           )}
 
+          <TestnetFaucetButton address={address} onFunded={onRetry} />
           <button type="button" className="nq-ghost-btn home-cta" onClick={onDisconnect}>
             Disconnect
           </button>

@@ -24,6 +24,8 @@ import { rateLimit } from './rate-limit.js'
 const COOKIE_NAME = 'steakout_session'
 const DEFAULT_CHALLENGE_TTL_MS = 5 * 60 * 1000
 const DEFAULT_SESSION_TTL_MS = 24 * 60 * 60 * 1000
+/** Desktop↔phone session handoff QR lifetime. */
+const DEFAULT_DESKTOP_PAIR_TTL_MS = 5 * 60 * 1000
 const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 
 export interface AuthOptions {
@@ -410,6 +412,163 @@ export function mountAuth(app: Express, options: AuthOptions): MountAuthResult {
     const session = setSessionCookie(res, address)
     res.json({
       address,
+      sessionExpiresAt: new Date(session.exp).toISOString(),
+    })
+  })
+
+  /**
+   * Desktop browser wants a session without Hub: create a pairing slot, show QR
+   * for Nimiq Pay, phone approves, desktop claims cookie.
+   */
+  authRouter.post('/desktop-pair', rateLimit(20, 60_000, { scope: 'auth-desktop-pair' }), (_req, res) => {
+    const pairId = randomUUID()
+    const createdAtMs = now()
+    const expiresAtMs = createdAtMs + DEFAULT_DESKTOP_PAIR_TTL_MS
+    const createdAt = new Date(createdAtMs).toISOString()
+    const expiresAt = new Date(expiresAtMs).toISOString()
+    database
+      .prepare(
+        `INSERT INTO desktop_pairings (id, status, address, created_at, expires_at, approved_at, claimed_at)
+         VALUES (?, 'waiting', NULL, ?, ?, NULL, NULL)`,
+      )
+      .run(pairId, createdAt, expiresAt)
+    res.json({ pairId, expiresAt })
+  })
+
+  authRouter.get('/desktop-pair/:pairId', (req, res) => {
+    const pairId = typeof req.params.pairId === 'string' ? req.params.pairId.trim() : ''
+    if (!pairId) {
+      sendError(res, 400, 'VALIDATION', 'pairId is required.')
+      return
+    }
+    const row = database
+      .prepare(
+        `SELECT id, status, address, expires_at AS expiresAt, claimed_at AS claimedAt
+         FROM desktop_pairings WHERE id = ?`,
+      )
+      .get(pairId) as
+      | { id: string; status: string; address: string | null; expiresAt: string; claimedAt: string | null }
+      | undefined
+    if (!row) {
+      sendError(res, 404, 'VALIDATION', 'Pairing request not found.')
+      return
+    }
+    const expiresMs = Date.parse(row.expiresAt)
+    if (!Number.isFinite(expiresMs) || expiresMs < now()) {
+      if (row.status === 'waiting' || row.status === 'approved') {
+        database
+          .prepare(`UPDATE desktop_pairings SET status = 'expired' WHERE id = ? AND status IN ('waiting','approved')`)
+          .run(pairId)
+      }
+      res.json({ pairId, status: 'expired', address: null, expiresAt: row.expiresAt })
+      return
+    }
+    res.json({
+      pairId,
+      status: row.status,
+      address: row.status === 'approved' || row.status === 'claimed' ? row.address : null,
+      expiresAt: row.expiresAt,
+    })
+  })
+
+  /** Phone (already signed in via Pay) approves the desktop pairing. */
+  authRouter.post('/desktop-pair/approve', requireAuth, (req, res) => {
+    const body = req.body as { pairId?: unknown }
+    const pairId = typeof body.pairId === 'string' ? body.pairId.trim() : ''
+    if (!pairId) {
+      sendError(res, 400, 'VALIDATION', 'pairId is required.')
+      return
+    }
+    const address = res.locals.address as string
+    const row = database
+      .prepare(
+        `SELECT id, status, expires_at AS expiresAt FROM desktop_pairings WHERE id = ?`,
+      )
+      .get(pairId) as { id: string; status: string; expiresAt: string } | undefined
+    if (!row) {
+      sendError(res, 404, 'VALIDATION', 'Pairing request not found.')
+      return
+    }
+    const expiresMs = Date.parse(row.expiresAt)
+    if (!Number.isFinite(expiresMs) || expiresMs < now()) {
+      database.prepare(`UPDATE desktop_pairings SET status = 'expired' WHERE id = ?`).run(pairId)
+      sendError(res, 400, 'VALIDATION', 'This pairing QR has expired. Generate a new one on desktop.')
+      return
+    }
+    if (row.status === 'claimed') {
+      sendError(res, 400, 'VALIDATION', 'This pairing was already used.')
+      return
+    }
+    if (row.status !== 'waiting' && row.status !== 'approved') {
+      sendError(res, 400, 'VALIDATION', 'This pairing cannot be approved.')
+      return
+    }
+    const approvedAt = new Date(now()).toISOString()
+    database
+      .prepare(
+        `UPDATE desktop_pairings
+         SET status = 'approved', address = ?, approved_at = ?
+         WHERE id = ? AND status IN ('waiting','approved')`,
+      )
+      .run(normalizeAddress(address), approvedAt, pairId)
+    res.json({
+      pairId,
+      status: 'approved',
+      address: normalizeAddress(address),
+      message: 'Desktop can finish signing in. Keep this phone session open until desktop shows connected.',
+    })
+  })
+
+  /** Desktop claims the approved pairing and receives a session cookie. */
+  authRouter.post('/desktop-pair/claim', rateLimit(30, 60_000, { scope: 'auth-desktop-claim' }), (req, res) => {
+    const body = req.body as { pairId?: unknown }
+    const pairId = typeof body.pairId === 'string' ? body.pairId.trim() : ''
+    if (!pairId) {
+      sendError(res, 400, 'VALIDATION', 'pairId is required.')
+      return
+    }
+    const row = database
+      .prepare(
+        `SELECT id, status, address, expires_at AS expiresAt FROM desktop_pairings WHERE id = ?`,
+      )
+      .get(pairId) as
+      | { id: string; status: string; address: string | null; expiresAt: string }
+      | undefined
+    if (!row) {
+      sendError(res, 404, 'VALIDATION', 'Pairing request not found.')
+      return
+    }
+    const expiresMs = Date.parse(row.expiresAt)
+    if (!Number.isFinite(expiresMs) || expiresMs < now()) {
+      database.prepare(`UPDATE desktop_pairings SET status = 'expired' WHERE id = ?`).run(pairId)
+      sendError(res, 400, 'VALIDATION', 'This pairing QR has expired. Generate a new one.')
+      return
+    }
+    if (row.status !== 'approved' || !row.address) {
+      sendError(
+        res,
+        400,
+        'VALIDATION',
+        row.status === 'waiting'
+          ? 'Waiting for approval in Nimiq Pay on your phone.'
+          : 'This pairing is not ready to claim.',
+      )
+      return
+    }
+    const claimedAt = new Date(now()).toISOString()
+    const mark = database
+      .prepare(
+        `UPDATE desktop_pairings SET status = 'claimed', claimed_at = ?
+         WHERE id = ? AND status = 'approved'`,
+      )
+      .run(claimedAt, pairId)
+    if (mark.changes !== 1) {
+      sendError(res, 400, 'VALIDATION', 'This pairing was already claimed.')
+      return
+    }
+    const session = setSessionCookie(res, row.address)
+    res.json({
+      address: normalizeAddress(row.address),
       sessionExpiresAt: new Date(session.exp).toISOString(),
     })
   })

@@ -639,6 +639,38 @@ function buildSummary(
 }
 
 /**
+ * Expire pending intents that never received a chain tx hash (review abandoned /
+ * wallet never opened). Safe to supersede — no broadcast was recorded.
+ * Intents with `tx_hash` stay pending until confirm or natural expiry.
+ */
+export function expireAbandonedPendingIntents(
+  database: Database.Database,
+  userAddress: string,
+): number {
+  const address = normalizeAddress(userAddress)
+  const result = database
+    .prepare(
+      `UPDATE staking_intents
+       SET status = 'expired'
+       WHERE replace(upper(user_address), ' ', '') = ?
+         AND status = 'pending'
+         AND (tx_hash IS NULL OR trim(tx_hash) = '')`,
+    )
+    .run(address)
+  return Number(result.changes ?? 0)
+}
+
+/**
+ * User-initiated cancel of abandoned (no tx) pending intents for the session wallet.
+ */
+export function cancelAbandonedPendingIntents(
+  database: Database.Database,
+  userAddress: string,
+): { cancelled: number } {
+  return { cancelled: expireAbandonedPendingIntents(database, userAddress) }
+}
+
+/**
  * Validate + record a pending staking intent (15 min expiry, single-use).
  */
 export async function createStakingIntent(
@@ -650,6 +682,9 @@ export async function createStakingIntent(
   const address = normalizeAddress(userAddress)
   const operation = parseOperation(body.operation)
   const params = parseAndValidateParams(operation, body.params ?? {})
+
+  // Starting a new review supersedes abandoned intents (never submitted on-chain).
+  expireAbandonedPendingIntents(options.database, address)
 
   const readPosition = options.readPosition ?? readStakingPosition
   const envelope = await readPosition({
@@ -971,13 +1006,29 @@ function sendError(
 }
 
 /**
- * Mount POST /api/staking/intent and POST /api/staking/confirm.
+ * Mount POST /api/staking/intent, confirm, and cancel-pending.
  * Auth is already applied to `/api/staking` by mountAuth.
  */
 export function mountStakingIntents(
   app: Express,
   options: StakingIntentsOptions,
 ): void {
+  app.post('/api/staking/cancel-pending', (req: Request, res: Response) => {
+    const address = res.locals.address as string | undefined
+    if (!address) {
+      sendError(res, 401, 'WALLET_NOT_CONNECTED', 'No valid wallet session.')
+      return
+    }
+    const result = cancelAbandonedPendingIntents(options.database, address)
+    res.status(200).json({
+      cancelled: result.cancelled,
+      message:
+        result.cancelled > 0
+          ? 'Abandoned staking review cleared. You can start again.'
+          : 'No abandoned pending staking action to clear.',
+    })
+  })
+
   app.post('/api/staking/intent', async (req: Request, res: Response) => {
     const address = res.locals.address as string | undefined
     if (!address) {

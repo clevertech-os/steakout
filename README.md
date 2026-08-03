@@ -109,12 +109,13 @@ Copy [`.env.example`](.env.example). Important variables:
 | `SESSION_SECRET` | Required for auth cookies |
 | `NIMIQ_NETWORK` / `NIMIQ_RPC_URL` | Chain network + RPC |
 | `NIMIQ_RPC_URL_FALLBACK` | Optional secondary RPC |
-| `VALIDATORS_API_URL` | Official validators registry |
+| `VALIDATORS_API_URL` | Official validators registry (main vs test workers; auto-picked from `NIMIQ_NETWORK` if unset) |
 | `INDEXER_ENABLED` | Enable reward-address payout indexing (off by default in example) |
 | `DATA_DIR` | SQLite location |
 | `CORS_ORIGIN` | Browser origin allowed to call the API (dev: `http://localhost:5173`) |
 | `VITE_NIMIQ_NETWORK` | Client network badge + Hub/RPC defaults (`mainnet` hides badge; `testnet` → hub.nimiq-testnet.com) |
 | `VITE_NIMIQ_HUB_URL` | Optional Hub override (else derived from network) |
+| `VITE_PUBLIC_APP_URL` | Phone-reachable origin for Pay QR — prefer **HTTPS** tunnel (`cloudflared`); plain `http://192.168…` often opens Pay with a blank WebView |
 | `PUBLIC_APP_URL` | Canonical origin for shareable profile meta |
 
 Indexer and diagnostics options are documented in `.env.example`.

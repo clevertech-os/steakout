@@ -21,6 +21,7 @@ import { incrementMetric, METRIC_KEYS } from './metrics.js'
 import { loadObservationSummaries } from './observationScoring.js'
 import {
   buildPublicCacheKey,
+  clearPublicResponseCache,
   getCachedPublicResponse,
   PUBLIC_CACHE_CONTROL,
   setCachedPublicResponse,
@@ -344,13 +345,25 @@ export async function syncValidators(options: ValidatorSyncOptions): Promise<Syn
     registryUpdatedAt: now,
   })
 
+  // Drop rows not in this registry snapshot so a network switch (main ↔ test)
+  // cannot leave the other chain's validators in the directory.
+  const pruned = pruneValidatorsNotIn(
+    options.database,
+    merged.map((validator) => validator.address),
+  )
+  if (pruned > 0 || upserted > 0) {
+    clearPublicResponseCache()
+  }
+
   logger(JSON.stringify({
     validatorSync: 'cycle',
     upserted,
+    pruned,
     rewardAddressesResolved,
     knownOnly: knownOnly.validators.length,
     allObservable: allObservable.validators.length,
     registryUpdatedAt: now,
+    source: knownOnly.source,
   }))
 
   return {
@@ -360,6 +373,34 @@ export async function syncValidators(options: ValidatorSyncOptions): Promise<Syn
     rewardAddressesResolved,
     registryUpdatedAt: now,
   }
+}
+
+/**
+ * Delete validators whose address is not in `keepAddresses` (normalized).
+ * Used after a full registry sync so mainnet rows do not linger on testnet.
+ */
+export function pruneValidatorsNotIn(
+  database: Database.Database,
+  keepAddresses: readonly string[],
+): number {
+  const keep = new Set(
+    keepAddresses
+      .filter((address) => isValidNimiqAddress(address))
+      .map((address) => compactKey(address)),
+  )
+  const rows = listValidatorRows(database)
+  const del = database.prepare('DELETE FROM validators WHERE address = ?')
+  let pruned = 0
+  const run = database.transaction(() => {
+    for (const row of rows) {
+      if (!keep.has(compactKey(row.address))) {
+        del.run(row.address)
+        pruned += 1
+      }
+    }
+  })
+  run()
+  return pruned
 }
 
 export function startValidatorSyncScheduler(

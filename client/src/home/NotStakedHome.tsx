@@ -6,6 +6,8 @@ import Amount from '../components/Amount'
 import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
 import FreshnessTag from '../components/FreshnessTag'
 import type { StakingPositionEnvelope } from '../api/position'
+import OpenInNimiqPayQr from '../components/OpenInNimiqPayQr'
+import TestnetFaucetButton from './TestnetFaucetButton'
 
 export interface NotStakedHomeProps {
   address: string
@@ -100,6 +102,7 @@ export default function NotStakedHome({
           <a className="nq-pill-blue nq-pill-lg home-cta" href="#/validators">
             Choose a validator
           </a>
+          <TestnetFaucetButton address={address} onFunded={onRetry} />
           <a className="nq-pill-secondary home-cta" href="#/learn/staking">
             How staking works
           </a>
@@ -107,6 +110,9 @@ export default function NotStakedHome({
             Disconnect
           </button>
         </div>
+
+        {/* Stake-only QR on connected home — session already active here. */}
+        <OpenInNimiqPayQr linkDesktopSession={false} />
       </section>
     </>
   )

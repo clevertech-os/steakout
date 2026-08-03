@@ -27,7 +27,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--so-space-4, 1rem);
-  max-height: min(92vh, 40rem);
+  max-height: min(94vh, 48rem);
   overflow: auto;
   width: 100%;
   max-width: 44rem;
@@ -183,6 +183,11 @@
 
 .mono {
   font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+}
+
+/* Pay QR on review — keep compact inside the bottom sheet */
+.review-sheet-pay-qr {
+  margin-top: 0;
 }
 
 @media (min-width: 600px) {

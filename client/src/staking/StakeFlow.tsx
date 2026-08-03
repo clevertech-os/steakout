@@ -17,6 +17,7 @@ import type { NimiqProvider } from '@nimiq/mini-app-sdk'
 import { formatDisplayAddress, shortAddress } from '../addresses'
 import { ApiError } from '../api/http'
 import {
+  cancelPendingStakingIntents,
   createStakingIntent,
   pollConfirmStakingIntent,
   type IntentSummary,
@@ -25,6 +26,7 @@ import {
 import type { PositionState, StakingPositionData } from '../api/position'
 import { fetchStakingPosition } from '../api/position'
 import Amount from '../components/Amount'
+import OpenInNimiqPayQr from '../components/OpenInNimiqPayQr'
 import { humanizeFetchError } from '../components/humanizeError'
 import { formatNimFromLuna, lunaToNim } from '../luna'
 import {
@@ -547,13 +549,20 @@ export default function StakeFlow(props: StakeFlowProps) {
 
       if (outcome.kind === 'error') {
         const cancelled = /cancel|denied|reject|dismiss/i.test(outcome.message)
-        setErrorMessage(cancelled ? STAKE_CANCELLED : STAKE_PROVIDER_ERROR)
-        if (!cancelled && outcome.message) {
-          setErrorMessage(`${STAKE_PROVIDER_ERROR} (${outcome.message})`)
+        if (cancelled) {
+          setErrorMessage(STAKE_CANCELLED)
+        } else {
+          const detail = outcome.message?.trim()
+          setErrorMessage(
+            detail
+              ? `${STAKE_PROVIDER_ERROR} ${detail}`
+              : STAKE_PROVIDER_ERROR,
+          )
         }
-        setDebugRaw(outcome.raw)
+        setDebugRaw(outcome.raw ?? outcome.message)
         setPhase('error')
-        // Intent remains unused; user can restart
+        // Abandon unused intent so "already pending" does not block retry.
+        void abandonReviewIntent()
         providerCalledRef.current = false
         return
       }
@@ -602,8 +611,18 @@ export default function StakeFlow(props: StakeFlowProps) {
     }
   }
 
+  async function abandonReviewIntent() {
+    clearPendingIntent()
+    try {
+      await cancelPendingStakingIntents()
+    } catch {
+      // Best-effort; create path also supersedes abandoned intents.
+    }
+  }
+
   function handleCancelReview() {
     if (busy && phase === 'wallet') return
+    void abandonReviewIntent()
     setReview(null)
     setPhase(isUpdate ? 'prep' : 'amount')
     providerCalledRef.current = false
@@ -611,6 +630,10 @@ export default function StakeFlow(props: StakeFlowProps) {
 
   function handleClose() {
     abortRef.current?.abort()
+    // Closing after review without a chain tx should free the pending lock.
+    if (review && !providerCalledRef.current) {
+      void abandonReviewIntent()
+    }
     onClose()
   }
 
@@ -620,6 +643,24 @@ export default function StakeFlow(props: StakeFlowProps) {
     setReview(null)
     providerCalledRef.current = false
     setPhase(isUpdate ? 'prep' : 'amount')
+  }
+
+  async function handleClearPendingAndRetry() {
+    setBusy(true)
+    setErrorMessage(null)
+    try {
+      await abandonReviewIntent()
+      setPhase(isUpdate ? 'prep' : 'amount')
+      setReview(null)
+      providerCalledRef.current = false
+    } catch (err) {
+      setErrorMessage(
+        humanizeFetchError(err, 'Could not clear the pending staking action. Try again in a moment.'),
+      )
+      setPhase('error')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const connectTitle = isUpdate
@@ -962,9 +1003,32 @@ export default function StakeFlow(props: StakeFlowProps) {
               Approve in wallet
             </h2>
             <p className="stake-flow-copy">
-              Complete or cancel the request in Nimiq Pay. Steakout will not mark success until the
-              server matches the transaction on chain.
+              Complete or cancel the request in <strong>Nimiq Pay</strong>. Desktop Hub cannot sign
+              staking writes. Scan the QR to open this app on your phone inside Pay (testnet when
+              testing), then run Stake there if the desktop wallet step fails.
             </p>
+            <OpenInNimiqPayQr compact linkDesktopSession={false} />
+            <p className="stake-flow-muted" role="status">
+              Waiting for Nimiq Pay… Steakout only marks success after the server matches the
+              transaction on chain.
+            </p>
+            <div className="stake-flow-actions">
+              <button
+                type="button"
+                className="nq-pill-secondary"
+                disabled={busy}
+                onClick={() => {
+                  void abandonReviewIntent()
+                  setPhase(isUpdate ? 'prep' : 'amount')
+                  setReview(null)
+                  providerCalledRef.current = false
+                  submitLock.current = false
+                  setBusy(false)
+                }}
+              >
+                {STAKE_CANCEL}
+              </button>
+            </div>
           </>
         )}
 
@@ -1017,16 +1081,45 @@ export default function StakeFlow(props: StakeFlowProps) {
               {errorMessage}
             </p>
             {debugRaw ? (
-              <p className="stake-flow-debug mono">Detail: {truncateMiddle(debugRaw, 64)}</p>
+              <p className="stake-flow-debug mono" title={debugRaw}>
+                Wallet detail: {truncateMiddle(debugRaw, 120)}
+              </p>
+            ) : null}
+            <p className="stake-flow-copy stake-flow-muted">
+              Common fixes: switch Nimiq Pay to <strong>testnet</strong> (Steakout is testnet), use a
+              smaller amount (e.g. 10–100 NIM, not max), leave fee headroom, and pick a testnet
+              validator. No on-chain change was confirmed by Steakout.
+            </p>
+            {/Nimiq Pay wallet not found/i.test(errorMessage ?? '') ? (
+              <OpenInNimiqPayQr compact linkDesktopSession={false} />
+            ) : null}
+            {/already pending/i.test(errorMessage ?? '') ? (
+              <p className="stake-flow-copy">
+                A previous review was left open without finishing in the wallet. Clear it to start
+                again, or open Steakout in Nimiq Pay to complete a real stake.
+              </p>
             ) : null}
             <div className="stake-flow-actions">
-              <button
-                type="button"
-                className="nq-pill-blue nq-pill-lg stake-flow-primary"
-                onClick={resetToEntry}
-              >
-                Try again
-              </button>
+              {/already pending/i.test(errorMessage ?? '') ? (
+                <button
+                  type="button"
+                  className="nq-pill-blue nq-pill-lg stake-flow-primary"
+                  disabled={busy}
+                  onClick={() => {
+                    void handleClearPendingAndRetry()
+                  }}
+                >
+                  {busy ? 'Clearing…' : 'Clear pending and try again'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="nq-pill-blue nq-pill-lg stake-flow-primary"
+                  onClick={resetToEntry}
+                >
+                  Try again
+                </button>
+              )}
               <button type="button" className="nq-pill-secondary" onClick={handleClose}>
                 {STAKE_CANCEL}
               </button>

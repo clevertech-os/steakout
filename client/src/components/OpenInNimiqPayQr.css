@@ -1,0 +1,140 @@
+/* Open in Nimiq Pay — desktop QR handoff */
+
+.open-in-pay-qr {
+  display: flex;
+  flex-direction: column;
+  gap: var(--so-space-3);
+  margin-top: var(--so-space-4);
+  padding: var(--so-space-4);
+  border-radius: var(--so-radius-md, 12px);
+  border: 1px solid color-mix(in srgb, var(--so-border, #d0d4e0) 80%, transparent);
+  background: color-mix(in srgb, var(--so-surface, #fff) 92%, var(--so-accent, #d9573f) 4%);
+}
+
+.open-in-pay-qr--compact {
+  margin-top: var(--so-space-3);
+  padding: var(--so-space-3);
+}
+
+.open-in-pay-qr-title {
+  margin: 0;
+  font-size: var(--so-text-lg, 1.05rem);
+  letter-spacing: -0.02em;
+}
+
+.open-in-pay-qr-lede,
+.open-in-pay-qr-hint {
+  margin: 0;
+  line-height: 1.45;
+  color: var(--so-ink, #1f2348);
+}
+
+.open-in-pay-qr-lede {
+  font-size: var(--so-text-md, 0.95rem);
+}
+
+.open-in-pay-qr-warn {
+  margin: 0;
+  padding: var(--so-space-2) var(--so-space-3);
+  border-radius: 8px;
+  background: color-mix(in srgb, #e9b213 18%, transparent);
+  color: var(--so-ink, #1f2348);
+  font-size: var(--so-text-sm, 0.85rem);
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  gap: var(--so-space-2);
+}
+
+.open-in-pay-qr-warn p {
+  margin: 0;
+}
+
+.open-in-pay-qr-warn code {
+  font-size: 0.9em;
+  word-break: break-all;
+}
+
+.open-in-pay-qr-steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.open-in-pay-qr-warn-note {
+  opacity: 0.9;
+  font-size: 0.92em;
+}
+
+.open-in-pay-qr-url--muted {
+  opacity: 0.75;
+  font-size: 0.75rem;
+}
+
+.open-in-pay-qr-pair-status {
+  margin: 0;
+  text-align: center;
+  font-size: var(--so-text-sm, 0.85rem);
+  color: var(--so-ink, #1f2348);
+  font-weight: 600;
+}
+.open-in-pay-qr-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--so-space-4);
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.open-in-pay-qr-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--so-space-2);
+}
+
+.open-in-pay-qr-img {
+  display: block;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px;
+  box-shadow: 0 1px 3px rgb(31 35 72 / 12%);
+}
+
+.open-in-pay-qr-img--secondary {
+  opacity: 0.95;
+}
+
+.open-in-pay-qr-caption {
+  font-size: var(--so-text-sm, 0.8rem);
+  color: var(--so-muted, #5c637a);
+  text-align: center;
+}
+
+.open-in-pay-qr-url {
+  margin: 0;
+  font-size: var(--so-text-sm, 0.8rem);
+  word-break: break-all;
+  color: var(--so-muted, #5c637a);
+  text-align: center;
+}
+
+.open-in-pay-qr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--so-space-2);
+  justify-content: center;
+}
+
+.open-in-pay-qr-btn {
+  min-height: 44px;
+}
+
+.open-in-pay-qr-hint a {
+  color: var(--so-accent, #d9573f);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

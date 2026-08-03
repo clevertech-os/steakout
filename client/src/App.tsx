@@ -5,6 +5,7 @@ import StyleReference from './spike/StyleReference'
 import BottomNav from './components/BottomNav'
 import NetworkBadge from './components/NetworkBadge'
 import OfflineBanner from './components/OfflineBanner'
+import { peekHubRedirectInUrl } from './hubRedirectParse'
 import { HOME_PATH, hashToPath, matchRoute, type RouteId } from './routes'
 import './App.css'
 
@@ -28,11 +29,25 @@ function screenFor(id: RouteId, param?: string) {
   }
 }
 
+/**
+ * Resolve the SPA path from the location hash.
+ *
+ * Hub redirect login returns payload *in the hash* (`#id=…&status=…&result=…`).
+ * That is not a Steakout route. Treat it as Home and **do not** rewrite the
+ * fragment — Home’s wallet boot must read the payload and open the second Hub
+ * trip (sign-message). Rewriting to `#/` used to wipe the response, so users
+ * finished “choose address” with nothing to sign and stayed disconnected.
+ */
+function pathFromLocationHash(): string {
+  if (peekHubRedirectInUrl()) return HOME_PATH
+  return hashToPath(window.location.hash)
+}
+
 function useHashPath(): string {
-  const [path, setPath] = useState(() => hashToPath(window.location.hash))
+  const [path, setPath] = useState(() => pathFromLocationHash())
 
   useEffect(() => {
-    const onHashChange = () => setPath(hashToPath(window.location.hash))
+    const onHashChange = () => setPath(pathFromLocationHash())
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
@@ -45,7 +60,9 @@ function RoutedShell() {
   const match = matchRoute(path)
 
   // 404 → Home. replace() (not assign) keeps the bad URL out of history.
+  // Never touch the hash while a Hub redirect payload is present.
   useEffect(() => {
+    if (peekHubRedirectInUrl()) return
     if (!matchRoute(path)) {
       window.location.replace(`#${HOME_PATH}`)
     }

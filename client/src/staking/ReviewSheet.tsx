@@ -5,6 +5,7 @@
 
 import { formatDisplayAddress, shortAddress } from '../addresses'
 import Amount from '../components/Amount'
+import OpenInNimiqPayQr from '../components/OpenInNimiqPayQr'
 import type { IntentSummary } from '../api/staking'
 import {
   formatStateTransition,
@@ -166,6 +167,9 @@ export default function ReviewSheet({
           <p>{STAKE_MAINNET_REAL_AMOUNTS}</p>
           <p>{STAKE_NO_ILLUSTRATIVE_ON_REVIEW}</p>
         </div>
+
+        {/* Desktop: Pay is required for staking writes — QR before Confirm (no session link). */}
+        <OpenInNimiqPayQr compact linkDesktopSession={false} className="review-sheet-pay-qr" />
 
         <div className="review-sheet-actions">
           <button

@@ -134,6 +134,14 @@ Aggregate network view: total stake, validator count (listed vs observable), dom
 
 ## 4. Auth endpoints
 
+### Desktop session handoff (Nimiq Pay phone → desktop browser)
+
+1. Desktop `POST /api/auth/desktop-pair` → `{ pairId, expiresAt }` (≈5 min). No auth.
+2. QR embeds `?desktopPair=<pairId>` in the Pay mini-app URL.
+3. Phone (session cookie) `POST /api/auth/desktop-pair/approve` `{ pairId }`.
+4. Desktop polls `GET /api/auth/desktop-pair/:pairId` until `status: "approved"`.
+5. Desktop `POST /api/auth/desktop-pair/claim` `{ pairId }` → `Set-Cookie` for this origin + `{ address, sessionExpiresAt }`.
+
 ### `POST /api/auth/challenge`
 Body: `{ address }`. Rate-limited. Returns `{ challengeId, message, expiresAt }` — `message` is the exact string the client passes to `nimiq.sign()`.
 
@@ -222,6 +230,11 @@ params    = { valueLuna?, delegation?, newActiveBalanceLuna?, newDelegation?, re
 ```
 
 Server validates (amounts > 0, address formats, state preconditions from chain reads), records the intent with expiry, returns `{ intentId, expiresAt, summary }`. `summary` is exactly what the client renders on the review screen.
+
+### `POST /api/staking/cancel-pending`
+Body: `{}` (auth cookie only). Expires the caller’s **abandoned** pending intents (status `pending` and no `tx_hash`). Used when the user backs out of review or never opened the wallet. Intents that already recorded a provider/tx hash are not cancelled here — they expire or confirm via `/confirm`. Response: `{ cancelled: number, message: string }`.
+
+Creating a new intent via `POST /api/staking/intent` also auto-expires abandoned (no `tx_hash`) pending rows for that wallet so “Continue to review” is not blocked by a leftover desktop review.
 
 ### `POST /api/staking/confirm`
 Body: `{ intentId, txHash }`. Server fetches the tx by hash and matches it against the authenticated address + recorded intent (operation, amount, delegation where visible). Responses:

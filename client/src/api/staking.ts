@@ -156,6 +156,17 @@ export async function createStakingIntent(
 }
 
 /**
+ * Clear abandoned pending intents (review started, no chain tx submitted).
+ * Safe when Pay/Hub never opened; does not cancel intents that already have a tx hash.
+ */
+export async function cancelPendingStakingIntents(): Promise<{
+  cancelled: number
+  message: string
+}> {
+  return apiPost<{ cancelled: number; message: string }>('/api/staking/cancel-pending', {})
+}
+
+/**
  * One confirm attempt. 202 TX_PENDING → pending; 200 → confirmed;
  * other non-2xx → ApiError (TX_FAILED, TX_MISMATCH, INTENT_NOT_FOUND, …).
  */

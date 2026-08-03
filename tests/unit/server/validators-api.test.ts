@@ -6,6 +6,9 @@ import {
   normalizeOfficialScore,
   normalizePayoutType,
   normalizeValidator,
+  resolveValidatorsApiUrl,
+  VALIDATORS_API_MAINNET,
+  VALIDATORS_API_TESTNET,
   type ValidatorsFetch,
 } from '../../../server/src/validators-api.js'
 
@@ -14,6 +17,31 @@ const fixtureDirectory = resolve(process.cwd(), 'tests/fixtures/registry')
 function readJson(name: string): unknown {
   return JSON.parse(readFileSync(resolve(fixtureDirectory, name), 'utf8')) as unknown
 }
+
+describe('resolveValidatorsApiUrl', () => {
+  it('defaults to main or test workers from network', () => {
+    expect(resolveValidatorsApiUrl({ apiUrl: null, network: 'main' })).toBe(VALIDATORS_API_MAINNET)
+    expect(resolveValidatorsApiUrl({ apiUrl: null, network: 'mainnet' })).toBe(VALIDATORS_API_MAINNET)
+    expect(resolveValidatorsApiUrl({ apiUrl: null, network: 'testnet' })).toBe(VALIDATORS_API_TESTNET)
+    expect(resolveValidatorsApiUrl({ apiUrl: null, network: 'test' })).toBe(VALIDATORS_API_TESTNET)
+  })
+
+  it('overrides main registry when network is testnet', () => {
+    const warns: string[] = []
+    const url = resolveValidatorsApiUrl({
+      apiUrl: VALIDATORS_API_MAINNET,
+      network: 'testnet',
+      warn: (line) => warns.push(line),
+    })
+    expect(url).toBe(VALIDATORS_API_TESTNET)
+    expect(warns.length).toBe(1)
+  })
+
+  it('keeps custom non-official URLs', () => {
+    const custom = 'https://registry.example.test/api/v1/validators'
+    expect(resolveValidatorsApiUrl({ apiUrl: custom, network: 'testnet' })).toBe(custom)
+  })
+})
 
 describe('validators API normalization', () => {
   it('normalizes both captured registry modes without fabricating fields', () => {

@@ -19,6 +19,14 @@ describe('hashToPath', () => {
     expect(hashToPath('#')).toBe('/')
   })
 
+  it('does not treat Hub redirect fragments as app routes (shape only)', () => {
+    // App.tsx uses peekHubRedirectInUrl() so these never 404-rewrite.
+    // hashToPath alone would mis-parse them — document that boundary.
+    const hubLike = '#id=42&status=ok&result=%7B%7D'
+    expect(hashToPath(hubLike)).not.toBe('/')
+    expect(matchRoute(hashToPath(hubLike))).toBeNull()
+  })
+
   it('strips query strings embedded in the hash (stake deep-link)', () => {
     expect(hashToPath('#/validators/NQXX?stake=1')).toBe('/validators/NQXX')
     expect(hashWantsStake('#/validators/NQXX?stake=1')).toBe(true)

@@ -19,6 +19,7 @@ import {
 import { getBlockNumber } from './nimiq-rpc.js'
 import { mountProfileShareRoutes } from './profileMeta.js'
 import { startValidatorSyncScheduler } from './validatorSync.js'
+import { resolveValidatorsApiUrl } from './validators-api.js'
 
 const port = Number(process.env.PORT ?? 3000)
 const databasePath = process.env.DATA_DIR
@@ -80,11 +81,15 @@ if (process.env.VALIDATORS_SYNC_ENABLED !== 'false') {
   const intervalMs = (Number.isFinite(configuredHours) && configuredHours > 0
     ? configuredHours
     : 1) * 60 * 60_000
+  const validatorsApiUrl = resolveValidatorsApiUrl({
+    apiUrl: process.env.VALIDATORS_API_URL,
+    network: process.env.NIMIQ_NETWORK,
+  })
   validatorScheduler = startValidatorSyncScheduler(
     {
       database,
       fetchOptions: {
-        apiUrl: process.env.VALIDATORS_API_URL,
+        apiUrl: validatorsApiUrl,
         rpcUrl: process.env.NIMIQ_RPC_URL,
       },
     },
