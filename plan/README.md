@@ -94,7 +94,7 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 | P2-12 | Learn: staking, methodology, limitations | Polishing | P1-07 | done 2026-08-03 |
 | P2-13 | Caching, rate limits, indexer diagnostics | Implementation | P2-06 | done 2026-08-03 |
 | P2-14 | Unit tests: classifier, scoring, cursor | Testing | P2-01, P2-02, P2-03, P2-04 | done 2026-08-03 |
-| P2-15 | Integration: indexer, dupes, evidence links | Testing | P0-06, P0-08, P2-06 | backlog |
+| P2-15 | Integration: indexer, dupes, evidence links | Testing | P0-06, P0-08, P2-06 | done 2026-08-03 |
 | P2-16 | Shareable validator profile URLs + meta | Implementation | P2-08 | done 2026-08-03 |
 
 ### Phase 3 — Polish & public beta (Aug 24–30) → [cards](phase-3-polish.md)

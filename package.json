@@ -12,9 +12,10 @@
     "dev": "concurrently -n server,client -c blue,green \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "dev:server": "npm run dev --prefix server",
     "dev:client": "npm run dev --prefix client",
-    "test": "npm run test:server && npm run test:client",
+    "test": "npm run test:server && npm run test:client && npm run test:integration",
     "test:client": "vitest run tests/unit/client",
     "test:server": "vitest run tests/unit/server",
+    "test:integration": "vitest run tests/integration",
     "build": "npm run build --prefix server && npm run build --prefix client",
     "smoke": "node scripts/smoke.mjs"
   },

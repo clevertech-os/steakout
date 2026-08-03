@@ -621,15 +621,25 @@ Board: [README.md](README.md#phase-2--accountability-engine-aug-1723)
 - `tests/integration/` indexer + contract suites
 
 **Acceptance criteria:**
-- [ ] Restart test proves cursor-based resume with no refetch overlap
-- [ ] Duplicate ingestion = zero new rows
-- [ ] Contract test asserts full envelope + run payload shape
-- [ ] Explorer URLs correct for testnet + mainnet
+- [x] Restart test proves cursor-based resume with no refetch overlap
+- [x] Duplicate ingestion = zero new rows
+- [x] Contract test asserts full envelope + run payload shape
+- [x] Explorer URLs correct for testnet + mainnet
 
-**Verification:** `npm test` clean env.
+**Verification:** `npm run test:integration` / `npm test` clean env.
 
 **Notes:**
--
+- **Done 2026-08-03.** Suite at `tests/integration/indexer-evidence.test.ts` (6 tests):
+  1. Multi-page ingest + SQLite reopen: cursor resumes; only new tip inserts (no overlap).
+  2. Transient first-page failures retry then succeed.
+  3. Same mockRpc page twice → zero new rows (hash PK).
+  4. Index → classify → `GET /api/validators/:address/observations` full envelope + run shape
+     (`windowStart`, `txCount`, `recipientCount`, nullable coverage, `txHashes`, `blockRange`,
+     `limitations`).
+  5. Empty-history validator → HTTP 200 + `insufficient-data`/`unavailable`, empty runs.
+  6. Explorer 302 mainnet (`nimiq.watch`) / testnet (`test.nimiq.watch`) + `?format=json`.
+- Root scripts: `test:integration`; `npm test` now includes integration after unit suites.
+- Offline only (mockRpc / injected fetch). See `tests/integration/README.md`.
 
 ---
 
