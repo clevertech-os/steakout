@@ -11,8 +11,8 @@
   border-radius: 999px;
   background: var(--so-card);
   color: var(--so-muted);
-  font-family: 'Fira Mono', monospace;
-  font-size: 0.75rem;
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-size: var(--so-text-xs, 0.75rem);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }

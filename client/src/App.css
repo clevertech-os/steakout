@@ -1,4 +1,4 @@
-/* App shell layout (P1-07). Spike screens keep their own .shell layout. */
+/* App shell layout (P1-07 / P3-06). Spike screens keep their own .shell layout. */
 
 .app {
   min-height: 100vh;
@@ -10,11 +10,21 @@
 .app-main {
   width: min(100% - 2rem, 44rem);
   max-width: 100%;
+  min-width: 0;
   min-height: 100vh;
   margin: 0 auto;
   /* Bottom clearance keeps content above the fixed BottomNav. */
   padding: 2.5rem 0 calc(var(--bottom-nav-height, 4rem) + env(safe-area-inset-bottom, 0px) + 1.5rem);
   overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* 320px: slightly tighter horizontal margin so cards keep usable width. */
+@media (max-width: 359px) {
+  .app-main {
+    width: min(100% - 1.25rem, 44rem);
+    padding-top: 1.75rem;
+  }
 }
 
 .app-loading {

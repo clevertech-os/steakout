@@ -165,3 +165,5 @@ These don't exist in nimiq-css; build them in `client/src/components/` with co-l
 ## 9. Review gate
 
 Polishing reviews any new screen against this file and SPEC §10 before it can be marked `done`. If a needed pattern isn't covered here, extend this document first, then build.
+
+**Audit trail:** Phase 3 design / responsive / a11y checklist results live in [`docs/design-audit.md`](design-audit.md) (P3-05–07).

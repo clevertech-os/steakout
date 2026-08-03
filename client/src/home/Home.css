@@ -183,6 +183,9 @@ a.home-cta {
 }
 
 .home-method-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--so-touch, 44px);
   color: var(--so-info);
   font-size: 0.9rem;
   text-decoration: none;
@@ -191,6 +194,7 @@ a.home-cta {
 .home-method-link:hover,
 .home-method-link:focus-visible {
   text-decoration: underline;
+  text-underline-offset: 0.15em;
 }
 
 .home-stat-grid {
@@ -246,6 +250,10 @@ a.home-cta {
   margin: 0 0 0.25rem;
   font-weight: 600;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .home-validator-addr {

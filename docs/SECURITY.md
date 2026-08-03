@@ -43,7 +43,8 @@ Disclose in the app (Learn → Privacy):
 
 - the wallet address is sent to the Steakout server to retrieve position and activity data;
 - public chain activity may be associated with the user's Steakout session;
-- analytics are aggregate and minimal (no name, email, or location in v1).
+- analytics are aggregate and minimal (no name, email, or location in v1);
+- product metrics (SPEC §16) are server-side counters and table counts only — exposed at `GET /api/metrics/public` without addresses; disclosed in Learn → Privacy.
 
 Data stored: see [DATA-MODEL.md](DATA-MODEL.md) — no keys, no seeds, no unnecessary personal data. Challenges/intents expire and are cleaned up.
 

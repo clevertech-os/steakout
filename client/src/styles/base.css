@@ -58,6 +58,23 @@ body {
   outline-offset: 2px;
 }
 
+/* Avoid double rings when a component already styles :focus-visible. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Reduced motion: kill non-essential animations/transitions app-wide. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 .shell {
   width: min(100% - 2rem, 44rem);
   min-height: 100vh;

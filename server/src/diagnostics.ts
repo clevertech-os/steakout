@@ -31,6 +31,7 @@ const DIAG_TABLES = [
   'index_cursors',
   'staking_intents',
   'auth_challenges',
+  'metrics',
 ] as const
 
 /** Short non-reversible fingerprint for operator correlation without PII. */

@@ -41,6 +41,28 @@ Error envelope:
 
 ## 3. Public endpoints
 
+### `GET /api/metrics/public`
+Aggregate product metrics for the launch story (SPEC §16). No auth. **Counts only — never addresses or other PII.**
+
+```jsonc
+{
+  "updatedAt": "ISO",
+  "disclosure": "Product metrics are aggregate counts only …",
+  "metrics": {
+    "distinctConnectedWallets": 0,   // COUNT(users)
+    "authConnects": 0,               // successful wallet verifies
+    "repeatSessions": 0,             // verify when user already known
+    "validatorProfileViews": 0,
+    "publicProfileShares": 0,        // path-based /validators/:address hits
+    "stakingIntents": 0,             // COUNT(staking_intents); residual until intents land
+    "stakingConfirmed": 0,           // confirmed intents; residual until confirm path lands
+    "indexerHistoryDepthDays": 0     // computed from earliest indexed data → now
+  },
+  "notes": { /* short residual / methodology strings per computed field */ }
+}
+```
+Short public cache (`max-age=30`). Do not treat as real-time.
+
 ### `GET /api/health`
 Service + indexer liveness. Always HTTP 200 when the process is up (RPC outage does not fail the probe).
 

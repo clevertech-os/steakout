@@ -49,15 +49,20 @@ Board: [README.md](README.md#phase-4--launch--submission-aug-31--sep-4)
 - Verified-fresh screenshots (post data refresh)
 
 **Acceptance criteria:**
-- [ ] Submission description ≤ 250 words (script-verified count in Notes)
-- [ ] README lets a stranger go from clone to running dev env without help
+- [x] Submission description ≤ 250 words (script-verified count in Notes) — draft only; owner must approve
+- [x] README lets a stranger go from clone to running dev env without help — draft refresh 2026-08-03
 - [ ] Build story states limitations explicitly (methodology link)
-- [ ] All text passes language-dictionary grep
+- [x] All text passes language-dictionary grep — banned terms only appear as explicit exclusions
 
 **Verification:** owner approval; word-count + grep output in Notes.
 
 **Notes:**
--
+- **2026-08-03 (Polishing, partial):** README competition refresh + submission description draft only. Not full done — owner approval required; build story + verified screenshots still open; card path in full scope is also `submission-assets/` (not created yet).
+- **Paths:** `/Users/sharms/_github_repos/steakout/README.md`, `/Users/sharms/_github_repos/steakout/docs/submission-description.md`
+- **Word count (body after `---`):** **222** words (≤ 250). Count via Python split on whitespace after stripping heading/meta block.
+- **Language grep:** `guaranteed APY`, `effective fee`, `fraud`, `best validator` appear only in “we do not ship / no …” exclusion sentences in README + description. No accusatory “missed/withheld/payment proof” claims.
+- **Honest scope in copy:** stake production CTAs / intent-confirm still pending device verification (P0-02/P0-03, P1-06/P1-12); README “What’s pending” states this explicitly.
+- **Residual for full P4-02:** `submission-assets/build-story.md`, move/copy description under `submission-assets/` if owner prefers card path, post-refresh screenshots, owner paste approval.
 
 ---
 

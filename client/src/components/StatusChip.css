@@ -1,4 +1,4 @@
-/* Observation status chip — token-only (STYLING §5). */
+/* Observation status chip — token-only (STYLING §5 / P3-05 contrast). */
 
 .status-chip {
   display: inline-flex;
@@ -6,12 +6,13 @@
   gap: 0.35rem;
   max-width: 100%;
   padding: 0.35rem 0.65rem 0.35rem 0.75rem;
-  border-radius: 999px;
+  border-radius: var(--so-radius-chip, 999px);
   border: 1px solid transparent;
   font-size: 0.8rem;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.25;
   overflow-wrap: anywhere;
+  /* Color alone is never the status signal — label text is primary. */
 }
 
 .status-chip-label {
@@ -30,7 +31,7 @@
   font-size: 0.65rem;
   font-weight: 700;
   line-height: 1;
-  opacity: 0.75;
+  opacity: 0.85;
   border: 1px solid currentColor;
 }
 
@@ -41,9 +42,10 @@
   border-color: var(--so-verified);
 }
 
-/* Gold — mostly-on-schedule, irregular (incomplete) (STYLING §3). */
+/* Gold — mostly-on-schedule, irregular (incomplete) (STYLING §3).
+   Text uses --so-warn-ink for AA on small type over soft gold. */
 .status-chip--warn {
-  color: var(--so-warn-strong);
+  color: var(--so-warn-ink, #6b4f06);
   background: var(--so-warn-soft);
   border-color: var(--so-warn);
 }
@@ -64,7 +66,7 @@
 
 /* Neutral — insufficient-data, unavailable (STYLING §3). */
 .status-chip--disabled {
-  color: var(--so-disabled-ink);
+  color: var(--so-disabled-chip-ink, var(--so-disabled-ink));
   background: var(--so-disabled-soft);
   border-color: var(--so-disabled);
 }

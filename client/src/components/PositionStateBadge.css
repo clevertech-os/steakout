@@ -1,17 +1,20 @@
 .so-position-badge {
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
   padding: 0.35rem 0.75rem;
-  border-radius: 999px;
+  border-radius: var(--so-radius-chip, 999px);
   border: 1px solid transparent;
   font-size: 0.8rem;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.25;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .so-position-badge--notstaked {
-  color: var(--so-disabled-ink);
+  color: var(--so-disabled-chip-ink, var(--so-disabled-ink));
   background: var(--so-disabled-soft);
   border-color: var(--so-disabled);
 }
@@ -29,13 +32,13 @@
 }
 
 .so-position-badge--inactive {
-  color: var(--so-warn-strong);
+  color: var(--so-warn-ink, #6b4f06);
   background: var(--so-warn-soft);
   border-color: var(--so-warn);
 }
 
 .so-position-badge--retiring {
-  color: var(--so-warn-strong);
+  color: var(--so-warn-ink, #6b4f06);
   background: var(--so-warn-soft);
   border-color: var(--so-warn-alt);
 }

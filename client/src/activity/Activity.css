@@ -186,15 +186,18 @@
 
 .activity-item-label {
   margin: 0;
+  min-width: 0;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--so-ink);
+  overflow-wrap: anywhere;
 }
 
 .activity-item-time {
   margin: 0;
   color: var(--so-muted);
-  font-size: 0.875rem;
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-size: var(--so-text-sm, 0.875rem);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -204,6 +207,7 @@
   color: var(--so-muted);
   font-size: 0.9rem;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .activity-item-amount {
@@ -213,18 +217,23 @@
 .activity-item-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem 1rem;
+  gap: 0.35rem 0.75rem;
   margin-top: 0.5rem;
 }
 
 .activity-item-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--so-touch, 44px);
   color: var(--so-info);
   font-size: 0.9rem;
   text-decoration: none;
 }
 
-.activity-item-links a:hover {
+.activity-item-links a:hover,
+.activity-item-links a:focus-visible {
   text-decoration: underline;
+  text-underline-offset: 0.15em;
 }
 
 .activity-item-status {

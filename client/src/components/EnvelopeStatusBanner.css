@@ -22,7 +22,7 @@
 
 .so-envelope-banner-kicker {
   font-weight: 600;
-  color: var(--so-warn-strong);
+  color: var(--so-warn-ink, #6b4f06);
   white-space: nowrap;
 }
 

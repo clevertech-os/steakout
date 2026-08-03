@@ -21,12 +21,15 @@ const LABELS: Record<PositionState, string> = {
  */
 export default function PositionStateBadge({ state, className = '' }: PositionStateBadgeProps) {
   const modifier = state.toLowerCase()
+  const label = LABELS[state]
+  const definition = 'Staker position status from on-chain account state'
   return (
     <span
       className={`so-position-badge so-position-badge--${modifier} ${className}`.trim()}
-      title="Staker position status from on-chain account state"
+      title={definition}
+      aria-label={`${label}. ${definition}`}
     >
-      {LABELS[state]}
+      {label}
     </span>
   )
 }

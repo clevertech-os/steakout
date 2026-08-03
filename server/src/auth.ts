@@ -18,6 +18,7 @@ import type Database from 'better-sqlite3'
 import { isValidNimiqAddress, normalizeAddress } from './addresses.js'
 import { publicKeyBindingResult } from './auth-wallet.js'
 import { verifyHubSignedMessage } from './hub-signature.js'
+import { incrementMetric, METRIC_KEYS } from './metrics.js'
 import { rateLimit } from './rate-limit.js'
 
 const COOKIE_NAME = 'steakout_session'
@@ -393,7 +394,19 @@ export function mountAuth(app: Express, options: AuthOptions): MountAuthResult {
     }
 
     const address = normalizeAddress(row.address)
+    // P3-04: aggregate auth counters (no addresses stored in metrics).
+    const existingUser = database
+      .prepare(`SELECT 1 AS ok FROM users WHERE address = ?`)
+      .get(address) as { ok: number } | undefined
     upsertUser(database, address, publicKey, usedAt)
+    try {
+      incrementMetric(database, METRIC_KEYS.authConnects)
+      if (existingUser) {
+        incrementMetric(database, METRIC_KEYS.repeatSessions)
+      }
+    } catch {
+      // Metrics must never break auth.
+    }
     const session = setSessionCookie(res, address)
     res.json({
       address,

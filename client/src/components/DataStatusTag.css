@@ -47,14 +47,14 @@
 }
 
 .data-status-tag--inferred {
-  color: var(--so-warn-strong);
+  color: var(--so-warn-ink, #6b4f06);
   background: var(--so-warn-soft);
   border-color: var(--so-warn);
 }
 
 .data-status-tag--insufficient,
 .data-status-tag--unavailable {
-  color: var(--so-disabled-ink);
+  color: var(--so-disabled-chip-ink, var(--so-disabled-ink));
   background: var(--so-disabled-soft);
   border-color: var(--so-disabled);
 }

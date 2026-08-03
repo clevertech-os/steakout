@@ -484,7 +484,11 @@ function PrivacyArticle() {
         <li>No private keys or seed phrases — ever.</li>
         <li>No name, email, or location required for core staking and observation.</li>
         <li>
-          Product analytics, when present, are <strong>aggregate and minimal</strong>.
+          Product analytics are <strong>aggregate and minimal</strong>: server-side
+          counters for disclosed product metrics only (for example distinct connected
+          wallets as a count, profile views, share-page hits, and indexer history depth).
+          The public metrics endpoint never includes wallet addresses. No third-party
+          analytics, and raw pageviews are not treated as unique wallet usage.
         </li>
       </ul>
 

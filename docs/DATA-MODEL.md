@@ -102,9 +102,27 @@ CREATE TABLE IF NOT EXISTS auth_challenges (
   expires_at  TEXT NOT NULL,
   used_at     TEXT
 );
+
+-- P3-04: aggregate product counters only (SPEC §16). Never store addresses here.
+CREATE TABLE IF NOT EXISTS metrics (
+  key         TEXT PRIMARY KEY,
+  value       INTEGER NOT NULL DEFAULT 0,
+  updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
 ```
 
 Sessions: signed httpOnly cookie (no table needed for v1 volume); if server-side sessions become necessary, add a `sessions` table additively.
+
+### Metrics keys (aggregate)
+
+| key | Incremented on |
+|---|---|
+| `auth_connects` | Successful `POST /api/auth/verify` |
+| `repeat_sessions` | Successful verify when the user row already existed |
+| `validator_profile_views` | Successful `GET /api/validators/:address` (200, incl. cache hits) |
+| `public_profile_shares` | `GET /validators/:address` share HTML for a valid Nimiq address |
+
+Derived on read (not stored as counters): `COUNT(users)`, `COUNT(staking_intents)`, confirmed intents, max indexer history depth days from earliest indexed tx/observation.
 
 ## 2. Indexer strategy
 

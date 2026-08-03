@@ -1,4 +1,4 @@
-/* BottomNav — primary navigation (P1-07, STYLING.md §5/§7).
+/* BottomNav — primary navigation (P1-07 / P3-05–07, STYLING.md §5/§7).
    Fixed bottom bar; ≥ 44px targets; safe-area inset on iOS. */
 
 :root {
@@ -42,22 +42,32 @@
   width: 100%;
   height: 100%;
   /* STYLING.md §7: touch targets ≥ 44px (bar itself is 4rem). */
-  min-height: 44px;
+  min-height: var(--so-touch, 44px);
   color: var(--so-muted);
-  font-size: 0.75rem;
+  font-size: var(--so-text-xs, 0.75rem);
   line-height: 1;
   text-decoration: none;
+  /* Keep focus ring inside the bar so it isn't clipped. */
+  outline-offset: -3px;
+}
+
+.bottom-nav-link:focus-visible {
+  outline: 2px solid var(--so-focus);
+  outline-offset: -3px;
+  border-radius: 0.5rem;
+  color: var(--so-ink);
 }
 
 .bottom-nav-label {
   max-width: 100%;
+  padding: 0 0.15rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 /* Active destination: ember accent + top indicator, so the state is
-   distinct by more than color alone. */
+   distinct by more than color alone (a11y: not color-only). */
 .bottom-nav-link.is-active {
   color: var(--so-accent);
   font-weight: 700;
@@ -80,5 +90,13 @@
 
   .bottom-nav-link.is-active:hover {
     color: var(--so-accent);
+  }
+}
+
+/* Very narrow: slightly denser icons so labels still fit at 320px. */
+@media (max-width: 359px) {
+  .bottom-nav-link {
+    gap: 0.15rem;
+    font-size: 0.7rem;
   }
 }

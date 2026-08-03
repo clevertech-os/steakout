@@ -162,6 +162,7 @@ function TimelineList({
                   href={buildNimiqExplorerUrl(item.txHash)}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label={`View transaction ${item.txHash.slice(0, 10)}… in explorer`}
                 >
                   View transaction
                 </a>
@@ -169,6 +170,7 @@ function TimelineList({
               {item.validatorAddress ? (
                 <a
                   href={`#/validators/${encodeURIComponent(item.validatorAddress)}`}
+                  aria-label={`Open validator record ${item.validatorName?.trim() || shortenAddress(item.validatorAddress)}`}
                 >
                   Validator record
                 </a>

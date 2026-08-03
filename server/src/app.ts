@@ -8,6 +8,7 @@ import {
 import { mountAuth, type AuthOptions } from './auth.js'
 import { mountDiagnostics } from './diagnostics.js'
 import { applySecurityHeaders } from './http-headers.js'
+import { mountMetricsApi } from './metrics.js'
 import { getBlockNumber, getRpcHealth, getRpcMetrics, toRpcApiError } from './nimiq-rpc.js'
 import type { IndexerHealth } from './payoutIndexer.js'
 import { mountObservationsApi } from './observationsApi.js'
@@ -78,6 +79,9 @@ export function createApp(options: AppOptions) {
     getIndexerHealth: options.getIndexerHealth,
     token: options.diagnosticsToken,
   })
+
+  // P3-04 — aggregate product metrics (SPEC §16 track list; no addresses).
+  mountMetricsApi(app, options.database)
 
   // P1-05 — authenticated position (requireAuth already applied to /api/me/*).
   app.get('/api/me/staking-position', async (request, response) => {

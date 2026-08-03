@@ -100,6 +100,13 @@ const schema = `
     expires_at  TEXT NOT NULL,
     used_at     TEXT
   );
+
+  -- P3-04: aggregate product counters only (no addresses / PII).
+  CREATE TABLE IF NOT EXISTS metrics (
+    key         TEXT PRIMARY KEY,
+    value       INTEGER NOT NULL DEFAULT 0,
+    updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
 `
 
 const requiredColumns: Record<string, readonly string[]> = {
@@ -129,6 +136,7 @@ const requiredColumns: Record<string, readonly string[]> = {
     'created_at', 'expires_at', 'confirmed_at',
   ],
   auth_challenges: ['id', 'address', 'message', 'created_at', 'expires_at', 'used_at'],
+  metrics: ['key', 'value', 'updated_at'],
 }
 
 const additiveColumnDefinitions: Record<string, Record<string, string>> = {
@@ -174,6 +182,10 @@ const additiveColumnDefinitions: Record<string, Record<string, string>> = {
     address: "TEXT NOT NULL DEFAULT ''", message: "TEXT NOT NULL DEFAULT ''",
     created_at: "TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
     expires_at: "TEXT NOT NULL DEFAULT ''", used_at: 'TEXT',
+  },
+  metrics: {
+    value: 'INTEGER NOT NULL DEFAULT 0',
+    updated_at: "TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
   },
 }
 

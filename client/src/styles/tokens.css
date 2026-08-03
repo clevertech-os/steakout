@@ -1,5 +1,5 @@
 /**
- * Steakout semantic tokens (P1-08).
+ * Steakout semantic tokens (P1-08 / P3-05 polish).
  *
  * Components consume only `--so-*` here. Raw nimiq-css palette vars
  * (`--colors-*`) must not appear outside this file.
@@ -32,6 +32,8 @@
   --so-warn: var(--colors-gold, #e9b213);
   --so-warn-soft: var(--colors-gold-400, #fdf6d8);
   --so-warn-strong: var(--colors-gold-1100, #b8890c);
+  /* Chip/body text on warn-soft: darker than gold-1100 for WCAG AA on small type */
+  --so-warn-ink: #6b4f06;
   --so-warn-alt: var(--colors-orange, #f69522);
 
   /* —— Status: not observed / needs review (muted red; never full-screen alarm) —— */
@@ -50,6 +52,8 @@
   --so-disabled: var(--colors-neutral-500, #a39e98);
   --so-disabled-soft: var(--colors-neutral-200, #f0eeea);
   --so-disabled-ink: var(--colors-neutral-600, #8a8580);
+  /* Chip text on disabled-soft: charcoal-leaning for AA on small labels */
+  --so-disabled-chip-ink: var(--colors-neutral-700, #5c5854);
 
   /* —— Focus ring (blue info, accessible) —— */
   --so-focus: var(--colors-blue, #0582ca);
@@ -59,4 +63,24 @@
     --nq-shadow,
     0 1.5rem 3rem rgb(36 36 36 / 7%)
   );
+
+  /* —— Spacing rhythm (4px base; prefer these over ad-hoc rem) —— */
+  --so-space-1: 0.25rem;
+  --so-space-2: 0.5rem;
+  --so-space-3: 0.75rem;
+  --so-space-4: 1rem;
+  --so-space-5: 1.25rem;
+  --so-space-6: 1.5rem;
+  --so-space-8: 2rem;
+
+  /* —— Type scale (UI; long-form uses nq-prose) —— */
+  --so-text-xs: 0.75rem;
+  --so-text-sm: 0.875rem;
+  --so-text-md: 1rem;
+  --so-text-lg: 1.125rem;
+
+  /* —— Radii / touch —— */
+  --so-radius-card: 1.25rem;
+  --so-radius-chip: 999px;
+  --so-touch: 44px;
 }

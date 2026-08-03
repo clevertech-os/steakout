@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs'
 import type Database from 'better-sqlite3'
 import type { Express, Request, Response } from 'express'
 import { isValidNimiqAddress, normalizeAddress, shortAddress } from './addresses.js'
+import { incrementMetric, METRIC_KEYS } from './metrics.js'
 import { loadObservationSummaries } from './observationScoring.js'
 import {
   getValidatorRowByAddress,
@@ -246,6 +247,14 @@ export function mountProfileShareRoutes(
     }
 
     const body = injectProfileMeta(html, meta, { canonicalUrl })
+    // P3-04: public profile share hits (path-based share URL). Count valid addresses only.
+    if (isValidNimiqAddress(address)) {
+      try {
+        incrementMetric(options.database, METRIC_KEYS.publicProfileShares)
+      } catch {
+        // Metrics must never break share pages.
+      }
+    }
     res.status(200).type('html').setHeader('Cache-Control', 'public, max-age=60').send(body)
   }
 

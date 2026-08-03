@@ -55,7 +55,7 @@ function NavIcon({ id }: { id: RouteId }) {
 export default function BottomNav({ active }: BottomNavProps) {
   return (
     <nav className="bottom-nav" aria-label="Primary">
-      <ul className="bottom-nav-list">
+      <ul className="bottom-nav-list" role="list">
         {NAV_ROUTES.map((route) => {
           const isActive = route.id === active
           return (
@@ -64,9 +64,12 @@ export default function BottomNav({ active }: BottomNavProps) {
                 className={isActive ? 'bottom-nav-link is-active' : 'bottom-nav-link'}
                 href={`#${route.path}`}
                 aria-current={isActive ? 'page' : undefined}
+                aria-label={route.label}
               >
                 <NavIcon id={route.id} />
-                <span className="bottom-nav-label">{route.label}</span>
+                <span className="bottom-nav-label" aria-hidden="true">
+                  {route.label}
+                </span>
               </a>
             </li>
           )

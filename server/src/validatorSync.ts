@@ -17,6 +17,7 @@ import {
   getIndexerWatermarkIso,
   type EnvelopeStatus,
 } from './freshness.js'
+import { incrementMetric, METRIC_KEYS } from './metrics.js'
 import { loadObservationSummaries } from './observationScoring.js'
 import {
   buildPublicCacheKey,
@@ -742,6 +743,12 @@ export function mountValidatorsApi(app: Express, database: Database.Database): v
     )
     const cached = getCachedPublicResponse(cacheKey)
     if (cached) {
+      // P3-04: count cache hits as profile views (client still requested the profile).
+      try {
+        incrementMetric(database, METRIC_KEYS.validatorProfileViews)
+      } catch {
+        // Metrics must never break public profiles.
+      }
       res.setHeader('Cache-Control', PUBLIC_CACHE_CONTROL)
       res.setHeader('X-Cache', 'HIT')
       res.status(cached.status).json(cached.body)
@@ -767,6 +774,11 @@ export function mountValidatorsApi(app: Express, database: Database.Database): v
       data: profile,
     }
     setCachedPublicResponse(cacheKey, body, { watermark: watermarkIso })
+    try {
+      incrementMetric(database, METRIC_KEYS.validatorProfileViews)
+    } catch {
+      // Metrics must never break public profiles.
+    }
     res.setHeader('Cache-Control', PUBLIC_CACHE_CONTROL)
     res.setHeader('X-Cache', 'MISS')
     res.json(body)

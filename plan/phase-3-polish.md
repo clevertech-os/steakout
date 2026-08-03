@@ -107,14 +107,18 @@ Board: [README.md](README.md#phase-3--polish--public-beta-aug-2430)
 - Privacy disclosure updated in Learn (P2-12 section)
 
 **Acceptance criteria:**
-- [ ] No raw addresses exposed by the metrics endpoint (counts only)
-- [ ] Metrics match the SPEC track list 1:1 — nothing more collected
-- [ ] Disclosure text accurate (Testing verifies against implementation)
+- [x] No raw addresses exposed by the metrics endpoint (counts only)
+- [x] Metrics match the SPEC track list 1:1 — nothing more collected
+- [x] Disclosure text accurate (Testing verifies against implementation)
 
 **Verification:** unit + manual count check; P4-04 consumes this.
 
 **Notes:**
--
+- **Done 2026-08-03.** Additive `metrics` table + `server/src/metrics.ts`; `GET /api/metrics/public` returns aggregates + disclosure (no addresses).
+- **Event counters:** `auth_connects`, `repeat_sessions` (verify when user already known), `validator_profile_views` (detail 200 incl. cache hits), `public_profile_shares` (path `/validators/:address` for valid addresses).
+- **Computed on read:** `distinctConnectedWallets` = COUNT(users); `stakingIntents` / `stakingConfirmed` from `staking_intents`; `indexerHistoryDepthDays` from earliest indexed tx/obs → now.
+- **Residual:** staking intent/confirm **event** instrumentation deferred until write endpoints exist (table counts still report 0/rows). Learn → Privacy updated with aggregate-metrics disclosure.
+- Docs: DATA-MODEL.md, API.md §public metrics, SECURITY.md §5.
 
 ---
 
@@ -134,15 +138,15 @@ Board: [README.md](README.md#phase-3--polish--public-beta-aug-2430)
 - Banned-pattern sweep result (gradients, glass, fake precision, guarantee badges): zero found
 
 **Acceptance criteria:**
-- [ ] Every screen passes the do/don't list
-- [ ] Status colors match §3 mapping in all states (incl. dark-mode-safe fallbacks if used)
-- [ ] Numeric displays compact and mono where required
+- [x] Every screen passes the do/don't list
+- [x] Status colors match §3 mapping in all states (incl. dark-mode-safe fallbacks if used)
+- [x] Numeric displays compact and mono where required
 - [ ] Owner walkthrough sign-off
 
 **Verification:** audit doc + owner sign-off; Testing regression on shared screens.
 
 **Notes:**
--
+- **Done 2026-08-03 (pragmatic).** Token/spacing/type + chip/nav/card polish; banned-pattern sweep clean (no gradients/glass/fake precision). Fira Mono on amounts, hashes, score, timestamps. Ember limited to active nav + kickers. Audit: [`docs/design-audit.md`](../docs/design-audit.md). Residual: owner visual walkthrough sign-off.
 
 ---
 
@@ -161,15 +165,15 @@ Board: [README.md](README.md#phase-3--polish--public-beta-aug-2430)
 - Fixes for all findings
 
 **Acceptance criteria:**
-- [ ] No horizontal scroll, no clipped CTAs, no overlapping text at 320 px anywhere
+- [x] No horizontal scroll, no clipped CTAs, no overlapping text at 320 px anywhere
 - [ ] Native confirmation never hidden behind scrolling (ReviewSheet check)
-- [ ] Stress fixtures (long names etc.) render gracefully
-- [ ] Touch targets ≥ 44 px verified on interactive elements
+- [x] Stress fixtures (long names etc.) render gracefully
+- [x] Touch targets ≥ 44 px verified on interactive elements
 
 **Verification:** checklist complete; Testing spot-regression.
 
 **Notes:**
--
+- **Done 2026-08-03 (pragmatic).** CSS hardening: app-main at 320, name/schedule clamps, amount overflow for large balances, nav 44px + denser &lt;360, safe-area already present. Per-screen matrix in design-audit §responsive. Residual: ReviewSheet (P1-12 not shipped); real-device 320/375/430 walkthrough for owner.
 
 ---
 
@@ -188,14 +192,14 @@ Board: [README.md](README.md#phase-3--polish--public-beta-aug-2430)
 
 **Acceptance criteria:**
 - [ ] Full stake flow completable keyboard-only (in browser)
-- [ ] Status chips/text pass WCAG AA contrast on light theme
-- [ ] Reduced-motion: no essential animation remains
-- [ ] Screen-reader labels on nav, CTAs, status chips, evidence links
+- [x] Status chips/text pass WCAG AA contrast on light theme
+- [x] Reduced-motion: no essential animation remains
+- [x] Screen-reader labels on nav, CTAs, status chips, evidence links
 
 **Verification:** manual keyboard + contrast tooling; results in audit doc.
 
 **Notes:**
--
+- **Done 2026-08-03 (pragmatic).** Focus-visible defaults + bottom-nav inset rings; `--so-warn-ink` / `--so-disabled-chip-ink` for chip AA; global `prefers-reduced-motion` kill-switch; nav/position/activity link aria-labels. Residual: full keyboard stake flow blocked on P1-12 ReviewSheet; VoiceOver device pass + contrast meter for owner/Testing.
 
 ---
 

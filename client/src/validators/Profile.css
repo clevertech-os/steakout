@@ -22,10 +22,14 @@
 }
 
 .profile-title {
-  font-size: clamp(1.75rem, 8vw, 2.75rem);
+  font-size: clamp(1.5rem, 8vw, 2.75rem);
   letter-spacing: -0.04em;
   line-height: 1.1;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
 }
 
 .profile-address {
@@ -204,8 +208,10 @@
 
 .profile-score-value {
   margin: 0.25rem 0 0.75rem;
-  font-size: clamp(2rem, 8vw, 2.75rem);
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-size: clamp(1.75rem, 8vw, 2.75rem);
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
   line-height: 1;
   color: var(--so-ink);

@@ -211,7 +211,7 @@
 
 .learn-def-status--warn {
   background: var(--so-warn-soft);
-  color: var(--so-warn-strong);
+  color: var(--so-warn-ink, #6b4f06);
 }
 
 .learn-def-body {
