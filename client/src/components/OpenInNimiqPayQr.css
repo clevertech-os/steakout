@@ -133,8 +133,8 @@
   min-height: 44px;
 }
 
+/* Inherits global text-link color; keep standing underline in dense hint copy. */
 .open-in-pay-qr-hint a {
-  color: var(--so-accent, #d9573f);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 0.15em;
 }

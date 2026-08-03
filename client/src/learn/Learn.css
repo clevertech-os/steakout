@@ -123,8 +123,24 @@
   margin-top: 0.35rem;
 }
 
-.learn-article a {
+/*
+ * Prose body links: nq-prose sets blue + weight but kills underline (color-only).
+ * Re-add calm underline so inline links are not color-only (a11y).
+ * Exclude nq-arrow* (footer / back chrome use those + their own rules).
+ * Specificity must beat `.nq-prose *…:where(a)`.
+ */
+.learn-article.nq-prose a:not(.nq-arrow, .nq-arrow-back) {
   color: var(--so-info);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--so-info) 40%, transparent);
+  text-underline-offset: 0.15em;
+  text-decoration-thickness: from-font;
+}
+
+.learn-article.nq-prose a:not(.nq-arrow, .nq-arrow-back):hover,
+.learn-article.nq-prose a:not(.nq-arrow, .nq-arrow-back):focus-visible {
+  color: var(--so-info-strong);
+  text-decoration-color: currentColor;
 }
 
 .learn-article code,

@@ -46,6 +46,8 @@ Installed: **nimiq-css@1.0.0-beta.162** (workspace-hoisted under root `node_modu
 
 Import order matters: nimiq-css layers first, Steakout overrides last. `main.tsx` imports `styles/nimiq.css` once; no other global CSS entry points.
 
+**Default text links** live in `base.css` (`:where(a)` → `--so-info`, calm underline, visited stays blue-family). Specificity is 0 so chrome anchors (`nq-pill*`, bottom nav, directory cards) keep their own rules. Long-form Learn articles re-assert underline under `.learn-article.nq-prose a` so body links are not color-only.
+
 **Fonts (Vite):** self-hosted in `client/public/assets/fonts/` (weights shipped in V-01; real faces so `font-synthesis: none` in `base.css` never falls back to faux-bold):
 - `Mulish-VariableFont_wght.ttf` → family `Mulish` weights 100–1000 (variable)
 - `FiraMono-Regular.ttf` → family `Fira Mono` weight 400
