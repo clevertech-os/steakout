@@ -313,6 +313,13 @@
   cursor: not-allowed;
 }
 
+.profile-stake-error {
+  margin: 0.5rem 0 0;
+  color: var(--so-ink);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
 .mono {
   font-family: var(--nq-font-mono, 'Fira Mono', monospace);
 }

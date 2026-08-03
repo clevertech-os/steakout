@@ -18,6 +18,10 @@ import {
 } from './personalContinuity.js'
 import { rateLimit } from './rate-limit.js'
 import {
+  mountStakingIntents,
+  type StakingIntentsOptions,
+} from './stakingIntents.js'
+import {
   PositionReadError,
   positionCacheControlHeader,
   readStakingPosition,
@@ -31,6 +35,8 @@ export interface AppOptions {
   auth?: Omit<AuthOptions, 'database'>
   /** Diagnostics token override (tests). Defaults to DIAGNOSTICS_TOKEN env. */
   diagnosticsToken?: string | null
+  /** Staking intent/confirm overrides (tests). Merged with `{ database }`. */
+  staking?: Omit<StakingIntentsOptions, 'database'>
 }
 
 /**
@@ -62,6 +68,12 @@ export function createApp(options: AppOptions) {
   mountAuth(app, {
     database: options.database,
     ...options.auth,
+  })
+
+  // P1-06 — staking intent + confirm (requireAuth already on /api/staking).
+  mountStakingIntents(app, {
+    database: options.database,
+    ...options.staking,
   })
 
   // P1-04 — public registry list/detail (no auth). Observation fields from P2-03 when present.

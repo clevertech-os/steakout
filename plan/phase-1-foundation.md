@@ -190,14 +190,20 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - Replay protection: used/expired intents rejected
 
 **Acceptance criteria:**
-- [ ] Matcher validates operation, amount, and delegation (where visible on chain) — mismatch cases unit-tested
-- [ ] Pending → confirmed and pending → failed paths both proven against fixtures
-- [ ] Intent replay rejected; cross-user intent use rejected
-- [ ] Preconditions block impossible operations (e.g. stake-more with no staker) with clear errors
+- [x] Matcher validates operation, amount, and delegation (where visible on chain) — mismatch cases unit-tested
+- [x] Pending → confirmed and pending → failed paths both proven against fixtures
+- [x] Intent replay rejected; cross-user intent use rejected
+- [x] Preconditions block impossible operations (e.g. stake-more with no staker) with clear errors
 
 **Verification:** P1-15 integration suite; P3-10 re-review.
 
 **Notes:**
+- Done 2026-08-03. Module: `server/src/stakingIntents.ts` (`createStakingIntent`, `confirmStakingIntent`, `normalizeProviderTxRef`, `countPendingIntents`, `mountStakingIntents`). Wired in `app.ts` under existing `/api/staking` auth + rate-limit tree. Injectable `readPosition` / `fetchTx` / `now` for tests.
+- **Intent:** validates operation enum + params (positive Luna where needed, addresses via normalize/validate); state preconditions via `readStakingPosition` (new-staker→NotStaked; stake/set-active/update/retire→Active|Inactive; remove→Withdrawable, Retiring rejected with clear not-ready message); 15 min expiry; review `summary` for client review screen.
+- **Confirm:** never trusts client success alone. `normalizeProviderTxRef` accepts 64-hex hash (optional 0x) or `{ hash }`; rejects serialized-tx blobs. `fetchTransaction` null → `202 TX_PENDING`; `executionResult false` → `422 TX_FAILED`; from/amount hard match → `422 TX_MISMATCH`; success → status confirmed + position envelope. Replay / expired / cross-user rejected. Soft-check re-reads staker delegation for new-staker/stake/update (log-only mismatch).
+- **P0-03 residual:** provider return-value semantics still unresolved (hash vs serialized). v1 matcher is **hash-only**; serialized-tx decoding deferred until device evidence.
+- Tests: `tests/unit/server/staking-intents.test.ts` (create happy/preconditions, confirm pending/match/mismatch/failed/expired/replay/cross-user, HTTP path).
+
 -
 
 ---
@@ -378,17 +384,20 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - Error states: user cancel, provider error, timeout, `TX_FAILED`, `TX_MISMATCH`
 
 **Acceptance criteria:**
-- [ ] No provider method fires without the review sheet (invariant #3)
-- [ ] Presets never allow staking the entire balance (fee headroom enforced)
-- [ ] Pending intent survives reload and resumes polling
-- [ ] Duplicate taps cannot create two intents
-- [ ] Confirmed end state shows the position from server data, not client optimism
-- [ ] Works at 320 px with the CTA never below the fold on the review sheet
+- [x] No provider method fires without the review sheet (invariant #3)
+- [x] Presets never allow staking the entire balance (fee headroom enforced)
+- [x] Pending intent survives reload and resumes polling
+- [x] Duplicate taps cannot create two intents
+- [x] Confirmed end state shows the position from server data, not client optimism
+- [x] Works at 320 px with the CTA never below the fold on the review sheet
 
 **Verification:** P1-15 integration + P1-16 device pass; build green.
 
 **Notes:**
--
+- Done 2026-08-03 (client). Modules: `client/src/staking/{StakeFlow,ReviewSheet,amounts,pendingIntent,copy}.{ts,tsx,css}`, `client/src/api/staking.ts`, provider wrappers in `nimiq.ts` (six methods + `normalizeProviderTxResult`). Profile Stake CTA + `#/validators/:addr?stake=1` deep-link; StakedHome "Stake more" → current validator `?stake=1`.
+- Flow: amount presets (25/50/max-safe/custom) → `POST /api/staking/intent` → ReviewSheet → provider only after Confirm (`sendNewStakerTransaction` / `sendStakeTransaction`) → poll confirm (~2 min backoff) → position from server. Fee headroom constant `STAKE_FEE_HEADROOM_LUNA = 1 NIM`. Pending intent in localStorage for reload resume. Submit lock + `providerCalledRef` against double-tap.
+- **P1-06 residual:** server intent/confirm routes not required for client build; client matches API.md §6. Live success needs P1-06. No mainnet hard-block on product path (spike remains testnet-only).
+- Verified: `npm run build` pass; `npm run test:client` 69/69 (amounts, normalize, API mock, copy ban grep, hash query).
 
 ---
 
@@ -407,14 +416,15 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - Review against the language dictionary — zero banned phrases
 
 **Acceptance criteria:**
-- [ ] Every screen in the stake flow uses approved copy
+- [x] Every screen in the stake flow uses approved copy
 - [ ] Reading-level check: a non-crypto user can explain back what will happen (owner sanity check)
-- [ ] No yield promises, no "guaranteed", no fee claims
+- [x] No yield promises, no "guaranteed", no fee claims
 
 **Verification:** owner read-through; dictionary grep in Testing regression.
 
 **Notes:**
--
+- Done 2026-08-03 (copy deck). Source of truth: `client/src/staking/copy.ts`; re-exported from `client/src/learn/copy.ts`. Covers non-custodial, review-before-confirm, mainnet real amounts, no illustrative yield on review sheet, cancel/error/timeout/mismatch strings, presets, waiting-period note for create/add.
+- Unit ban grep: `tests/unit/client/staking-copy.test.ts` (no guaranteed/APY/fraud/em dash). Owner reading-level pass still open.
 
 ---
 

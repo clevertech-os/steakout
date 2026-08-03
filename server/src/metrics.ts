@@ -45,12 +45,12 @@ export interface PublicMetrics {
     /** Path-based share page hits (valid address). */
     publicProfileShares: number
     /**
-     * Rows in staking_intents (0 until intent endpoints land).
-     * Residual: not instrumented as event counters until P1-06 / P2-11 write intents.
+     * Rows in staking_intents (intent create path writes rows).
+     * Aggregate COUNT only — not an event counter.
      */
     stakingIntents: number
     /**
-     * staking_intents with status = 'confirmed' (0 until confirm path lands).
+     * staking_intents with status = 'confirmed' (confirm matcher writes status).
      */
     stakingConfirmed: number
     /**
@@ -182,9 +182,9 @@ export function buildPublicMetrics(
     },
     notes: {
       stakingIntents:
-        'Computed as COUNT(staking_intents). Event counters deferred until intent endpoints write rows (residual).',
+        'Computed as COUNT(staking_intents). Rows written by POST /api/staking/intent.',
       stakingConfirmed:
-        "Computed as COUNT(staking_intents WHERE status = 'confirmed'). Residual until confirm path lands.",
+        "Computed as COUNT(staking_intents WHERE status = 'confirmed'). Set by chain-matched POST /api/staking/confirm.",
       indexerHistoryDepthDays:
         'Computed on read from earliest indexed transaction/observation timestamp → now (whole days). Not stored as a counter.',
     },

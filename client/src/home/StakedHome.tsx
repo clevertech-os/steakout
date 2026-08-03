@@ -25,7 +25,7 @@ export default function StakedHome({
   const { data, updatedAt, dataFreshness, status: envelopeStatus } = envelope
   const { staker, state, lastRewardObservation } = data
   const shortAddress = shortenAddress(address)
-  const primaryCta = primaryAction(state)
+  const primaryCta = primaryAction(state, staker.delegation)
   const monitoring = monitoringCopy(envelopeStatus, lastRewardObservation)
 
   return (
@@ -159,7 +159,10 @@ export default function StakedHome({
   )
 }
 
-function primaryAction(state: PositionState): {
+function primaryAction(
+  state: PositionState,
+  delegation: string | null | undefined,
+): {
   label: string
   href: string
   secondary?: { label: string; href: string }
@@ -193,7 +196,10 @@ function primaryAction(state: PositionState): {
     default:
       return {
         label: 'Stake more',
-        href: '#/validators',
+        href:
+          delegation?.trim()
+            ? `#/validators/${encodeURIComponent(delegation)}?stake=1`
+            : '#/validators',
         secondary: { label: 'Change validator', href: '#/validators' },
       }
   }

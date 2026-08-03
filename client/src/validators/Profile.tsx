@@ -1,6 +1,6 @@
 /**
  * Validator profile — summary + evidence layers (P1-11 / P2-08 / P2-16 / SPEC §6.3).
- * Public, no wallet required.
+ * Public, no wallet required. Stake CTA opens P1-12 StakeFlow when connected.
  *
  * Official Nimiq Trust Score is always shown as the official score,
  * never blended with Steakout observation status (invariant #6).
@@ -11,11 +11,17 @@ import {
   isValidNimiqAddress,
   shortAddress,
 } from '../addresses'
+import { walletAuthApi } from '../api/walletAuth'
+import type { PositionState } from '../api/position'
 import DataStatusTag from '../components/DataStatusTag'
 import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
 import { humanizeFetchError } from '../components/humanizeError'
 import type { ObservationStatus } from '../components/StatusChip'
 import { buildNimiqAddressExplorerUrl } from '../explorer'
+import { hashWantsStake } from '../routes'
+import StakeFlow, { loadAvailableLunaForStake } from '../staking/StakeFlow'
+import { STAKE_CONNECT_FIRST } from '../staking/copy'
+import { useWallet } from '../wallet/useWallet'
 import Evidence from './Evidence'
 import {
   applyDocumentMeta,
@@ -158,10 +164,41 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
   const [state, setState] = useState<LoadState>({ kind: 'loading' })
   const [shareFeedback, setShareFeedback] = useState<string | null>(null)
   const [reloadToken, setReloadToken] = useState(0)
+  const [stakeOpen, setStakeOpen] = useState(false)
+  const [stakeBalance, setStakeBalance] = useState<{
+    availableLuna: number | null
+    positionState: PositionState | null
+    currentDelegation: string | null
+  }>({ availableLuna: null, positionState: null, currentDelegation: null })
+
+  const wallet = useWallet({ auth: walletAuthApi })
 
   const retry = useCallback(() => {
     setReloadToken((n) => n + 1)
   }, [])
+
+  // Deep-link `#/validators/:address?stake=1` opens stake flow once profile is ok.
+  useEffect(() => {
+    if (state.kind !== 'ok') return
+    if (!hashWantsStake(window.location.hash)) return
+    setStakeOpen(true)
+    // Clear the query so reload does not re-open forever
+    const path = window.location.hash.replace(/\?.*$/, '')
+    if (path !== window.location.hash) {
+      window.history.replaceState(null, '', path)
+    }
+  }, [state.kind])
+
+  useEffect(() => {
+    if (!stakeOpen || wallet.status !== 'connected') return
+    let cancelled = false
+    void loadAvailableLunaForStake().then((bal) => {
+      if (!cancelled) setStakeBalance(bal)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [stakeOpen, wallet.status, wallet.address])
 
   useEffect(() => {
     let cancelled = false
@@ -609,7 +646,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
         )}
       </section>
 
-      {/* Stake CTA stub — review-before-confirm is P1-12; do not invoke provider */}
+      {/* Stake CTA — opens amount + ReviewSheet; provider only after Confirm (P1-12). */}
       <section
         className="nq-card profile-card profile-card--cta"
         aria-labelledby="profile-stake-cta"
@@ -618,19 +655,59 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           Stake with this validator
         </h2>
         <p className="nq-subline profile-section-note">
-          Staking opens a review step before any wallet confirmation. The full
-          stake flow is not wired on this screen yet.
+          You will choose an amount, review the exact action and validator, then
+          approve in your wallet. Steakout never holds keys.
         </p>
-        <button
-          type="button"
-          className="nq-pill-blue profile-stake-btn"
-          disabled
-          aria-disabled="true"
-          title="Stake flow arrives with the end-to-end staking task (P1-12)."
-        >
-          Stake (coming soon)
-        </button>
+        {wallet.status === 'connected' && wallet.address ? (
+          <button
+            type="button"
+            className="nq-pill-blue profile-stake-btn"
+            onClick={() => setStakeOpen(true)}
+          >
+            Stake
+          </button>
+        ) : (
+          <>
+            <p className="nq-subline profile-section-note">{STAKE_CONNECT_FIRST}</p>
+            <button
+              type="button"
+              className="nq-pill-blue profile-stake-btn"
+              disabled={wallet.connecting || wallet.status === 'connecting'}
+              onClick={() => {
+                void wallet.connect().then(() => setStakeOpen(true))
+              }}
+            >
+              {wallet.connecting || wallet.status === 'connecting'
+                ? 'Connecting…'
+                : 'Connect to stake'}
+            </button>
+          </>
+        )}
+        {wallet.error ? (
+          <p className="profile-stake-error" role="alert">
+            {wallet.error}
+          </p>
+        ) : null}
       </section>
+
+      {stakeOpen ? (
+        <StakeFlow
+          validatorAddress={profile.address}
+          validatorName={profile.name}
+          walletAddress={wallet.address}
+          nimiq={wallet.nimiq}
+          positionState={stakeBalance.positionState}
+          availableLuna={stakeBalance.availableLuna}
+          currentDelegation={stakeBalance.currentDelegation}
+          onClose={() => setStakeOpen(false)}
+          onConnectedRequest={() => {
+            void wallet.connect()
+          }}
+          onSuccess={() => {
+            // Position lives on Home; leave sheet success UI in StakeFlow.
+          }}
+        />
+      ) : null}
     </div>
   )
 }

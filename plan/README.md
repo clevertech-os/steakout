@@ -64,14 +64,14 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 | P1-03 | Server RPC client (retry/backoff/timeouts) | Implementation | P0-04 | done 2026-08-03 |
 | P1-04 | Validator registry sync + `/api/validators` | Implementation | P0-05, P1-03 | done 2026-08-03 |
 | P1-05 | Position endpoint + state normalization | Implementation | P0-04, P1-03 | done 2026-08-03 |
-| P1-06 | Staking intent/confirm + chain matcher | Implementation | P0-03, P1-02, P1-03 | backlog |
+| P1-06 | Staking intent/confirm + chain matcher | Implementation | P0-03, P1-02, P1-03 | done 2026-08-03 |
 | P1-07 | App shell + routing + bottom nav | Implementation | P0-01 | done |
 | P1-08 | nimiq-css wiring + tokens + fonts | Implementation | P0-01 | done 2026-08-03 |
 | P1-09 | Home dashboard (3 states) | Implementation | P1-05, P1-07, P1-08 | done 2026-08-03 |
 | P1-10 | Validator directory + sorts | Implementation | P1-04, P1-08 | done 2026-08-03 |
 | P1-11 | Validator profile (summary layer) | Implementation | P1-04, P1-08 | done 2026-08-03 |
-| P1-12 | Stake flow end-to-end | Implementation | P1-06, P1-09, P1-10, P1-11 | backlog |
-| P1-13 | Non-custodial explainer + review-screen copy | Polishing | P1-12 | backlog |
+| P1-12 | Stake flow end-to-end | Implementation | P1-06, P1-09, P1-10, P1-11 | done 2026-08-03 |
+| P1-13 | Non-custodial explainer + review-screen copy | Polishing | P1-12 | done 2026-08-03 |
 | P1-14 | Unit tests: addresses, luna, position, intent | Testing | P1-01, P1-05, P1-06 | partial 2026-08-03 (intent residual → P1-06) |
 | P1-15 | Integration: auth, registry, intent/confirm | Testing | P0-08, P1-02, P1-04, P1-06 | backlog |
 | P1-16 | Device smoke: Pay Android/iOS + Hub fallback | Testing | P1-12 | backlog (human-assisted) |

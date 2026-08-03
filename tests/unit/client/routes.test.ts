@@ -4,7 +4,9 @@ import {
   LEARN_ARTICLES,
   LEARN_PATH,
   NAV_ROUTES,
+  hashQuery,
   hashToPath,
+  hashWantsStake,
   matchRoute,
 } from '../../../client/src/routes.ts'
 
@@ -14,6 +16,13 @@ describe('hashToPath', () => {
     expect(hashToPath('#/')).toBe('/')
     expect(hashToPath('')).toBe('/')
     expect(hashToPath('#')).toBe('/')
+  })
+
+  it('strips query strings embedded in the hash (stake deep-link)', () => {
+    expect(hashToPath('#/validators/NQXX?stake=1')).toBe('/validators/NQXX')
+    expect(hashWantsStake('#/validators/NQXX?stake=1')).toBe(true)
+    expect(hashWantsStake('#/validators/NQXX')).toBe(false)
+    expect(hashQuery('#/validators/NQXX?stake=1').get('stake')).toBe('1')
   })
 })
 

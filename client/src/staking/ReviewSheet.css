@@ -1,0 +1,192 @@
+/* ReviewSheet — bottom sheet pre-confirm (P1-12). Calm instrument UI; CTA never below fold. */
+
+.review-sheet-root {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  /* Keep sheet above bottom nav + safe area */
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.review-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: rgb(36 36 36 / 40%);
+  cursor: pointer;
+}
+
+.review-sheet-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--so-space-4, 1rem);
+  max-height: min(92vh, 40rem);
+  overflow: auto;
+  width: 100%;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: var(--so-space-5, 1.25rem) var(--so-space-4, 1rem)
+    calc(var(--so-space-5, 1.25rem) + env(safe-area-inset-bottom, 0));
+  background: var(--so-card);
+  border-radius: var(--so-radius-lg, 1rem) var(--so-radius-lg, 1rem) 0 0;
+  box-shadow: var(--so-shadow);
+  border: 1px solid var(--so-rule);
+  border-bottom: 0;
+}
+
+.review-sheet-header {
+  flex: 0 0 auto;
+}
+
+.review-sheet-title {
+  margin: 0.15rem 0 0.35rem;
+  font-size: clamp(1.35rem, 5vw, 1.75rem);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.review-sheet-lede {
+  margin: 0;
+  color: var(--so-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.review-sheet-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+}
+
+.review-sheet-fact {
+  margin: 0;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--so-rule);
+}
+
+.review-sheet-fact:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.review-sheet-fact dt {
+  margin: 0 0 0.2rem;
+}
+
+.review-sheet-fact dd {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.review-sheet-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.review-sheet-luna {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--so-muted);
+}
+
+.review-sheet-validator-name {
+  display: block;
+}
+
+.review-sheet-validator-addr {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--so-muted);
+}
+
+.review-sheet-note {
+  font-weight: 500 !important;
+  color: var(--so-ink);
+  font-size: 0.9rem !important;
+}
+
+.review-sheet-notes {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--so-muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.review-sheet-trust {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--so-info-soft);
+  border-radius: var(--so-radius-md, 0.75rem);
+}
+
+.review-sheet-trust p {
+  margin: 0;
+  color: var(--so-ink);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+/* Sticky actions so Confirm stays above the fold on short viewports */
+.review-sheet-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+  background: linear-gradient(
+    to top,
+    var(--so-card) 70%,
+    rgb(255 255 255 / 0%)
+  );
+}
+
+.review-sheet-confirm,
+.review-sheet-cancel {
+  width: 100%;
+  min-height: var(--so-touch, 44px);
+  justify-content: center;
+}
+
+.review-sheet-confirm:disabled,
+.review-sheet-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mono {
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+}
+
+@media (min-width: 600px) {
+  .review-sheet-panel {
+    padding-left: var(--so-space-6, 1.5rem);
+    padding-right: var(--so-space-6, 1.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .review-sheet-panel {
+    transition: none;
+  }
+}

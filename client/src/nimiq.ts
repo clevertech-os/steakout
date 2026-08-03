@@ -10,7 +10,7 @@
 
 import HubApi from '@nimiq/hub-api'
 import type { ChooseAddressResult, SignedMessage, SignedTransaction } from '@nimiq/hub-api'
-import { init } from '@nimiq/mini-app-sdk'
+import { init, type ErrorResponse, type NimiqProvider } from '@nimiq/mini-app-sdk'
 import { createHubRedirectBehavior } from './hubRedirectBehavior'
 import { processLenientHubRedirect } from './hubLoginRedirect'
 import { saveHubReturnPath, savePayReturnPath } from './hubReturnPath'
@@ -795,4 +795,143 @@ export async function copyNimiqPayDeepLink(appUrl?: string): Promise<string> {
     await navigator.clipboard.writeText(link)
   }
   return link
+}
+
+// ── Staking provider wrappers (P1-12) ──────────────────────────────────────
+// Non-custodial: only window.nimiq / mini-app-sdk methods. No local signing of
+// raw staking transactions. Product stake flow does NOT hard-block mainnet
+// (spike harness is testnet-only). Callers must show ReviewSheet first.
+
+export type ProviderTxOutcome =
+  | { kind: 'hash'; hash: string; raw: string }
+  | { kind: 'raw'; value: string; raw: string }
+  | { kind: 'error'; message: string; type?: string; raw: string }
+
+const TX_HASH_HEX = /^[0-9a-fA-F]{64}$/
+
+/**
+ * Normalize a provider staking return for confirm polling.
+ * - 64-hex string → treat as tx hash
+ * - other string → use as-is for confirm (may still be a hash-like id); keep raw for debug
+ * - ErrorResponse → cancel/error neutrally
+ */
+export function normalizeProviderTxResult(result: unknown): ProviderTxOutcome {
+  const errMsg = getProviderErrorMessage(result)
+  if (errMsg) {
+    const type =
+      typeof result === 'object' &&
+      result !== null &&
+      'error' in result &&
+      typeof (result as ErrorResponse).error?.type === 'string'
+        ? (result as ErrorResponse).error.type
+        : undefined
+    return {
+      kind: 'error',
+      message: errMsg,
+      type,
+      raw: formatProviderRaw(result),
+    }
+  }
+
+  if (typeof result === 'string') {
+    const trimmed = result.trim()
+    if (TX_HASH_HEX.test(trimmed)) {
+      return { kind: 'hash', hash: trimmed.toLowerCase(), raw: trimmed }
+    }
+    return { kind: 'raw', value: trimmed, raw: trimmed }
+  }
+
+  return {
+    kind: 'error',
+    message: 'Unexpected wallet response. No staking change was confirmed by Steakout.',
+    raw: formatProviderRaw(result),
+  }
+}
+
+function formatProviderRaw(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (value instanceof Error) return `${value.name}: ${value.message}`
+  try {
+    return JSON.stringify(value) ?? String(value)
+  } catch {
+    return String(value)
+  }
+}
+
+async function withConnectedProvider(
+  existing?: NimiqProvider | null,
+): Promise<NimiqProvider> {
+  const provider = await ensureNimiqProvider(existing ?? null)
+  await provider.connect()
+  return provider
+}
+
+/** Create staker + delegate. ReviewSheet must have been confirmed first. */
+export async function sendNewStakerTransaction(
+  args: { delegation: string; value: number },
+  existing?: NimiqProvider | null,
+): Promise<ProviderTxOutcome> {
+  const provider = await withConnectedProvider(existing)
+  const result = await provider.sendNewStakerTransaction({
+    delegation: args.delegation,
+    value: args.value,
+  })
+  return normalizeProviderTxResult(result)
+}
+
+/** Add stake to existing staker. */
+export async function sendStakeTransaction(
+  args: { value: number },
+  existing?: NimiqProvider | null,
+): Promise<ProviderTxOutcome> {
+  const provider = await withConnectedProvider(existing)
+  const result = await provider.sendStakeTransaction({ value: args.value })
+  return normalizeProviderTxResult(result)
+}
+
+/** Set active stake balance. */
+export async function sendSetActiveStakeTransaction(
+  args: { newActiveBalance: number },
+  existing?: NimiqProvider | null,
+): Promise<ProviderTxOutcome> {
+  const provider = await withConnectedProvider(existing)
+  const result = await provider.sendSetActiveStakeTransaction({
+    newActiveBalance: args.newActiveBalance,
+  })
+  return normalizeProviderTxResult(result)
+}
+
+/** Change delegation. */
+export async function sendUpdateStakerTransaction(
+  args: { newDelegation: string; reactivateAllStake?: boolean },
+  existing?: NimiqProvider | null,
+): Promise<ProviderTxOutcome> {
+  const provider = await withConnectedProvider(existing)
+  const result = await provider.sendUpdateStakerTransaction({
+    newDelegation: args.newDelegation,
+    reactivateAllStake: args.reactivateAllStake,
+  })
+  return normalizeProviderTxResult(result)
+}
+
+/** Retire stake (waiting period applies). */
+export async function sendRetireStakeTransaction(
+  args: { retireStake: number },
+  existing?: NimiqProvider | null,
+): Promise<ProviderTxOutcome> {
+  const provider = await withConnectedProvider(existing)
+  const result = await provider.sendRetireStakeTransaction({
+    retireStake: args.retireStake,
+  })
+  return normalizeProviderTxResult(result)
+}
+
+/** Remove retired stake after waiting period. */
+export async function sendRemoveStakeTransaction(
+  args: { value: number },
+  existing?: NimiqProvider | null,
+): Promise<ProviderTxOutcome> {
+  const provider = await withConnectedProvider(existing)
+  const result = await provider.sendRemoveStakeTransaction({ value: args.value })
+  return normalizeProviderTxResult(result)
 }

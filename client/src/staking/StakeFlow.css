@@ -1,0 +1,194 @@
+/* StakeFlow shell (amount entry + status). ReviewSheet is layered on top. */
+
+.stake-flow-root {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.stake-flow-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: rgb(36 36 36 / 35%);
+  cursor: pointer;
+}
+
+.stake-flow-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--so-space-4, 1rem);
+  max-height: min(92vh, 42rem);
+  overflow: auto;
+  width: 100%;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: var(--so-space-5, 1.25rem) var(--so-space-4, 1rem)
+    calc(var(--so-space-5, 1.25rem) + env(safe-area-inset-bottom, 0));
+  background: var(--so-card);
+  border-radius: var(--so-radius-lg, 1rem) var(--so-radius-lg, 1rem) 0 0;
+  box-shadow: var(--so-shadow);
+  border: 1px solid var(--so-rule);
+  border-bottom: 0;
+}
+
+.stake-flow-title {
+  margin: 0.15rem 0 0.35rem;
+  font-size: clamp(1.35rem, 5vw, 1.75rem);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.stake-flow-copy {
+  margin: 0;
+  color: var(--so-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.stake-flow-validator-name {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.stake-flow-validator-addr {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--so-muted);
+  overflow-wrap: anywhere;
+}
+
+.stake-flow-balance .nq-label,
+.stake-flow-validator .nq-label,
+.stake-flow-field .nq-label {
+  margin: 0 0 0.25rem;
+}
+
+.stake-flow-muted {
+  margin: 0.35rem 0 0;
+  color: var(--so-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.stake-flow-headroom {
+  margin-top: 0;
+}
+
+.stake-flow-warn {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  background: var(--so-warn-soft);
+  color: var(--so-warn-ink, var(--so-ink));
+  border-radius: var(--so-radius-md, 0.75rem);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.stake-flow-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.stake-flow-preset {
+  min-height: var(--so-touch, 44px);
+  flex: 1 1 auto;
+}
+
+.stake-flow-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.stake-flow-input {
+  min-height: var(--so-touch, 44px);
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--so-rule);
+  border-radius: var(--so-radius-md, 0.75rem);
+  background: var(--so-surface);
+  color: var(--so-ink);
+  font-size: 1.1rem;
+}
+
+.stake-flow-input:focus-visible {
+  outline: 2px solid var(--so-focus);
+  outline-offset: 2px;
+}
+
+.stake-flow-trust {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--so-muted);
+}
+
+.stake-flow-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  position: sticky;
+  bottom: 0;
+  padding-top: 0.35rem;
+  background: linear-gradient(to top, var(--so-card) 65%, rgb(255 255 255 / 0%));
+}
+
+.stake-flow-primary {
+  width: 100%;
+  min-height: var(--so-touch, 44px);
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+}
+
+.stake-flow-actions .nq-pill-secondary {
+  width: 100%;
+  min-height: var(--so-touch, 44px);
+  justify-content: center;
+}
+
+.stake-flow-error {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  background: var(--so-not-observed-soft);
+  color: var(--so-ink);
+  border-radius: var(--so-radius-md, 0.75rem);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.stake-flow-debug {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--so-muted);
+  overflow-wrap: anywhere;
+}
+
+.stake-flow-success-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mono {
+  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+}
+
+@media (min-width: 600px) {
+  .stake-flow-panel {
+    padding-left: var(--so-space-6, 1.5rem);
+    padding-right: var(--so-space-6, 1.5rem);
+  }
+}

@@ -54,8 +54,8 @@ Aggregate product metrics for the launch story (SPEC §16). No auth. **Counts on
     "repeatSessions": 0,             // verify when user already known
     "validatorProfileViews": 0,
     "publicProfileShares": 0,        // path-based /validators/:address hits
-    "stakingIntents": 0,             // COUNT(staking_intents); residual until intents land
-    "stakingConfirmed": 0,           // confirmed intents; residual until confirm path lands
+    "stakingIntents": 0,             // COUNT(staking_intents); rows from POST /api/staking/intent
+    "stakingConfirmed": 0,           // confirmed intents from chain-matched POST /api/staking/confirm
     "indexerHistoryDepthDays": 0     // computed from earliest indexed data → now
   },
   "notes": { /* short residual / methodology strings per computed field */ }

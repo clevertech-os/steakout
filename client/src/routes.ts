@@ -48,10 +48,31 @@ export interface RouteMatch {
   param?: string
 }
 
-/** Convert a location fragment (`#/validators/NQ…`) into a route path. */
+/**
+ * Convert a location fragment (`#/validators/NQ…` or `#/validators/NQ…?stake=1`)
+ * into a route path. Query strings in the hash are stripped so matchers stay pure.
+ */
 export function hashToPath(hash: string): string {
-  const path = hash.replace(/^#/, '')
-  return path.startsWith('/') ? path : '/'
+  const raw = hash.replace(/^#/, '')
+  const withSlash = raw.startsWith('/') ? raw : raw ? `/${raw}` : '/'
+  const pathOnly = withSlash.split(/[?#]/)[0] || '/'
+  return pathOnly.startsWith('/') ? pathOnly : `/${pathOnly}`
+}
+
+/** Parse query params embedded in the hash (`#/path?stake=1`). */
+export function hashQuery(hash: string): URLSearchParams {
+  const raw = hash.replace(/^#/, '')
+  const qIndex = raw.indexOf('?')
+  if (qIndex < 0) return new URLSearchParams()
+  const query = raw.slice(qIndex + 1).split('#')[0]
+  return new URLSearchParams(query)
+}
+
+/** True when the hash asks to open the stake flow (`?stake=1`). */
+export function hashWantsStake(hash: string): boolean {
+  const q = hashQuery(hash)
+  const v = q.get('stake')
+  return v === '1' || v === 'true'
 }
 
 function isLearnArticle(slug: string): slug is LearnArticleId {
