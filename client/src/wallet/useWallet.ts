@@ -452,26 +452,33 @@ export function useWallet(options: UseWalletOptions = {}): UseWalletResult {
 
         /**
          * Browser paths (not inside Nimiq Pay WebView):
-         * - Explicit Pay (`useRedirect: false`): try `nimiqpay://` deeplink only.
-         * - Everything else (Hub button, desktop Login, default): Nimiq Hub.
+         * Product path is Nimiq Pay only (same address for desktop prepare + phone approve).
+         * Hub is no longer the default connect — use QR / deeplink / desktop-pair instead.
+         * Opt-in Hub: connect({ useRedirect: true }) still works for rare debugging.
          */
         if (!alreadyInPay && !payHost) {
-          const wantPayDeeplink =
-            isMobileDevice() && connectOptions?.useRedirect === false && !explicitHubRedirect
+          const wantHub = explicitHubRedirect === true
 
-          if (wantPayDeeplink) {
-            setWalletStatus('Opening Nimiq Pay…')
-            const appUrl = `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`
-            const payResult = launchNimiqPayMiniApp(appUrl)
-            if (payResult === 'already-in-pay') return
-            if (payResult === 'launched') {
+          if (!wantHub) {
+            // Mobile: try deeplink into Pay. Desktop: surface install / scan QR (no Hub popup).
+            if (isMobileDevice()) {
               setWalletStatus('Opening Nimiq Pay…')
-              scheduleDeeplinkFallback()
-              return
+              const appUrl = `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`
+              const payResult = launchNimiqPayMiniApp(appUrl)
+              if (payResult === 'already-in-pay') return
+              if (payResult === 'launched') {
+                setWalletStatus('Opening Nimiq Pay…')
+                scheduleDeeplinkFallback()
+                return
+              }
             }
             setShowOpenInPay(true)
             setWalletStatus(null)
-            setError(PAY_INSTALL_HINT)
+            setError(
+              isMobileDevice()
+                ? PAY_INSTALL_HINT
+                : 'Sign in with Nimiq Pay using the QR below. Desktop Hub login is disabled so staking uses the same Pay address on phone and desktop.',
+            )
             return
           }
 
@@ -495,7 +502,6 @@ export function useWallet(options: UseWalletOptions = {}): UseWalletResult {
             return
           }
 
-          // Address-only until P1-02 auth is wired.
           const chosen = await chooseAddressViaHub({ preferRedirect })
           hubConnectInFlightRef.current = false
           applySession(undefined, chosen.address)

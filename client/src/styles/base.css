@@ -83,6 +83,54 @@ body {
   outline: none;
 }
 
+/*
+ * Default text links (STYLING §3 — blue reserved for links / info).
+ * :where() keeps specificity at 0 so chrome anchors (nq-pill*, bottom-nav,
+ * validator cards, learn index cards, etc.) keep their own color and
+ * text-decoration. Bare prose / method links pick these up automatically.
+ */
+:where(a) {
+  color: var(--so-info);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--so-info) 40%, transparent);
+  text-underline-offset: 0.15em;
+  text-decoration-thickness: from-font;
+}
+
+:where(a:hover),
+:where(a:focus-visible) {
+  color: var(--so-info-strong);
+  text-decoration-color: currentColor;
+}
+
+/* Visited stays in the info family — never browser purple. */
+:where(a:visited) {
+  color: var(--so-info-strong);
+}
+
+:where(a:visited:hover),
+:where(a:visited:focus-visible) {
+  color: var(--so-info-strong);
+  text-decoration-color: currentColor;
+}
+
+/*
+ * Arrow affordance links: icon carries the cue; no standing underline.
+ * Hover/focus still pick up color from the rules above.
+ */
+:where(a.nq-arrow),
+:where(a.nq-arrow-back) {
+  text-decoration: none;
+}
+
+:where(a.nq-arrow:hover),
+:where(a.nq-arrow:focus-visible),
+:where(a.nq-arrow-back:hover),
+:where(a.nq-arrow-back:focus-visible) {
+  text-decoration: underline;
+  text-decoration-color: currentColor;
+}
+
 /* Reduced motion: kill non-essential animations/transitions app-wide. */
 @media (prefers-reduced-motion: reduce) {
   *,

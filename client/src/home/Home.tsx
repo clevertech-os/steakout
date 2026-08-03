@@ -103,6 +103,7 @@ export default function Home() {
           walletStatus={wallet.walletStatus}
           error={wallet.error}
           mobilePayConnect={wallet.mobilePayConnect}
+          inNimiqPay={wallet.inNimiqPay}
           showOpenInPay={wallet.showOpenInPay}
           onConnect={handleConnect}
           onConnectPay={wallet.mobilePayConnect ? handleConnectPay : undefined}

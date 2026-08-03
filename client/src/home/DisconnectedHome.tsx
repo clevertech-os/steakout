@@ -10,6 +10,8 @@ export interface DisconnectedHomeProps {
   walletStatus: string | null
   error: string | null
   mobilePayConnect: boolean
+  /** True when running inside Nimiq Pay WebView. */
+  inNimiqPay: boolean
   showOpenInPay: boolean
   onConnect: () => void
   onConnectPay?: () => void
@@ -22,6 +24,7 @@ export default function DisconnectedHome({
   walletStatus,
   error,
   mobilePayConnect,
+  inNimiqPay,
   showOpenInPay,
   onConnect,
   onConnectPay,
@@ -40,9 +43,9 @@ export default function DisconnectedHome({
       <section className="nq-card nq-card-lg shell-card home-card" aria-labelledby="home-connect-title">
         <h2 id="home-connect-title">Connect or browse</h2>
         <p className="home-copy">
-          Steakout is non-custodial: private keys never leave your wallet. Connect with
-          Nimiq Pay (or Hub on desktop) to read your staking position, or explore
-          validators and payout observations without connecting.
+          Steakout is non-custodial: private keys never leave your wallet. Sign in with{' '}
+          <strong>Nimiq Pay</strong> so desktop and phone share the same address — required for
+          staking (prepare here, approve in Pay). Or explore validators without connecting.
         </p>
         <p className="home-copy home-copy--muted">
           Observations describe what was seen on chain. They are not a guaranteed return
@@ -50,14 +53,17 @@ export default function DisconnectedHome({
         </p>
 
         <div className="home-actions">
-          <button
-            type="button"
-            className="nq-pill-blue nq-pill-lg home-cta"
-            onClick={onConnect}
-            disabled={connecting}
-          >
-            {connecting ? 'Connecting…' : mobilePayConnect ? 'Connect Nimiq Pay wallet' : 'Connect wallet'}
-          </button>
+          {/* Inside Pay: native connect. Desktop: QR pair below is primary (no Hub). */}
+          {inNimiqPay ? (
+            <button
+              type="button"
+              className="nq-pill-blue nq-pill-lg home-cta"
+              onClick={onConnect}
+              disabled={connecting}
+            >
+              {connecting ? 'Connecting…' : 'Connect Nimiq Pay wallet'}
+            </button>
+          ) : null}
 
           {mobilePayConnect && onConnectPay ? (
             <button
@@ -93,10 +99,11 @@ export default function DisconnectedHome({
 
         {showOpenInPay ? (
           <p className="home-hint nq-subline">
-            Install Nimiq Pay, then return here, or continue with Nimiq Hub above.
+            Install Nimiq Pay, then scan the QR below to open Steakout inside the app.
           </p>
         ) : null}
 
+        {/* Desktop primary: Pay deeplink + session pair (no Hub). */}
         <OpenInNimiqPayQr linkDesktopSession onDesktopLinked={onDesktopLinked} />
       </section>
     </>
