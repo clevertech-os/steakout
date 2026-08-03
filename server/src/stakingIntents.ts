@@ -1005,6 +1005,88 @@ function sendError(
   res.status(status).json({ error })
 }
 
+export interface IntentStatusView {
+  intentId: string
+  status: IntentStatus
+  expiresAt: string
+  operation: StakingOperation
+  params: IntentParams
+  summary: IntentSummary
+  txHash: string | null
+  confirmedAt: string | null
+}
+
+/**
+ * Load an intent owned by the authenticated address (for phone approve + desktop poll).
+ */
+export function getOwnedIntent(
+  options: StakingIntentsOptions,
+  userAddress: string,
+  intentId: string,
+  nowMs: number = Date.now(),
+): IntentStatusView {
+  const address = normalizeAddress(userAddress)
+  const row = options.database
+    .prepare(
+      `SELECT id, user_address AS userAddress, operation, params_json AS paramsJson,
+              status, tx_hash AS txHash, expires_at AS expiresAt, confirmed_at AS confirmedAt
+       FROM staking_intents WHERE id = ?`,
+    )
+    .get(intentId) as
+    | {
+        id: string
+        userAddress: string
+        operation: string
+        paramsJson: string
+        status: string
+        txHash: string | null
+        expiresAt: string
+        confirmedAt: string | null
+      }
+    | undefined
+
+  if (!row || !addressesEqual(row.userAddress, address)) {
+    throw new StakingIntentError('Staking intent not found.', 404, 'INTENT_NOT_FOUND')
+  }
+
+  let status = row.status as IntentStatus
+  const expiresMs = Date.parse(row.expiresAt)
+  if (
+    status === 'pending' &&
+    Number.isFinite(expiresMs) &&
+    expiresMs < nowMs
+  ) {
+    options.database
+      .prepare(
+        `UPDATE staking_intents SET status = 'expired' WHERE id = ? AND status = 'pending'`,
+      )
+      .run(intentId)
+    status = 'expired'
+  }
+
+  const params = parseStoredParams(row.paramsJson)
+  const operation = row.operation as StakingOperation
+  // Rebuild summary for phone review UI (validator names from registry).
+  const summary = buildSummary(
+    options.database,
+    operation,
+    params,
+    status === 'pending' ? 'Pending' : (status === 'confirmed' ? 'Active' : 'NotStaked'),
+    params.delegation ?? params.newDelegation ?? null,
+  )
+
+  return {
+    intentId: row.id,
+    status,
+    expiresAt: row.expiresAt,
+    operation,
+    params,
+    summary,
+    txHash: row.txHash,
+    confirmedAt: row.confirmedAt,
+  }
+}
+
 /**
  * Mount POST /api/staking/intent, confirm, and cancel-pending.
  * Auth is already applied to `/api/staking` by mountAuth.
@@ -1013,6 +1095,29 @@ export function mountStakingIntents(
   app: Express,
   options: StakingIntentsOptions,
 ): void {
+  app.get('/api/staking/intent/:intentId', (req: Request, res: Response) => {
+    const address = res.locals.address as string | undefined
+    if (!address) {
+      sendError(res, 401, 'WALLET_NOT_CONNECTED', 'No valid wallet session.')
+      return
+    }
+    const intentId = typeof req.params.intentId === 'string' ? req.params.intentId.trim() : ''
+    if (!intentId) {
+      sendError(res, 400, 'VALIDATION', 'intentId is required.')
+      return
+    }
+    try {
+      const view = getOwnedIntent(options, address, intentId)
+      res.status(200).json(view)
+    } catch (error) {
+      if (error instanceof StakingIntentError) {
+        sendError(res, error.httpStatus, error.code, error.message)
+        return
+      }
+      sendError(res, 500, 'VALIDATION', 'Could not load staking intent.')
+    }
+  })
+
   app.post('/api/staking/cancel-pending', (req: Request, res: Response) => {
     const address = res.locals.address as string | undefined
     if (!address) {

@@ -17,8 +17,10 @@ import type { NimiqProvider } from '@nimiq/mini-app-sdk'
 import { formatDisplayAddress, shortAddress } from '../addresses'
 import { ApiError } from '../api/http'
 import {
+  APPROVE_INTENT_PARAM,
   cancelPendingStakingIntents,
   createStakingIntent,
+  getStakingIntent,
   pollConfirmStakingIntent,
   type IntentSummary,
   type StakingOperation,
@@ -30,6 +32,8 @@ import OpenInNimiqPayQr from '../components/OpenInNimiqPayQr'
 import { humanizeFetchError } from '../components/humanizeError'
 import { formatNimFromLuna, lunaToNim } from '../luna'
 import {
+  getPhoneReachableMiniAppUrl,
+  isNimiqPayHost,
   sendNewStakerTransaction,
   sendRemoveStakeTransaction,
   sendRetireStakeTransaction,
@@ -153,6 +157,7 @@ type Phase =
   | 'creating-intent'
   | 'review'
   | 'wallet'
+  | 'phone-approve'
   | 'polling'
   | 'success'
   | 'error'
@@ -508,6 +513,62 @@ export default function StakeFlow(props: StakeFlowProps) {
       }
     }
 
+    const inPay = isNimiqPayHost() || Boolean(nimiq) || Boolean(typeof window !== 'undefined' && window.nimiq)
+
+    // Desktop browser: cannot sign staking writes — hand off to phone Pay via QR.
+    if (!inPay) {
+      setPhase('phone-approve')
+      setBusy(false)
+      submitLock.current = false
+      providerCalledRef.current = false
+      setPendingNote('Waiting for approval in Nimiq Pay on your phone…')
+      // Poll until phone confirms the same intent.
+      const ac = new AbortController()
+      abortRef.current = ac
+      void (async () => {
+        const started = Date.now()
+        const maxMs = 14 * 60_000
+        try {
+          while (!ac.signal.aborted && Date.now() - started < maxMs) {
+            const status = await getStakingIntent(review.intentId)
+            if (status.status === 'confirmed') {
+              const pos = await fetchStakingPosition().catch(() => null)
+              const data = pos?.data ?? null
+              if (data) {
+                setConfirmedPosition(data)
+                setPhase('success')
+                onSuccess?.(data)
+              } else {
+                setPhase('success')
+              }
+              return
+            }
+            if (status.status === 'failed' || status.status === 'expired') {
+              setErrorMessage(
+                status.status === 'expired'
+                  ? 'Phone approve window expired. Start the stake again from desktop.'
+                  : 'Staking intent failed. Start again from desktop.',
+              )
+              setPhase('error')
+              return
+            }
+            await new Promise((r) => setTimeout(r, 2500))
+          }
+          if (!ac.signal.aborted) {
+            setErrorMessage(
+              'Still waiting for phone approval. Open the QR in Nimiq Pay, or cancel and try again.',
+            )
+            setPhase('error')
+          }
+        } catch (err) {
+          if (ac.signal.aborted) return
+          setErrorMessage(mapConfirmError(err))
+          setPhase('error')
+        }
+      })()
+      return
+    }
+
     try {
       let outcome
       if (operation === 'new-staker') {
@@ -630,12 +691,29 @@ export default function StakeFlow(props: StakeFlowProps) {
 
   function handleClose() {
     abortRef.current?.abort()
-    // Closing after review without a chain tx should free the pending lock.
-    if (review && !providerCalledRef.current) {
+    // Closing without a chain tx frees the pending lock (not while phone may still approve).
+    if (review && !providerCalledRef.current && phase !== 'phone-approve') {
+      void abandonReviewIntent()
+    }
+    if (phase === 'phone-approve') {
       void abandonReviewIntent()
     }
     onClose()
   }
+
+  const phoneApproveAppUrl = (() => {
+    if (!review) return undefined
+    try {
+      const base = getPhoneReachableMiniAppUrl()
+      const url = new URL(base)
+      url.searchParams.set(APPROVE_INTENT_PARAM, review.intentId)
+      url.hash = '#/'
+      return url.href
+    } catch {
+      return undefined
+    }
+  })()
+
 
   function resetToEntry() {
     setErrorMessage(null)
@@ -1003,24 +1081,42 @@ export default function StakeFlow(props: StakeFlowProps) {
               Approve in wallet
             </h2>
             <p className="stake-flow-copy">
-              Complete or cancel the request in <strong>Nimiq Pay</strong>. Desktop Hub cannot sign
-              staking writes. Scan the QR to open this app on your phone inside Pay (testnet when
-              testing), then run Stake there if the desktop wallet step fails.
+              Complete the native Nimiq Pay confirmation. Steakout marks success only after chain
+              match.
             </p>
-            <OpenInNimiqPayQr compact linkDesktopSession={false} />
             <p className="stake-flow-muted" role="status">
-              Waiting for Nimiq Pay… Steakout only marks success after the server matches the
-              transaction on chain.
+              Waiting for Nimiq Pay…
+            </p>
+          </>
+        )}
+
+        {phase === 'phone-approve' && review && (
+          <>
+            <h2 id="stake-flow-title" className="stake-flow-title">
+              Approve on your phone
+            </h2>
+            <p className="stake-flow-copy">
+              Desktop prepared this stake. Scan the QR to open Steakout <strong>inside Nimiq Pay</strong>,
+              connect the same wallet, then approve the Pay confirmation sheet. This browser waits
+              until the server confirms the transaction.
+            </p>
+            <OpenInNimiqPayQr
+              compact
+              linkDesktopSession={false}
+              appUrl={phoneApproveAppUrl}
+            />
+            <p className="stake-flow-muted" role="status">
+              {pendingNote ?? 'Waiting for phone approval…'}
             </p>
             <div className="stake-flow-actions">
               <button
                 type="button"
                 className="nq-pill-secondary"
-                disabled={busy}
                 onClick={() => {
+                  abortRef.current?.abort()
                   void abandonReviewIntent()
-                  setPhase(isUpdate ? 'prep' : 'amount')
                   setReview(null)
+                  setPhase(isUpdate ? 'prep' : 'amount')
                   providerCalledRef.current = false
                   submitLock.current = false
                   setBusy(false)

@@ -7,7 +7,7 @@
  * client is written to the published contract so tests can mock fetch.
  */
 
-import { ApiError, apiPost, type ErrorEnvelope } from './http'
+import { ApiError, apiGet, apiPost, type ErrorEnvelope } from './http'
 import type { StakingPositionData } from './position'
 
 /** Wire operations for POST /api/staking/intent. */
@@ -164,6 +164,85 @@ export async function cancelPendingStakingIntents(): Promise<{
   message: string
 }> {
   return apiPost<{ cancelled: number; message: string }>('/api/staking/cancel-pending', {})
+}
+
+export type IntentRowStatus = 'pending' | 'confirmed' | 'failed' | 'expired'
+
+export interface StakingIntentView {
+  intentId: string
+  status: IntentRowStatus
+  expiresAt: string
+  operation: StakingOperation
+  params: StakingIntentParams
+  summary: IntentSummary
+  txHash: string | null
+  confirmedAt: string | null
+}
+
+/** Load an intent owned by the current session (desktop poll / phone approve). */
+export async function getStakingIntent(intentId: string): Promise<StakingIntentView> {
+  const raw = await apiGet<StakingIntentView & { summary: WireIntentSummary }>(
+    `/api/staking/intent/${encodeURIComponent(intentId)}`,
+  )
+  return {
+    ...raw,
+    summary: normalizeIntentSummary(raw.summary),
+  }
+}
+
+/** Query param / hash key for phone-approve deep links. */
+export const APPROVE_INTENT_PARAM = 'approveIntent'
+
+export function readApproveIntentIdFromLocation(
+  search = typeof window !== 'undefined' ? window.location.search : '',
+  hash = typeof window !== 'undefined' ? window.location.hash : '',
+): string | null {
+  try {
+    const fromSearch = new URLSearchParams(
+      search.startsWith('?') ? search.slice(1) : search,
+    ).get(APPROVE_INTENT_PARAM)
+    if (fromSearch?.trim()) return fromSearch.trim()
+  } catch {
+    /* ignore */
+  }
+  try {
+    const raw = hash.replace(/^#/, '')
+    const qIndex = raw.indexOf('?')
+    if (qIndex < 0) return null
+    const id = new URLSearchParams(raw.slice(qIndex + 1)).get(APPROVE_INTENT_PARAM)
+    return id?.trim() || null
+  } catch {
+    return null
+  }
+}
+
+export function clearApproveIntentFromLocation(): void {
+  if (typeof window === 'undefined') return
+  try {
+    const url = new URL(window.location.href)
+    if (url.searchParams.has(APPROVE_INTENT_PARAM)) {
+      url.searchParams.delete(APPROVE_INTENT_PARAM)
+      history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`)
+    }
+    const hash = window.location.hash
+    if (hash.includes(`${APPROVE_INTENT_PARAM}=`)) {
+      const raw = hash.replace(/^#/, '')
+      const qIndex = raw.indexOf('?')
+      if (qIndex >= 0) {
+        const path = raw.slice(0, qIndex)
+        const params = new URLSearchParams(raw.slice(qIndex + 1))
+        params.delete(APPROVE_INTENT_PARAM)
+        const q = params.toString()
+        history.replaceState(
+          history.state,
+          '',
+          `${url.pathname}${url.search}#${path}${q ? `?${q}` : ''}`,
+        )
+      }
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**

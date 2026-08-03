@@ -221,6 +221,15 @@ Personal continuity for the authenticated wallet (METHODOLOGY.md §4.4 / §5). A
 
 ## 6. Staking action endpoints
 
+### `GET /api/staking/intent/:intentId`
+Auth required. Returns the caller’s intent for phone-approve / desktop wait:
+`{ intentId, status, expiresAt, operation, params, summary, txHash, confirmedAt }`.
+`404 INTENT_NOT_FOUND` if missing or owned by another wallet.
+
+Desktop creates the intent, shows a Pay QR with `?approveIntent=<id>`. Phone loads this
+endpoint, runs the provider, then `POST /api/staking/confirm`. Desktop polls this GET until
+`status: "confirmed"`.
+
 ### `POST /api/staking/intent`
 Body: `{ operation, params }` where
 

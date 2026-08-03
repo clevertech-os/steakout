@@ -13,6 +13,7 @@ import { isStakedState } from '../api/position'
 import { humanizeFetchError } from '../components/humanizeError'
 import { useWallet } from '../wallet/useWallet'
 import DesktopPairApprove from '../components/DesktopPairApprove'
+import PhoneApproveIntent from '../components/PhoneApproveIntent'
 import { isNimiqPayHost } from '../nimiq'
 import DisconnectedHome from './DisconnectedHome'
 import NotStakedHome from './NotStakedHome'
@@ -48,12 +49,24 @@ export default function Home() {
   )
 
   const pairBanner = (
-    <DesktopPairApprove
-      enabled={isNimiqPayHost()}
-      walletConnected={wallet.status === 'connected' && Boolean(wallet.address)}
-      connecting={wallet.connecting}
-      onConnect={handleConnect}
-    />
+    <>
+      <DesktopPairApprove
+        enabled={isNimiqPayHost()}
+        walletConnected={wallet.status === 'connected' && Boolean(wallet.address)}
+        connecting={wallet.connecting}
+        onConnect={handleConnect}
+      />
+      <PhoneApproveIntent
+        enabled={isNimiqPayHost()}
+        walletConnected={wallet.status === 'connected' && Boolean(wallet.address)}
+        connecting={wallet.connecting}
+        nimiq={wallet.nimiq}
+        onConnect={handleConnect}
+        onDone={() => {
+          position.refresh()
+        }}
+      />
+    </>
   )
 
   if (!wallet.bootReady) {
