@@ -1,0 +1,97 @@
+@font-face {
+  font-family: 'Mulish';
+  src: url('/assets/fonts/Mulish-Regular.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fira Mono';
+  src: url('/assets/fonts/FiraMono-Regular.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  font-family: 'Mulish', sans-serif;
+  color: var(--so-ink);
+  background: var(--so-surface);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--so-surface);
+}
+
+.shell {
+  width: min(100% - 2rem, 44rem);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 4rem 0;
+}
+
+.shell-header {
+  margin-bottom: 2rem;
+}
+
+.eyebrow,
+.card-kicker {
+  margin: 0 0 0.75rem;
+  color: var(--so-accent);
+  font-family: 'Fira Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: clamp(3rem, 12vw, 5.5rem);
+  letter-spacing: -0.07em;
+  line-height: 0.95;
+}
+
+.shell-card {
+  border: 1px solid var(--so-rule);
+  border-radius: 1.25rem;
+  background: var(--so-card);
+  box-shadow: 0 1.5rem 3rem rgb(36 36 36 / 7%);
+}
+
+.shell-card h2 {
+  max-width: 16ch;
+  margin-bottom: 1rem;
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.shell-card p:last-child {
+  max-width: 42ch;
+  margin-bottom: 0;
+  color: var(--so-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+@media (min-width: 600px) {
+  .shell {
+    padding-top: 7rem;
+  }
+}
