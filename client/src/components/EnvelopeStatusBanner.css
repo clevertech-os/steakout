@@ -1,0 +1,47 @@
+/* Envelope status banner — amber/gold warn, never alarm-red (STYLING §3). */
+
+.so-envelope-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--so-warn);
+  background: var(--so-warn-soft);
+  color: var(--so-ink);
+  line-height: 1.4;
+  font-size: 0.9rem;
+}
+
+.so-envelope-banner--unavailable {
+  border-color: var(--so-disabled);
+  background: var(--so-disabled-soft);
+}
+
+.so-envelope-banner-kicker {
+  font-weight: 600;
+  color: var(--so-warn-strong);
+  white-space: nowrap;
+}
+
+.so-envelope-banner--unavailable .so-envelope-banner-kicker {
+  color: var(--so-disabled-ink);
+}
+
+.so-envelope-banner-kicker::after {
+  content: ' · ';
+  font-weight: 400;
+  color: var(--so-muted);
+}
+
+.so-envelope-banner-body {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.so-envelope-banner-retry {
+  margin-left: auto;
+  min-height: 44px;
+}

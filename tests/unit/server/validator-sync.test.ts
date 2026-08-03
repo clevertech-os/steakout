@@ -601,4 +601,66 @@ describe('GET /api/validators', () => {
       }
     }
   })
+
+  /**
+   * P3-03 — registry reads must not require live RPC.
+   * Seed SQLite only; unset RPC env; list + detail still 200 with registry envelope.
+   */
+  it('serves list/detail from SQLite with no live RPC configured', async () => {
+    const prevRpc = process.env.NIMIQ_RPC_URL
+    const prevFallback = process.env.NIMIQ_RPC_URL_FALLBACK
+    delete process.env.NIMIQ_RPC_URL
+    delete process.env.NIMIQ_RPC_URL_FALLBACK
+
+    try {
+      const ctx = await startApp(true)
+      contexts.push(ctx)
+
+      const listRes = await fetch(`${ctx.baseUrl}/api/validators`)
+      expect(listRes.status).toBe(200)
+      const listBody = await listRes.json() as {
+        source: string
+        status: string
+        data: { validators: unknown[] }
+      }
+      expect(listBody.source).toBe('registry')
+      expect(listBody.status).toBe('ok')
+      expect(listBody.data.validators.length).toBe(78)
+
+      const spaced = 'NQ96 X97C 94M1 6MV3 KJ0G JA5U 6VB4 6Y63 EUH4'
+      const detailRes = await fetch(
+        `${ctx.baseUrl}/api/validators/${encodeURIComponent(spaced)}`,
+      )
+      expect(detailRes.status).toBe(200)
+      const detailBody = await detailRes.json() as {
+        source: string
+        data: { address: string }
+      }
+      expect(detailBody.source).toBe('registry')
+      expect(detailBody.data.address).toBe(spaced)
+
+      // Health stays up; live chain reads flagged off when RPC never succeeds.
+      const healthRes = await fetch(`${ctx.baseUrl}/api/health`)
+      expect(healthRes.status).toBe(200)
+      const health = await healthRes.json() as {
+        ok: boolean
+        blockNumber: number | null
+        mode: string
+        features: { liveChainReads: boolean; registryReads: boolean }
+        rpc: { available: boolean; liveReads: boolean }
+      }
+      expect(health.ok).toBe(true)
+      expect(health.blockNumber).toBeNull()
+      expect(health.mode).toBe('degraded')
+      expect(health.features.registryReads).toBe(true)
+      expect(health.features.liveChainReads).toBe(false)
+      expect(health.rpc.available).toBe(false)
+      expect(health.rpc.liveReads).toBe(false)
+    } finally {
+      if (prevRpc !== undefined) process.env.NIMIQ_RPC_URL = prevRpc
+      else delete process.env.NIMIQ_RPC_URL
+      if (prevFallback !== undefined) process.env.NIMIQ_RPC_URL_FALLBACK = prevFallback
+      else delete process.env.NIMIQ_RPC_URL_FALLBACK
+    }
+  })
 })

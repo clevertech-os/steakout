@@ -88,6 +88,67 @@
   max-width: none;
 }
 
+.profile-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.profile-state-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  text-decoration: none;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.profile-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.profile-skeleton-line {
+  display: block;
+  height: 0.75rem;
+  border-radius: 0.35rem;
+  background: var(--so-disabled-soft);
+  width: 100%;
+}
+
+.profile-skeleton-line--wide {
+  width: 80%;
+  height: 1.1rem;
+}
+
+.profile-skeleton-line--mid {
+  width: 60%;
+}
+
+.profile-skeleton-line--narrow {
+  width: 35%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .profile-skeleton-line {
+    animation: profile-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes profile-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
 .profile-card {
   padding: 1.15rem 1.25rem;
   border: 1px solid var(--so-rule);

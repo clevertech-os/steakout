@@ -10,7 +10,7 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import type { Express, Request, Response } from 'express'
 import { getIndexerWatermarkIso } from './freshness.js'
-import { getRpcMetrics } from './nimiq-rpc.js'
+import { getRpcHealth, getRpcMetrics } from './nimiq-rpc.js'
 import type { IndexerHealth } from './payoutIndexer.js'
 import { configuredRewardAddresses } from './payoutIndexer.js'
 import { publicResponseCacheStats } from './responseCache.js'
@@ -106,6 +106,7 @@ export function buildDiagnosticsPayload(
 
   const indexer = options.getIndexerHealth?.() ?? null
   const rpc = getRpcMetrics()
+  const rpcHealth = getRpcHealth()
   // Average latency without exposing raw logs.
   const rpcSummary = {
     calls: rpc.calls,
@@ -120,6 +121,14 @@ export function buildDiagnosticsPayload(
     lastErrorMessage: rpc.lastErrorMessage
       ? rpc.lastErrorMessage.slice(0, 200)
       : null,
+    available: rpcHealth.available,
+    degraded: rpcHealth.degraded,
+    activeSource: rpcHealth.activeSource,
+    activeHost: rpcHealth.activeHost,
+    primaryConfigured: rpcHealth.primaryConfigured,
+    fallbackConfigured: rpcHealth.fallbackConfigured,
+    lastSuccessAt: rpcHealth.lastSuccessAt,
+    liveReads: rpcHealth.liveReads,
     byMethod: Object.fromEntries(
       Object.entries(rpc.byMethod).map(([method, m]) => [
         method,

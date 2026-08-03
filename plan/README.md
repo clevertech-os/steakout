@@ -53,7 +53,7 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 | P0-06 | Schema + payout indexer live | Implementation | P0-04, P0-05 | done (24h continuity residual) |
 | P0-07 | Direct-payout classification spike | Implementation | P0-06 | done (owner explorer verify residual) |
 | P0-08 | Test fixture harness | Testing | P0-04, P0-05 | done |
-| P0-09 | Kill-decision memo + scope freeze | Owner | P0-03, P0-04, P0-06, P0-07 | backlog (owner) |
+| P0-09 | Kill-decision memo + scope freeze | Owner | P0-03, P0-04, P0-06, P0-07 | in-progress (draft inputs) |
 
 ### Phase 1 — Foundation & first stake (Aug 10–16) → [cards](phase-1-foundation.md)
 
@@ -72,7 +72,7 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 | P1-11 | Validator profile (summary layer) | Implementation | P1-04, P1-08 | done 2026-08-03 |
 | P1-12 | Stake flow end-to-end | Implementation | P1-06, P1-09, P1-10, P1-11 | backlog |
 | P1-13 | Non-custodial explainer + review-screen copy | Polishing | P1-12 | backlog |
-| P1-14 | Unit tests: addresses, luna, position, intent | Testing | P1-01, P1-05, P1-06 | backlog |
+| P1-14 | Unit tests: addresses, luna, position, intent | Testing | P1-01, P1-05, P1-06 | partial 2026-08-03 (intent residual → P1-06) |
 | P1-15 | Integration: auth, registry, intent/confirm | Testing | P0-08, P1-02, P1-04, P1-06 | backlog |
 | P1-16 | Device smoke: Pay Android/iOS + Hub fallback | Testing | P1-12 | backlog (human-assisted) |
 
@@ -103,13 +103,13 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 |---|---|---|---|---|
 | P3-01 | Retire + remove flows | Implementation | P0-03, P2-11 | backlog |
 | P3-02 | Restake position-growth analytics | Implementation | P0-04, P2-10 | backlog (conditional on P0-04) |
-| P3-03 | RPC fallback / graceful degraded mode | Implementation | P2-13 | backlog |
+| P3-03 | RPC fallback / graceful degraded mode | Implementation | P2-13 | done 2026-08-03 (pragmatic) |
 | P3-04 | Telemetry (aggregate, disclosed) | Implementation | P2-16 | backlog |
 | P3-05 | Design polish pass (nimiq-css tokens, type, status colors) | Polishing | P1-08, P2-09 | backlog |
 | P3-06 | Responsive sweep + content stress cases | Polishing | P3-05 | backlog |
 | P3-07 | Accessibility pass | Polishing | P3-05 | backlog |
-| P3-08 | Loading/empty/offline/skeleton/stale states | Polishing | P3-05 | backlog |
-| P3-09 | Copy pass (first-run, errors, methodology) | Polishing | P2-12 | backlog |
+| P3-08 | Loading/empty/offline/skeleton/stale states | Polishing | P3-05 | done (2026-08-03, pragmatic) |
+| P3-09 | Copy pass (first-run, errors, methodology) | Polishing | P2-12 | partial (2026-08-03) |
 | P3-10 | Security review | Testing | P1-02, P1-06, P2-13 | backlog |
 | P3-11 | Failure-mode matrix | Testing | P1-16, P2-16 | backlog (human-assisted) |
 | P3-12 | Marketing assets (video script, screenshots, thread, post) | Polishing | P3-05 | backlog |

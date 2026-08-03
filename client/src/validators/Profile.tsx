@@ -5,13 +5,15 @@
  * Official Nimiq Trust Score is always shown as the official score,
  * never blended with Steakout observation status (invariant #6).
  */
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import {
   formatDisplayAddress,
   isValidNimiqAddress,
   shortAddress,
 } from '../addresses'
 import DataStatusTag from '../components/DataStatusTag'
+import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
+import { humanizeFetchError } from '../components/humanizeError'
 import type { ObservationStatus } from '../components/StatusChip'
 import { buildNimiqAddressExplorerUrl } from '../explorer'
 import Evidence from './Evidence'
@@ -155,6 +157,11 @@ function MetricRow({
 export default function Profile({ address: rawAddress }: ProfileProps) {
   const [state, setState] = useState<LoadState>({ kind: 'loading' })
   const [shareFeedback, setShareFeedback] = useState<string | null>(null)
+  const [reloadToken, setReloadToken] = useState(0)
+
+  const retry = useCallback(() => {
+    setReloadToken((n) => n + 1)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -171,15 +178,20 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
     ;(async () => {
       try {
         const res = await fetch(path)
-        const body = (await res.json()) as ApiOk | ApiErr
+        let body: ApiOk | ApiErr | null = null
+        try {
+          body = (await res.json()) as ApiOk | ApiErr
+        } catch {
+          body = null
+        }
 
         if (cancelled) return
 
-        if (!res.ok || 'error' in body) {
-          const err = body as ApiErr
-          const code = err.error?.code
+        if (!res.ok || !body || 'error' in body) {
+          const err = body as ApiErr | null
+          const code = err?.error?.code
           const message =
-            err.error?.message ?? 'Could not load this validator profile.'
+            err?.error?.message ?? 'Could not load this validator profile.'
           if (res.status === 404 || code === 'VALIDATOR_NOT_FOUND') {
             setState({ kind: 'not-found', message })
             return
@@ -189,11 +201,14 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
         }
 
         setState({ kind: 'ok', envelope: body as ApiOk })
-      } catch {
+      } catch (err) {
         if (!cancelled) {
           setState({
             kind: 'error',
-            message: 'Network error while loading this validator. Try again later.',
+            message: humanizeFetchError(
+              err,
+              'Could not load this validator profile. Try again later.',
+            ),
           })
         }
       }
@@ -202,7 +217,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
     return () => {
       cancelled = true
     }
-  }, [rawAddress])
+  }, [rawAddress, reloadToken])
 
   // P2-16: document title + meta from loaded profile (client-side; server injects for crawlers).
   useEffect(() => {
@@ -279,9 +294,21 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           <p className="eyebrow">Validator profile</p>
           <h1 className="profile-title">Loading…</h1>
         </header>
-        <p className="profile-status" role="status">
-          Loading validator profile…
-        </p>
+        <section
+          className="nq-card profile-card"
+          aria-busy="true"
+          aria-labelledby="profile-loading-status"
+        >
+          <p className="profile-status" id="profile-loading-status" role="status">
+            Loading validator profile…
+          </p>
+          <div className="profile-skeleton" aria-hidden="true">
+            <span className="profile-skeleton-line profile-skeleton-line--wide" />
+            <span className="profile-skeleton-line" />
+            <span className="profile-skeleton-line profile-skeleton-line--mid" />
+            <span className="profile-skeleton-line profile-skeleton-line--narrow" />
+          </div>
+        </section>
       </div>
     )
   }
@@ -300,6 +327,11 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           <p className="card-kicker">Not found</p>
           <h2 id="profile-invalid-title">This is not a valid Nimiq address.</h2>
           <p>Check the URL and try again from the validators directory.</p>
+          <div className="profile-state-actions">
+            <a className="nq-pill-blue profile-state-cta" href="#/validators">
+              Browse validators
+            </a>
+          </div>
         </section>
       </div>
     )
@@ -318,7 +350,18 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
         <section className="nq-card nq-card-lg shell-card profile-state-card" aria-labelledby="profile-missing-title">
           <p className="card-kicker">Registry</p>
           <h2 id="profile-missing-title">No registry record for this address.</h2>
-          <p>{state.message}</p>
+          <p>
+            {state.message ||
+              'Steakout has no registry entry for this address. It may be unlisted or not yet synced.'}
+          </p>
+          <div className="profile-state-actions">
+            <a className="nq-pill-blue profile-state-cta" href="#/validators">
+              Browse validators
+            </a>
+            <button type="button" className="nq-pill-secondary profile-state-cta" onClick={retry}>
+              Try again
+            </button>
+          </div>
         </section>
       </div>
     )
@@ -338,6 +381,14 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           <p className="card-kicker">Error</p>
           <h2 id="profile-error-title">Could not load this profile.</h2>
           <p>{state.message}</p>
+          <div className="profile-state-actions">
+            <button type="button" className="nq-pill-blue profile-state-cta" onClick={retry}>
+              Try again
+            </button>
+            <a className="nq-pill-secondary profile-state-cta" href="#/validators">
+              Browse validators
+            </a>
+          </div>
         </section>
       </div>
     )
@@ -362,6 +413,15 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
 
   return (
     <div className="profile">
+      <EnvelopeStatusBanner
+        status={envelope.status}
+        onRetry={retry}
+        message={
+          envelope.status === 'stale'
+            ? 'Profile snapshot may be outdated. Registry and observation fields reflect the last successful sync.'
+            : undefined
+        }
+      />
       <header className="shell-header profile-header">
         <a className="profile-back nq-arrow-back" href="#/validators">
           Validators

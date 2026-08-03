@@ -56,8 +56,58 @@
   line-height: 1.5;
 }
 
+.home-copy--muted {
+  color: var(--so-muted);
+  font-size: 0.95rem;
+}
+
 .home-copy strong {
   font-weight: 600;
+}
+
+/* Calm first-load skeleton (P3-08) */
+.home-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0.5rem 0 0;
+}
+
+.home-skeleton-line {
+  display: block;
+  height: 0.85rem;
+  border-radius: 0.35rem;
+  background: var(--so-disabled-soft);
+  width: 100%;
+}
+
+.home-skeleton-line--title {
+  height: 1.5rem;
+  width: 55%;
+}
+
+.home-skeleton-line--mid {
+  width: 70%;
+}
+
+.home-skeleton-line--narrow {
+  width: 40%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-skeleton-line {
+    animation: home-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes home-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
 }
 
 .home-actions {

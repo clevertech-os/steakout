@@ -178,6 +178,30 @@ describe('parseStakerBalances', () => {
         retiredBalance: 0,
       }),
     ).toBeNull()
+    expect(
+      parseStakerBalances({
+        address: TEST_ADDRESS,
+        balance: Number.POSITIVE_INFINITY,
+        delegation: null,
+        inactiveBalance: 0,
+        inactiveFrom: null,
+        retiredBalance: 0,
+      }),
+    ).toBeNull()
+  })
+
+  it('returns null when balance is a non-number (unreadable payload)', () => {
+    expect(
+      parseStakerBalances({
+        address: TEST_ADDRESS,
+        // Force garbage shape — RPC should never do this; fail closed.
+        balance: 'lots' as unknown as number,
+        delegation: null,
+        inactiveBalance: 0,
+        inactiveFrom: null,
+        retiredBalance: 0,
+      }),
+    ).toBeNull()
   })
 })
 
@@ -493,6 +517,31 @@ describe('readStakingPosition', () => {
         getBlock: async () => 1,
       }),
     ).rejects.toMatchObject({ code: 'RPC_UNAVAILABLE', httpStatus: 503 })
+  })
+
+  it('unreadable staker balances → envelope status unavailable (not Active)', async () => {
+    const envelope = await readStakingPosition({
+      database,
+      address: TEST_ADDRESS,
+      bypassCache: true,
+      getAccount: async () => ({ address: TEST_ADDRESS, balance: 99, type: 'basic' }),
+      getStaker: async () =>
+        ({
+          address: TEST_ADDRESS,
+          balance: Number.NaN,
+          delegation: VALIDATOR_ADDRESS,
+          inactiveBalance: 0,
+          inactiveFrom: null,
+          retiredBalance: 0,
+        }) as ReturnType<typeof makeStakerFixture>,
+      getBlock: async () => 1,
+    })
+    expect(envelope.status).toBe('unavailable')
+    expect(envelope.data.state).toBe('NotStaked')
+    expect(envelope.data.staker.activeLuna).toBe(0)
+    expect(envelope.data.staker.totalLuna).toBe(0)
+    // Account still readable → balance preserved on partial-read path fields
+    expect(envelope.data.accountBalanceLuna).toBe(99)
   })
 
   it('fixture-backed mockRpc no-staker path through real RPC client', async () => {

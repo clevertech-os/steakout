@@ -104,6 +104,49 @@
   font-size: 0.95rem;
 }
 
+.activity-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0.85rem 0 0;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--so-rule);
+  border-radius: 1.25rem;
+  background: var(--so-card);
+}
+
+.activity-skeleton-line {
+  display: block;
+  height: 0.7rem;
+  border-radius: 0.35rem;
+  background: var(--so-disabled-soft);
+  width: 100%;
+}
+
+.activity-skeleton-line--wide {
+  width: 70%;
+}
+
+.activity-skeleton-line--mid {
+  width: 45%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .activity-skeleton-line {
+    animation: activity-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes activity-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
 .activity-error {
   margin: 0.75rem 0 0;
   color: var(--so-not-observed);

@@ -3,10 +3,11 @@
  * No wallet required. Fetches GET /api/validators with sort + listed filter.
  */
 import { useCallback, useEffect, useId, useState } from 'react'
+import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
+import { humanizeFetchError } from '../components/humanizeError'
 import {
   fetchValidators,
   VALIDATOR_SORTS,
-  ValidatorsApiError,
   type ValidatorListItem,
   type ValidatorSort,
 } from './api'
@@ -16,7 +17,12 @@ import './Directory.css'
 type LoadState =
   | { kind: 'loading' }
   | { kind: 'error'; message: string }
-  | { kind: 'ready'; validators: ValidatorListItem[]; status: string; updatedAt: string }
+  | {
+      kind: 'ready'
+      validators: ValidatorListItem[]
+      status: string
+      updatedAt: string
+    }
 
 const RECOMMENDED_EXPLAINER =
   'Recommended order uses listed registry presence, normalizable payout schedule, payout observability (direct before restake), live Steakout observation status when available, lower dominance, then the official Nimiq Validator Trust Score — not financial advice, and not a “best validator” ranking.'
@@ -70,13 +76,10 @@ export default function Directory() {
       } catch (err) {
         if (controller.signal.aborted) return
         if (err instanceof DOMException && err.name === 'AbortError') return
-        const message =
-          err instanceof ValidatorsApiError
-            ? err.message
-            : err instanceof Error
-              ? err.message
-              : 'Could not load validators.'
-        setState({ kind: 'error', message })
+        setState({
+          kind: 'error',
+          message: humanizeFetchError(err, 'Could not load validators.'),
+        })
       }
     })()
 
@@ -147,9 +150,14 @@ export default function Directory() {
           <p className="card-kicker">Unavailable</p>
           <h2 id="directory-error-title">Could not load validators</h2>
           <p className="directory-state-body">{state.message}</p>
-          <button type="button" className="nq-pill-blue directory-retry" onClick={retry}>
-            Try again
-          </button>
+          <div className="directory-state-actions">
+            <button type="button" className="nq-pill-blue directory-retry" onClick={retry}>
+              Try again
+            </button>
+            <a className="nq-pill-secondary directory-retry" href="#/learn/methodology">
+              How observations work
+            </a>
+          </div>
         </section>
       ) : null}
 
@@ -160,7 +168,7 @@ export default function Directory() {
           <p className="directory-state-body">
             {listedOnly
               ? 'No listed validators match this view. Turn off “Listed only” to include all observable validators.'
-              : 'The registry has not returned any validators yet. Check back after the next sync.'}
+              : 'The registry has not returned any validators yet. Check back after the next sync — empty is a valid result, not an error.'}
           </p>
           {listedOnly ? (
             <button
@@ -180,10 +188,20 @@ export default function Directory() {
 
       {state.kind === 'ready' && state.validators.length > 0 ? (
         <>
+          <EnvelopeStatusBanner
+            status={state.status}
+            onRetry={retry}
+            message={
+              state.status === 'stale'
+                ? 'Directory snapshot may be outdated. Listing still reflects the last registry sync.'
+                : undefined
+            }
+          />
           <p className="directory-count nq-subline" aria-live="polite">
             {state.validators.length.toLocaleString('en-US')} validator
             {state.validators.length === 1 ? '' : 's'}
             {listedOnly ? ' · listed only' : ' · all observable'}
+            {state.status === 'stale' ? ' · stale snapshot' : null}
             {state.status === 'unavailable' ? ' · registry status: unavailable' : null}
           </p>
           <ul className="directory-list">

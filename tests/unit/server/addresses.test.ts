@@ -1,17 +1,17 @@
 /**
- * P1-14 — client address normalize/validate/equal/display.
+ * P1-14 — server address normalize/validate/equal.
+ * Mirrors client/src/addresses.ts (no formatDisplayAddress on server).
  */
 
 import { describe, expect, it } from 'vitest'
 import {
   addressesEqual,
-  formatDisplayAddress,
   isValidNimiqAddress,
   normalizeAddress,
   shortAddress,
-} from '../../../client/src/addresses.ts'
+} from '../../../server/src/addresses.js'
 
-describe('addresses helpers', () => {
+describe('server addresses helpers', () => {
   const valid = 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000'
   // Shape-valid (NQ + 34 alphanumerics) — checksum not checked by these helpers.
   const validCompact = 'NQ0700000000000000000000000000000000'
@@ -21,7 +21,7 @@ describe('addresses helpers', () => {
       validCompact,
     )
     expect(normalizeAddress(valid)).toBe(validCompact)
-    expect(normalizeAddress('Nq07\t0000\n0000 0000 0000 0000 0000 0000 0000')).toBe(
+    expect(normalizeAddress('nq07\t0000\n0000 0000 0000 0000 0000 0000 0000')).toBe(
       validCompact,
     )
   })
@@ -40,7 +40,7 @@ describe('addresses helpers', () => {
     expect(isValidNimiqAddress('   ')).toBe(false)
     expect(isValidNimiqAddress('NQ07')).toBe(false)
     expect(isValidNimiqAddress('AB0700000000000000000000000000000000')).toBe(false)
-    expect(isValidNimiqAddress('NQ070000000000000000000000000000000')).toBe(false) // 33 chars after NQ
+    expect(isValidNimiqAddress('NQ070000000000000000000000000000000')).toBe(false) // 33 after NQ
     expect(isValidNimiqAddress('NQ07000000000000000000000000000000001')).toBe(false) // 35
     expect(isValidNimiqAddress('NQ07 0000 0000 0000 0000 0000 0000 0000 000!')).toBe(false)
   })
@@ -48,11 +48,6 @@ describe('addresses helpers', () => {
   it('shortAddress shows first 4 and last 4 with ellipsis', () => {
     expect(shortAddress(valid)).toBe('NQ07…0000')
     expect(shortAddress(validCompact)).toBe('NQ07…0000')
-  })
-
-  it('formatDisplayAddress groups characters by four', () => {
-    expect(formatDisplayAddress(validCompact)).toBe(valid)
-    expect(formatDisplayAddress(valid.toLowerCase())).toBe(valid)
   })
 
   it('addressesEqual compares normalized forms only', () => {

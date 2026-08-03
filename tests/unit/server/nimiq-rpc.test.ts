@@ -5,6 +5,7 @@ import {
   getAccountByAddress,
   getActiveValidators,
   getBlockNumber,
+  getRpcHealth,
   getRpcMetrics,
   getStakerByAddress,
   getValidatorByAddress,
@@ -14,6 +15,7 @@ import {
   normalizeTxHash,
   resetRpcClientConfig,
   resetRpcMetrics,
+  resolveRpcEndpoints,
   RpcError,
   setRpcClientConfig,
   toRpcApiError,
@@ -21,6 +23,8 @@ import {
 import { createMockRpc } from '../../helpers/mockRpc.js'
 
 const RPC_URL = 'https://rpc.example.test'
+const PRIMARY_URL = 'https://primary.example.test'
+const FALLBACK_URL = 'https://fallback.example.test'
 
 describe('Nimiq RPC client', () => {
   beforeEach(() => {
@@ -260,11 +264,116 @@ describe('Nimiq RPC client', () => {
 
   it('throws when NIMIQ_RPC_URL is missing', async () => {
     const previous = process.env.NIMIQ_RPC_URL
+    const previousFallback = process.env.NIMIQ_RPC_URL_FALLBACK
     delete process.env.NIMIQ_RPC_URL
+    delete process.env.NIMIQ_RPC_URL_FALLBACK
     try {
       await expect(getBlockNumber(undefined)).rejects.toThrow('NIMIQ_RPC_URL is not configured')
     } finally {
       if (previous !== undefined) process.env.NIMIQ_RPC_URL = previous
+      else delete process.env.NIMIQ_RPC_URL
+      if (previousFallback !== undefined) process.env.NIMIQ_RPC_URL_FALLBACK = previousFallback
+      else delete process.env.NIMIQ_RPC_URL_FALLBACK
+    }
+  })
+
+  it('resolveRpcEndpoints: custom URL is pinned; primary includes fallback', () => {
+    const previous = process.env.NIMIQ_RPC_URL
+    const previousFallback = process.env.NIMIQ_RPC_URL_FALLBACK
+    process.env.NIMIQ_RPC_URL = PRIMARY_URL
+    process.env.NIMIQ_RPC_URL_FALLBACK = FALLBACK_URL
+    try {
+      expect(resolveRpcEndpoints(RPC_URL)).toEqual([{ url: RPC_URL, source: 'primary' }])
+      expect(resolveRpcEndpoints(PRIMARY_URL)).toEqual([
+        { url: PRIMARY_URL, source: 'primary' },
+        { url: FALLBACK_URL, source: 'fallback' },
+      ])
+      expect(resolveRpcEndpoints()).toEqual([
+        { url: PRIMARY_URL, source: 'primary' },
+        { url: FALLBACK_URL, source: 'fallback' },
+      ])
+    } finally {
+      if (previous !== undefined) process.env.NIMIQ_RPC_URL = previous
+      else delete process.env.NIMIQ_RPC_URL
+      if (previousFallback !== undefined) process.env.NIMIQ_RPC_URL_FALLBACK = previousFallback
+      else delete process.env.NIMIQ_RPC_URL_FALLBACK
+    }
+  })
+
+  it('failovers to NIMIQ_RPC_URL_FALLBACK after primary transport exhaustion', async () => {
+    const previous = process.env.NIMIQ_RPC_URL
+    const previousFallback = process.env.NIMIQ_RPC_URL_FALLBACK
+    process.env.NIMIQ_RPC_URL = PRIMARY_URL
+    process.env.NIMIQ_RPC_URL_FALLBACK = FALLBACK_URL
+    setRpcClientConfig({ maxAttempts: 2 })
+
+    const successBody = {
+      jsonrpc: '2.0',
+      result: { data: 42_000, metadata: null },
+      id: 1,
+    }
+    const fetchMock = vi.fn().mockImplementation(async (input: string | URL) => {
+      const url = String(input)
+      if (url === PRIMARY_URL) {
+        throw new Error('fetch failed: primary down')
+      }
+      if (url === FALLBACK_URL) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => successBody,
+        }
+      }
+      throw new Error(`unexpected url ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    try {
+      await expect(getBlockNumber()).resolves.toBe(42_000)
+      // primary: 2 attempts, then fallback: 1 success
+      expect(fetchMock).toHaveBeenCalled()
+      const urls = fetchMock.mock.calls.map((call) => String(call[0]))
+      expect(urls.filter((u) => u === PRIMARY_URL).length).toBe(2)
+      expect(urls.filter((u) => u === FALLBACK_URL).length).toBe(1)
+
+      const health = getRpcHealth()
+      expect(health.activeSource).toBe('fallback')
+      expect(health.activeHost).toBe('fallback.example.test')
+      expect(health.available).toBe(true)
+      expect(health.degraded).toBe(true)
+      expect(health.liveReads).toBe(true)
+      expect(health.fallbackConfigured).toBe(true)
+    } finally {
+      if (previous !== undefined) process.env.NIMIQ_RPC_URL = previous
+      else delete process.env.NIMIQ_RPC_URL
+      if (previousFallback !== undefined) process.env.NIMIQ_RPC_URL_FALLBACK = previousFallback
+      else delete process.env.NIMIQ_RPC_URL_FALLBACK
+    }
+  })
+
+  it('marks health unavailable when all endpoints fail', async () => {
+    const previous = process.env.NIMIQ_RPC_URL
+    const previousFallback = process.env.NIMIQ_RPC_URL_FALLBACK
+    process.env.NIMIQ_RPC_URL = PRIMARY_URL
+    process.env.NIMIQ_RPC_URL_FALLBACK = FALLBACK_URL
+    setRpcClientConfig({ maxAttempts: 1 })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new Error('fetch failed: all down')),
+    )
+
+    try {
+      await expect(getBlockNumber()).rejects.toBeInstanceOf(RpcError)
+      const health = getRpcHealth()
+      expect(health.available).toBe(false)
+      expect(health.degraded).toBe(true)
+      expect(health.liveReads).toBe(false)
+      expect(health.activeSource).toBeNull()
+    } finally {
+      if (previous !== undefined) process.env.NIMIQ_RPC_URL = previous
+      else delete process.env.NIMIQ_RPC_URL
+      if (previousFallback !== undefined) process.env.NIMIQ_RPC_URL_FALLBACK = previousFallback
+      else delete process.env.NIMIQ_RPC_URL_FALLBACK
     }
   })
 })

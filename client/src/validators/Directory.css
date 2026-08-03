@@ -145,8 +145,20 @@
 }
 
 .directory-retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 44px;
   cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.directory-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 /* —— Skeleton loading —— */

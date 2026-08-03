@@ -279,7 +279,7 @@ Board: [README.md](README.md#phase-0--de-risk-spike-aug-29)
 **Verification:** owner signs off in the memo.
 
 **Notes:**
--
+- 2026-08-03 — Agent draft inputs only (not owner sign-off): `docs/spikes/kill-decision-DRAFT.md`. Summarizes proven vs blocked across P0-02–P0-07; answers SPEC §19 kill/reduce/metric rules with evidence links; recommends listed-only mainnet reads + direct-payout monitoring, stake writes deferred pending device, restake analytics out of full v1. Board remains **in-progress (owner)** until owner freezes scope, marks cuts, and signs the final memo as `docs/spikes/kill-decision.md`. Residual human gates still open: Nimiq Pay device (P0-02/P0-03), explorer click (P0-07), ≥24h indexer continuity (P0-06).
 
 ---
 

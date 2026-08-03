@@ -4,6 +4,7 @@ import StakingMethods from './spike/StakingMethods'
 import StyleReference from './spike/StyleReference'
 import BottomNav from './components/BottomNav'
 import NetworkBadge from './components/NetworkBadge'
+import OfflineBanner from './components/OfflineBanner'
 import { HOME_PATH, hashToPath, matchRoute, type RouteId } from './routes'
 import './App.css'
 
@@ -58,6 +59,7 @@ function RoutedShell() {
     <div className="app">
       <main className="app-main">
         <NetworkBadge />
+        <OfflineBanner />
         <Suspense
           fallback={
             <p className="app-loading" role="status">

@@ -1,5 +1,6 @@
 /**
- * Home — wallet disconnected (SPEC §6.1).
+ * Home — wallet disconnected (SPEC §6.1 first-run).
+ * Primary headline locked to SPEC; supporting copy is methodology-safe (P3-09).
  */
 
 export interface DisconnectedHomeProps {
@@ -26,15 +27,22 @@ export default function DisconnectedHome({
       <header className="shell-header home-header">
         <p className="eyebrow">Steakout</p>
         <h1 className="home-title">Your NIM may be idle</h1>
-        <p className="home-lede">See what it could do — without giving up control of your keys.</p>
+        <p className="home-lede">
+          See what it could do — without giving up control of your keys.
+        </p>
       </header>
 
       <section className="nq-card nq-card-lg shell-card home-card" aria-labelledby="home-connect-title">
         <p className="card-kicker">Get started</p>
-        <h2 id="home-connect-title">Connect and explore</h2>
+        <h2 id="home-connect-title">Connect or browse</h2>
         <p className="home-copy">
-          Steakout is non-custodial. Connect with Nimiq Pay (or Hub on desktop) to read your
-          position, or browse validators without connecting.
+          Steakout is non-custodial: private keys never leave your wallet. Connect with
+          Nimiq Pay (or Hub on desktop) to read your staking position, or explore
+          validators and payout observations without connecting.
+        </p>
+        <p className="home-copy home-copy--muted">
+          Observations describe what was seen on chain. They are not a guaranteed return
+          and not a ranking of “best” validators.
         </p>
 
         <div className="home-actions">

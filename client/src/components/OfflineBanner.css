@@ -1,0 +1,33 @@
+/* Offline notice — muted/info calm, not alarm-red. */
+
+.so-offline-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--so-rule);
+  background: var(--so-disabled-soft);
+  color: var(--so-ink);
+  line-height: 1.4;
+  font-size: 0.9rem;
+}
+
+.so-offline-banner-kicker {
+  font-weight: 600;
+  color: var(--so-disabled-ink);
+  white-space: nowrap;
+}
+
+.so-offline-banner-kicker::after {
+  content: ' · ';
+  font-weight: 400;
+  color: var(--so-muted);
+}
+
+.so-offline-banner-body {
+  flex: 1 1 12rem;
+  min-width: 0;
+}

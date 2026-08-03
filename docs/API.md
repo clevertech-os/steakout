@@ -42,7 +42,26 @@ Error envelope:
 ## 3. Public endpoints
 
 ### `GET /api/health`
-Service + indexer liveness. `{ ok, network, blockNumber, indexer: { lastRunAt, addressesIndexed, lagBlocks } }`. No auth, no cache.
+Service + indexer liveness. Always HTTP 200 when the process is up (RPC outage does not fail the probe).
+
+```jsonc
+{
+  "ok": true,
+  "network": "main" | "testnet" | string,
+  "blockNumber": 0 | null,           // null when live RPC probe fails / times out
+  "mode": "ok" | "degraded",         // degraded when RPC unavailable or on fallback
+  "features": {
+    "liveChainReads": true,          // false → position/confirm will 503 RPC_UNAVAILABLE
+    "registryReads": true            // public validators/observations always SQLite-backed
+  },
+  "indexer": { "lastRunAt": "ISO|null", "addressesIndexed": 0, "lagBlocks": 0 } | null,
+  "rpc": {
+    /* call metrics + */ "available", "degraded", "activeSource": "primary"|"fallback"|null,
+    "activeHost", "primaryConfigured", "fallbackConfigured", "lastSuccessAt", "liveReads"
+  }
+}
+```
+No auth, no cache.
 
 ### `GET /api/validators`
 Query: `sort=recommended|score|dominance|stake|direct-payout|restake|new` (default `recommended`), `listed=true|false` (default `false` = include all observable).

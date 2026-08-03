@@ -172,7 +172,7 @@ Single client-visible enum (P1-05 owns the mapping; verify against P0-04 fixture
 
 | Failure | Behavior |
 |---|---|
-| RPC timeout/malformed | Retry w/ backoff → serve last known data labeled `Unavailable`/stale, never 500 the SPA shell |
+| RPC timeout/malformed | Retry w/ backoff; optional `NIMIQ_RPC_URL_FALLBACK` failover (P3-03). Live reads → `RPC_UNAVAILABLE`. Public registry/observations keep serving SQLite with honest freshness. Health: `mode: degraded`, `features.liveChainReads: false`. Never 500 the SPA shell |
 | Indexer stale | Profiles show history depth + last-indexed time; no fresh-looking empty state |
 | Provider unavailable (browser fallback) | Hub path from ported facade; staking writes degrade to read-only with clear copy |
 | Tx not found / failed execution | Distinct error codes per [API.md](API.md#error-taxonomy); UI returns to a useful state |

@@ -10,6 +10,7 @@ import { useCallback } from 'react'
 import { walletAuthApi } from '../api/walletAuth'
 import { ApiError } from '../api/http'
 import { isStakedState } from '../api/position'
+import { humanizeFetchError } from '../components/humanizeError'
 import { useWallet } from '../wallet/useWallet'
 import DisconnectedHome from './DisconnectedHome'
 import NotStakedHome from './NotStakedHome'
@@ -39,9 +40,20 @@ export default function Home() {
   if (!wallet.bootReady) {
     return (
       <div className="home">
-        <p className="home-status" role="status">
-          Loading…
-        </p>
+        <header className="shell-header home-header">
+          <p className="eyebrow">Steakout</p>
+          <h1 className="home-title">Loading…</h1>
+        </header>
+        <section className="nq-card nq-card-lg shell-card home-card" aria-busy="true">
+          <p className="home-status" role="status">
+            Starting wallet session…
+          </p>
+          <div className="home-skeleton" aria-hidden="true">
+            <span className="home-skeleton-line home-skeleton-line--title" />
+            <span className="home-skeleton-line home-skeleton-line--mid" />
+            <span className="home-skeleton-line home-skeleton-line--narrow" />
+          </div>
+        </section>
       </div>
     )
   }
@@ -76,6 +88,12 @@ export default function Home() {
           <p className="home-status" role="status">
             Reading on-chain staking state…
           </p>
+          <div className="home-skeleton" aria-hidden="true">
+            <span className="home-skeleton-line home-skeleton-line--title" />
+            <span className="home-skeleton-line home-skeleton-line--mid" />
+            <span className="home-skeleton-line" />
+            <span className="home-skeleton-line home-skeleton-line--narrow" />
+          </div>
           <div className="home-actions">
             <a className="nq-pill-secondary home-cta" href="#/validators">
               Explore validators
@@ -165,20 +183,8 @@ export default function Home() {
 
 function formatPositionError(error: Error | null): string | null {
   if (!error) return null
-  if (error instanceof ApiError) {
-    if (error.code === 'RPC_UNAVAILABLE') {
-      return 'Network data is temporarily unavailable. Your wallet is still connected.'
-    }
-    if (error.code === 'WALLET_NOT_CONNECTED') {
-      return 'No valid session. Connect again to load your position.'
-    }
-    if (error.code === 'RATE_LIMITED') {
-      const wait = error.retryAfterSeconds
-      return wait
-        ? `Too many requests. Try again in about ${wait}s.`
-        : 'Too many requests. Try again shortly.'
-    }
-    return error.message
+  if (error instanceof ApiError && error.code === 'RPC_UNAVAILABLE') {
+    return 'Network data is temporarily unavailable. Your wallet is still connected.'
   }
-  return error.message || 'Could not load staking position.'
+  return humanizeFetchError(error, 'Could not load staking position.')
 }

@@ -8,7 +8,7 @@ import {
 import { mountAuth, type AuthOptions } from './auth.js'
 import { mountDiagnostics } from './diagnostics.js'
 import { applySecurityHeaders } from './http-headers.js'
-import { getBlockNumber, getRpcMetrics, toRpcApiError } from './nimiq-rpc.js'
+import { getBlockNumber, getRpcHealth, getRpcMetrics, toRpcApiError } from './nimiq-rpc.js'
 import type { IndexerHealth } from './payoutIndexer.js'
 import { mountObservationsApi } from './observationsApi.js'
 import {
@@ -161,14 +161,35 @@ export function createApp(options: AppOptions) {
         }),
       ])
     } catch {
-      // Health stays 200; RPC unavailability is reflected via null block + rpc metrics.
+      // Health stays 200; RPC unavailability is reflected via null block + rpc health.
     }
+    const rpcHealth = getRpcHealth()
+    // process up ≠ chain up. mode is ok only when live RPC succeeds on primary.
+    const mode: 'ok' | 'degraded' =
+      rpcHealth.available && !rpcHealth.degraded ? 'ok' : 'degraded'
     response.json({
       ok: true,
       network,
       blockNumber,
+      mode,
+      features: {
+        // Position / confirm / block probe require live RPC (503 when down).
+        liveChainReads: rpcHealth.liveReads,
+        // Public validators list/detail/observations serve SQLite regardless.
+        registryReads: true,
+      },
       indexer: indexer ?? null,
-      rpc: getRpcMetrics(),
+      rpc: {
+        ...getRpcMetrics(),
+        available: rpcHealth.available,
+        degraded: rpcHealth.degraded,
+        activeSource: rpcHealth.activeSource,
+        activeHost: rpcHealth.activeHost,
+        primaryConfigured: rpcHealth.primaryConfigured,
+        fallbackConfigured: rpcHealth.fallbackConfigured,
+        lastSuccessAt: rpcHealth.lastSuccessAt,
+        liveReads: rpcHealth.liveReads,
+      },
     })
   })
 

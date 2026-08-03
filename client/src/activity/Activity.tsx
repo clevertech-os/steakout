@@ -15,6 +15,8 @@ import {
 import { ApiError } from '../api/http'
 import { walletAuthApi } from '../api/walletAuth'
 import Amount from '../components/Amount'
+import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
+import { humanizeFetchError } from '../components/humanizeError'
 import { buildNimiqExplorerUrl } from '../explorer'
 import { useWallet } from '../wallet/useWallet'
 import './Activity.css'
@@ -72,15 +74,22 @@ function TimelineList({
   emptyTitle,
   emptyBody,
   emptyActions,
+  envelopeStatus,
+  onRetry,
 }: {
   items: ActivityItem[]
   emptyTitle: string
   emptyBody: string
   emptyActions?: ReactNode
+  envelopeStatus?: string
+  onRetry?: () => void
 }) {
   if (items.length === 0) {
     return (
       <section className="activity-card" aria-labelledby="activity-empty-title">
+        {envelopeStatus ? (
+          <EnvelopeStatusBanner status={envelopeStatus} onRetry={onRetry} />
+        ) : null}
         <p className="card-kicker">Timeline</p>
         <h2 id="activity-empty-title">{emptyTitle}</h2>
         <p className="activity-copy">{emptyBody}</p>
@@ -93,6 +102,9 @@ function TimelineList({
 
   return (
     <section className="activity-card" aria-label="Activity timeline">
+      {envelopeStatus ? (
+        <EnvelopeStatusBanner status={envelopeStatus} onRetry={onRetry} />
+      ) : null}
       <p className="card-kicker">Timeline</p>
       <ul className="activity-list">
         {items.map((item, index) => (
@@ -266,9 +278,18 @@ export default function Activity() {
   if (!wallet.bootReady) {
     return (
       <div className="activity">
+        <header className="shell-header activity-header">
+          <p className="eyebrow">Steakout</p>
+          <h1 className="activity-title">Activity</h1>
+        </header>
         <p className="activity-status" role="status">
-          Loading…
+          Loading session…
         </p>
+        <div className="activity-skeleton" aria-hidden="true">
+          <span className="activity-skeleton-line activity-skeleton-line--wide" />
+          <span className="activity-skeleton-line" />
+          <span className="activity-skeleton-line activity-skeleton-line--mid" />
+        </div>
       </div>
     )
   }
@@ -280,7 +301,7 @@ export default function Activity() {
         <h1 className="activity-title">Activity</h1>
         <p className="activity-lede">
           Personal staking events and network payout observations — from indexed
-          chain data, with neutral status labels.
+          chain data, labeled observed / not observed / insufficient data.
         </p>
       </header>
 
@@ -353,9 +374,14 @@ export default function Activity() {
               ) : null}
             </section>
           ) : personalStatus === 'loading' || personalStatus === 'idle' ? (
-            <p className="activity-status" role="status">
-              Loading your timeline…
-            </p>
+            <div role="status" aria-busy="true" aria-label="Loading personal timeline">
+              <p className="activity-status">Loading your timeline…</p>
+              <div className="activity-skeleton" aria-hidden="true">
+                <span className="activity-skeleton-line activity-skeleton-line--wide" />
+                <span className="activity-skeleton-line" />
+                <span className="activity-skeleton-line activity-skeleton-line--mid" />
+              </div>
+            </div>
           ) : personalStatus === 'error' ? (
             <section className="activity-card" aria-labelledby="activity-err-title">
               <p className="card-kicker">Personal</p>
@@ -364,8 +390,10 @@ export default function Activity() {
                 {personalError instanceof ApiError &&
                 personalError.code === 'WALLET_NOT_CONNECTED'
                   ? 'Session expired or not established. Connect again to verify your wallet.'
-                  : personalError?.message ??
-                    'Something went wrong loading personal activity.'}
+                  : humanizeFetchError(
+                      personalError,
+                      'Something went wrong loading personal activity.',
+                    )}
               </p>
               <div className="activity-actions">
                 <button
@@ -382,13 +410,22 @@ export default function Activity() {
                 >
                   Reconnect
                 </button>
+                <button
+                  type="button"
+                  className="nq-ghost-btn activity-cta"
+                  onClick={() => setTab('network')}
+                >
+                  Browse network feed
+                </button>
               </div>
             </section>
           ) : (
             <TimelineList
               items={personal?.data.items ?? []}
+              envelopeStatus={personal?.status}
+              onRetry={refresh}
               emptyTitle="No personal activity observed yet"
-              emptyBody="Steakout has not indexed direct payouts, position growth, or staking actions for this address. That is not a claim about missing rewards — history may still be accumulating."
+              emptyBody="Steakout has not indexed direct payouts, observed position growth, or staking actions for this address yet. That is insufficient data — not a claim that rewards were missed or withheld. History may still be accumulating."
               emptyActions={
                 <>
                   <a className="nq-pill-blue activity-cta" href="#/validators">
@@ -409,16 +446,23 @@ export default function Activity() {
             />
           )
         ) : networkStatus === 'loading' || networkStatus === 'idle' ? (
-          <p className="activity-status" role="status">
-            Loading network observations…
-          </p>
+          <div role="status" aria-busy="true" aria-label="Loading network observations">
+            <p className="activity-status">Loading network observations…</p>
+            <div className="activity-skeleton" aria-hidden="true">
+              <span className="activity-skeleton-line activity-skeleton-line--wide" />
+              <span className="activity-skeleton-line" />
+              <span className="activity-skeleton-line activity-skeleton-line--mid" />
+            </div>
+          </div>
         ) : networkStatus === 'error' ? (
           <section className="activity-card" aria-labelledby="activity-net-err">
             <p className="card-kicker">Network</p>
             <h2 id="activity-net-err">Could not load network feed</h2>
             <p className="activity-copy">
-              {networkError?.message ??
-                'Network activity is temporarily unavailable.'}
+              {humanizeFetchError(
+                networkError,
+                'Network activity is temporarily unavailable.',
+              )}
             </p>
             <div className="activity-actions">
               <button
@@ -428,13 +472,18 @@ export default function Activity() {
               >
                 Retry
               </button>
+              <a className="nq-pill-secondary activity-cta" href="#/validators">
+                Browse validators
+              </a>
             </div>
           </section>
         ) : (
           <TimelineList
             items={network?.data.items ?? []}
+            envelopeStatus={network?.status}
+            onRetry={refresh}
             emptyTitle="No network observations yet"
-            emptyBody="Payout-run observations will appear here once the indexer has classified activity for listed validators. Insufficient data is a valid result — not an error."
+            emptyBody="Observed payout runs will appear here once the indexer has classified activity for listed validators. Insufficient data is a valid result — not an error and not a judgment of any validator."
             emptyActions={
               <>
                 <a className="nq-pill-blue activity-cta" href="#/validators">

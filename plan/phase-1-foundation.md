@@ -431,13 +431,18 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - `tests/unit/` suites for the four areas, using P0-08 helpers where relevant
 
 **Acceptance criteria:**
-- [ ] Every coverage-map row for these areas has ≥ 1 test incl. edge cases listed above
-- [ ] Suites run in `npm test` green from clean install
+- [x] Every coverage-map row for these areas has ≥ 1 test incl. edge cases listed above *(except intent — residual)*
+- [x] Suites run in `npm test` green from clean install
 
 **Verification:** `npm test`; coverage spot-check in Notes.
 
 **Notes:**
--
+- Partial 2026-08-03. All available areas covered; intent deferred until P1-06 lands.
+- **Addresses (client + server):** `tests/unit/client/addresses.test.ts` (expanded), `tests/unit/server/addresses.test.ts` (new). Covers normalize (spaces/tabs/newlines + mixed case), validate accept/reject, shortAddress, formatDisplayAddress (client only), addressesEqual.
+- **Luna ↔ NIM:** `tests/unit/client/luna.test.ts` (new) → `client/src/luna.ts`. Covers `LUNA_PER_NIM`, `lunaToNim`/`nimToLuna` round-trip + rounding + huge/negative, `formatNimFromLuna` zero/fractional/thousands/`fixed`/null-NaN-Infinity → em dash.
+- **Position state:** `tests/unit/server/staking-state.test.ts` (P1-05 suite expanded). Six states (NotStaked/Pending/Active/Inactive/Retiring/Withdrawable) + parseStakerBalances null on unreadable; **unavailable path:** unreadable NaN balances → envelope `status: 'unavailable'` (not Active); hard RPC still throws `RPC_UNAVAILABLE`.
+- **Intent matching residual:** `server/src/stakingIntents.ts` does **not** exist (P1-06 backlog). Did not invent module or tests. Re-open P1-14 (or fold into P1-15) when matcher ships: operation/amount/delegation mismatches + replay.
+- Spot-check: `npm test` green — server 265, client 46, integration 6 (no live network).
 
 ---
 

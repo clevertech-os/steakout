@@ -5,12 +5,13 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import DataStatusTag from '../components/DataStatusTag'
+import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
 import FreshnessTag from '../components/FreshnessTag'
+import { humanizeFetchError } from '../components/humanizeError'
 import StatusChip, { type ObservationStatus } from '../components/StatusChip'
 import { buildNimiqExplorerUrl } from '../explorer'
 import {
   fetchValidatorObservations,
-  ValidatorsApiError,
   type ObservationRunItem,
   type ObservationsEnvelope,
 } from './api'
@@ -242,13 +243,10 @@ export default function Evidence({
       } catch (err) {
         if (controller.signal.aborted) return
         if (err instanceof DOMException && err.name === 'AbortError') return
-        const message =
-          err instanceof ValidatorsApiError
-            ? err.message
-            : err instanceof Error
-              ? err.message
-              : 'Could not load payout observations.'
-        setState({ kind: 'error', message })
+        setState({
+          kind: 'error',
+          message: humanizeFetchError(err, 'Could not load payout observations.'),
+        })
       }
     })()
 
@@ -306,6 +304,11 @@ export default function Evidence({
         <p className="evidence-status" role="status">
           Loading observed payout runs…
         </p>
+        <div className="evidence-skeleton" aria-hidden="true">
+          <span className="evidence-skeleton-line evidence-skeleton-line--wide" />
+          <span className="evidence-skeleton-line" />
+          <span className="evidence-skeleton-line evidence-skeleton-line--mid" />
+        </div>
       </section>
     )
   }
@@ -372,6 +375,15 @@ export default function Evidence({
       className="nq-card profile-card profile-card--observation evidence"
       aria-labelledby="evidence-title"
     >
+      <EnvelopeStatusBanner
+        status={envelope.status}
+        onRetry={retry}
+        message={
+          envelope.status === 'stale'
+            ? 'Observation data may be outdated. Showing the last indexed payout runs.'
+            : undefined
+        }
+      />
       <p className="card-kicker">Steakout observation</p>
       <h2 id="evidence-title" className="profile-section-title">
         Payout evidence

@@ -31,7 +31,8 @@ const indexerEnv = indexerOptionsFromEnv()
 const payoutIndexer = new PayoutIndexer({
   database,
   rpcUrl: process.env.NIMIQ_RPC_URL,
-  getCurrentBlock: () => getBlockNumber(process.env.NIMIQ_RPC_URL),
+  // Omit pinned URL so NIMIQ_RPC_URL_FALLBACK failover applies (P3-03).
+  getCurrentBlock: () => getBlockNumber(),
   pageSize: indexerEnv.pageSize,
   maxPages: indexerEnv.maxPages,
   addressConcurrency: indexerEnv.addressConcurrency,

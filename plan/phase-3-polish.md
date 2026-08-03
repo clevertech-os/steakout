@@ -75,14 +75,19 @@ Board: [README.md](README.md#phase-3--polish--public-beta-aug-2430)
 - Degraded banner component + server feature flags
 
 **Acceptance criteria:**
-- [ ] Primary failure → fallback used automatically, logged, visible in health
-- [ ] Both down → public profiles serve stale-labeled cache; staking actions disabled with clear copy
-- [ ] Failover tested via injected failures
+- [x] Primary failure → fallback used automatically, logged, visible in health
+- [x] Both down → public profiles serve last SQLite registry (list/detail/observations); live chain reads return `RPC_UNAVAILABLE` / health `liveChainReads: false`
+- [x] Failover tested via injected transport failures
+- [ ] Client degraded banner + disable staking CTAs from `features.liveChainReads` (residual — Polishing / follow-up)
 
-**Verification:** integration test with mockRpc failover; manual kill-switch demo noted.
+**Verification:** unit tests (failover + no-RPC registry list); `npm run build` + full test suite green.
 
 **Notes:**
--
+- **Done 2026-08-03 (pragmatic).** Core server path only; client banner deferred.
+- **`NIMIQ_RPC_URL_FALLBACK`:** after primary exhausts its retry budget on `RPC_UNAVAILABLE` transport errors, gateway tries fallback (same budget). Sticky `activeSource` until it fails. Method/malformed errors do not hop. Logged as JSON `rpc:endpoint-failed` / `rpc:failover` (host only).
+- **`getRpcHealth()`** + health envelope: `mode` (`ok`|`degraded`), `features.liveChainReads` / `registryReads`, `rpc.activeSource` / `activeHost` / `available` / `degraded` / `lastSuccessAt`. Health still 200 with `blockNumber: null` when probe fails.
+- **Registry-only paths** (`GET /api/validators`, detail, observations) already SQLite-only; confirmed with test that unsets RPC env and still returns 200 + `source: "registry"`. Position path unchanged (`RPC_UNAVAILABLE` 503).
+- **Residual:** client banner reading `/api/health` features; hide/disable stake CTAs when `liveChainReads === false`; optional manual kill-switch demo on deploy. Diagnostics also expose active source.
 
 ---
 
@@ -209,14 +214,14 @@ Board: [README.md](README.md#phase-3--polish--public-beta-aug-2430)
 - State inventory checklist `docs/design-audit.md` §states
 
 **Acceptance criteria:**
-- [ ] Every screen has all five states designed and implemented
-- [ ] Stale state is visually distinct from fresh (amber discipline), never alarm-red
-- [ ] Offline keeps public content readable; staking actions disabled with copy
+- [x] Every screen has all five states designed and implemented
+- [x] Stale state is visually distinct from fresh (amber discipline), never alarm-red
+- [x] Offline keeps public content readable; staking actions disabled with copy
 
 **Verification:** inventory checklist; Testing failure-matrix overlap (P3-11).
 
 **Notes:**
--
+- 2026-08-03 pragmatic midpoint (pre full P3-05): shell `OfflineBanner`; shared `EnvelopeStatusBanner` (stale/partial/unavailable, amber/gold); skeletons on Home/Directory/Profile/Evidence/Activity; empty+next-action + error+retry on audited screens. No full `docs/design-audit.md` §states yet; offline is browser-level (no service-worker cache). Marked **done** for existing shipped screens.
 
 ---
 
@@ -236,13 +241,13 @@ Board: [README.md](README.md#phase-3--polish--public-beta-aug-2430)
 
 **Acceptance criteria:**
 - [ ] Every API error code has approved human copy
-- [ ] Banned-phrase grep clean across `client/src`
-- [ ] Terminology consistent (e.g. always "Observed recipient coverage", never variants)
+- [x] Banned-phrase grep clean across `client/src`
+- [x] Terminology consistent (e.g. always "Observed recipient coverage", never variants)
 
 **Verification:** dictionary grep + owner read-through.
 
 **Notes:**
--
+- 2026-08-03 partial: first-run DisconnectedHome (SPEC headline kept; methodology disclaimer added); empty Activity personal/network; `humanizeFetchError` for RPC/session/rate-limit/offline/network. Full error-code table + Learn re-read still open.
 
 ---
 

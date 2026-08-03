@@ -3,6 +3,7 @@
  */
 
 import Amount from '../components/Amount'
+import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
 import FreshnessTag from '../components/FreshnessTag'
 import PositionStateBadge from '../components/PositionStateBadge'
 import type { PositionState, StakingPositionEnvelope } from '../api/position'
@@ -40,16 +41,19 @@ export default function StakedHome({
         </p>
       </header>
 
-      {envelopeStatus === 'unavailable' || envelopeStatus === 'partial' ? (
-        <p className="home-banner home-banner--warn" role="status">
-          {envelopeStatus === 'unavailable'
-            ? 'Some position data is unavailable from the network right now.'
-            : 'Position data is partial — some fields may be incomplete.'}
-          <button type="button" className="nq-ghost-btn home-banner-retry" onClick={onRetry}>
-            Refresh
-          </button>
-        </p>
-      ) : null}
+      <EnvelopeStatusBanner
+        status={envelopeStatus}
+        onRetry={onRetry}
+        message={
+          envelopeStatus === 'stale'
+            ? 'Position snapshot may be outdated. Showing the last known on-chain read.'
+            : envelopeStatus === 'partial'
+              ? 'Position data is partial — some fields may be incomplete.'
+              : envelopeStatus === 'unavailable'
+                ? 'Some position data is unavailable from the network right now.'
+                : undefined
+        }
+      />
 
       <section className="nq-card nq-card-lg shell-card home-card" aria-labelledby="home-staked-title">
         <p className="card-kicker">Total staked</p>
@@ -202,6 +206,9 @@ function monitoringCopy(
 ): string {
   if (envelopeStatus === 'unavailable') {
     return 'Monitoring status unavailable while chain data cannot be read.'
+  }
+  if (envelopeStatus === 'stale') {
+    return 'Watching this position from a stale snapshot. Reconnect or refresh when the network is reachable.'
   }
   if (!lastReward) {
     return 'Watching this position. No personal reward events observed yet — insufficient data for continuity claims.'

@@ -3,6 +3,7 @@
  */
 
 import Amount from '../components/Amount'
+import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
 import FreshnessTag from '../components/FreshnessTag'
 import type { StakingPositionEnvelope } from '../api/position'
 
@@ -38,6 +39,10 @@ export default function NotStakedHome({
           {shortAddress}
         </p>
       </header>
+
+      {envelope ? (
+        <EnvelopeStatusBanner status={envelope.status} onRetry={onRetry} />
+      ) : null}
 
       <section className="nq-card nq-card-lg shell-card home-card" aria-labelledby="home-balance-title">
         <p className="card-kicker">Available balance</p>

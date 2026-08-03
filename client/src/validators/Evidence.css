@@ -9,6 +9,45 @@
   color: var(--so-muted);
 }
 
+.evidence-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+
+.evidence-skeleton-line {
+  display: block;
+  height: 0.7rem;
+  border-radius: 0.35rem;
+  background: var(--so-disabled-soft);
+  width: 100%;
+}
+
+.evidence-skeleton-line--wide {
+  width: 75%;
+}
+
+.evidence-skeleton-line--mid {
+  width: 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .evidence-skeleton-line {
+    animation: evidence-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes evidence-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
 .evidence-status-block {
   display: flex;
   flex-wrap: wrap;
