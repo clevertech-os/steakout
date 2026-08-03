@@ -7,6 +7,8 @@ Any further visual work must load `anti-slop.md` first (ban list + section 5 sel
 
 **Residual:** owner walkthrough sign-off (P3-05 AC); full keyboard stake flow (blocked until P1-12 ReviewSheet ships); automated contrast tooling in CI not wired.
 
+**Next cycle:** the architect-reviewed follow-up queue lives in [`visual-polish-todo.md`](visual-polish-todo.md) (font weights, chrome systemization, token drift, notice consistency, state parity).
+
 ---
 
 ## Anti-slop pass

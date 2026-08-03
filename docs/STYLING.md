@@ -46,11 +46,13 @@ Installed: **nimiq-css@1.0.0-beta.162** (workspace-hoisted under root `node_modu
 
 Import order matters: nimiq-css layers first, Steakout overrides last. `main.tsx` imports `styles/nimiq.css` once; no other global CSS entry points.
 
-**Fonts (Vite):** self-hosted in `client/public/assets/fonts/`:
-- `Mulish-Regular.ttf` → family `Mulish` weight 400
+**Fonts (Vite):** self-hosted in `client/public/assets/fonts/` (weights shipped in V-01; real faces so `font-synthesis: none` in `base.css` never falls back to faux-bold):
+- `Mulish-VariableFont_wght.ttf` → family `Mulish` weights 100–1000 (variable)
 - `FiraMono-Regular.ttf` → family `Fira Mono` weight 400
+- `FiraMono-Medium.ttf` → family `Fira Mono` weight 500
+- `FiraMono-Bold.ttf` → family `Fira Mono` weight 700
 
-Package `fonts.css` expects different filenames (`Mulish-VariableFont_wght.ttf`, `FiraMono-400.ttf`) and is **not** imported. Corrected `@font-face` blocks live in `base.css`. `--nq-font-mono` is overridden to prefer Fira Mono (preflight defaults to Fira Code).
+Fira Mono has no 600 face; CSS weight 600 requests for mono resolve to 700 per the font-matching algorithm. Package `fonts.css` expects different Fira filenames (`FiraMono-400.ttf`) and is **not** imported; the Mulish variable file already uses the exact name it expects, so a future switch is trivial. Corrected `@font-face` blocks live in `base.css`. `--nq-font-mono` is overridden to prefer Fira Mono (preflight defaults to Fira Code).
 
 **Hidden style reference:** pathname `/spike-style` (`client/src/spike/StyleReference.tsx`). Enabled in DEV or when `VITE_ENABLE_STYLE_SPIKE=true`.
 

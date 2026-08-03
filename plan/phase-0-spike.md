@@ -98,7 +98,11 @@ Board: [README.md](README.md#phase-0--de-risk-spike-aug-29)
 **Verification:** report reviewed by owner; tx hashes independently resolvable via RPC/explorer.
 
 **Notes:**
-- The guarded six-method harness is implemented at `/spike/staking-methods`. It requires explicit testnet acknowledgement and per-method clicks, refuses non-testnet providers, and records raw result/error data. All device-dependent observations, transaction hashes, and staking fixtures remain unresolved until a Nimiq Pay testnet session is available.
+- **2026-08-03 (pre-device prep, AC still blocked on device):** Package-level ground truth recorded from `@nimiq/mini-app-sdk` `provider.d.ts`: `sendBasicTransaction` documents `@returns The serialized transaction`; all six staking methods are `Promise<string | ErrorResponse>` without `@returns` (same family). Provisional hypothesis: success string is **serialized tx**, not hash; ErrorResponse for cancel when resolved. **Device must confirm** — not treated as proven.
+- Harness at `/spike/staking-methods`: testnet gate + per-method review unchanged; now classifies each result as `hash` | `serialized→hash` | `raw` | `error`, with **Copy report JSON** + download `steakout-p0-03-report.json`. Owner runbook at top of `docs/spikes/staking-methods.md`.
+- Confirm path prep: client `normalizeProviderTxResult` + server `normalizeProviderTxRef` try `Transaction.fromAny(hex).hash()` via `@nimiq/core` when string is not 64-hex (try/catch → raw / VALIDATION). Unit-tested with constructed basic signed txs (not Pay host fixtures). Client dep `@nimiq/core` + vite WASM plugin for browser derivation.
+- Fixture scaffold: `tests/fixtures/rpc/staking/README.md` + template `_meta.json` (empty captures). No fake device results.
+- Residual human gates: Pay testnet session, all six host return shapes, cancel shape, one pending→confirmed, fill fixtures, Week-1 safe list.
 
 ---
 

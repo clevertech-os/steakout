@@ -441,14 +441,25 @@ Board: [README.md](README.md#phase-2--accountability-engine-aug-1723)
 - UI entry point on the position view (Change validator)
 
 **Acceptance criteria:**
-- [ ] Same safety bar as P1-12: review before confirm, matcher validation, reload recovery
+- [x] Same safety bar as P1-12: review before confirm, matcher validation, reload recovery
 - [ ] Works on testnet device (evidence in Notes)
-- [ ] If P0-03 showed this method is broken, the card is marked `cut` with the evidence and the alternative implemented instead
+- [x] If P0-03 showed this method is broken, the card is marked `cut` with the evidence and the alternative implemented instead
 
 **Verification:** device spot-check + integration tests extended.
 
 **Notes:**
--
+- **Done 2026-08-03 (code path).** `sendUpdateStakerTransaction` wired end-to-end; P0-03 did not mark the method broken (device evidence still unresolved in spike — not cut).
+- **Server (`stakingIntents.ts`):**
+  - Preconditions already required Active/Inactive; added reject when `newDelegation` equals current delegation.
+  - Label → `Change validator`; waiting-period note explains reporting window / reactivate (not retire/remove multi-step wait).
+  - Intent params: `{ newDelegation, reactivateAllStake }`; confirm soft-checks delegation after match (existing).
+- **Client:**
+  - `StakeFlow` `mode='update'`: prep → intent → ReviewSheet → `sendUpdateStakerTransaction({ newDelegation, reactivateAllStake: true })` → confirm poll → success. Reload recovery via pending intent when operation is `update-staker`.
+  - `normalizeIntentSummary` maps server `fromState`/`toStateHint` → client `stateFrom`/`stateTo`.
+  - Review sheet: no amount for change-validator; waiting note from server/copy; title “Review change”.
+  - **Entry:** StakedHome Active/Inactive secondary “Change validator” → `#/validators`. Profile when staked elsewhere shows primary “Change to this validator” (`mode=update`); deep-link `?change=1`.
+- **Tests:** server update-staker happy/same-delegation/NotStaked; client summary normalize + createIntent mapping; `hashWantsChange`.
+- **Device spot-check:** still required on testnet Pay (P0-03 residual for return semantics). Code path ready; mark device AC when harness evidence is captured.
 
 ---
 

@@ -6,6 +6,7 @@ import {
   NAV_ROUTES,
   hashQuery,
   hashToPath,
+  hashWantsChange,
   hashWantsStake,
   matchRoute,
 } from '../../../client/src/routes.ts'
@@ -23,6 +24,13 @@ describe('hashToPath', () => {
     expect(hashWantsStake('#/validators/NQXX?stake=1')).toBe(true)
     expect(hashWantsStake('#/validators/NQXX')).toBe(false)
     expect(hashQuery('#/validators/NQXX?stake=1').get('stake')).toBe('1')
+  })
+
+  it('detects change-validator deep-link (?change=1)', () => {
+    expect(hashWantsChange('#/validators/NQXX?change=1')).toBe(true)
+    expect(hashWantsChange('#/validators/NQXX?change=true')).toBe(true)
+    expect(hashWantsChange('#/validators/NQXX?stake=1')).toBe(false)
+    expect(hashWantsChange('#/validators/NQXX')).toBe(false)
   })
 })
 

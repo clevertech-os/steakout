@@ -37,17 +37,63 @@ export interface IntentSummary {
   /** Plain-language action label, e.g. "Create staker and delegate". */
   operationLabel: string
   amountLuna: number | null
+  /** NIM amount when the server includes it (optional; client may derive). */
+  amountNim?: number | null
   validatorName: string | null
   validatorAddress: string | null
   /** Position state before the operation (when known). */
   stateFrom: string | null
   /** Expected position state after confirmation (when known). */
   stateTo: string | null
-  /** True when the protocol enforces a waiting period (retire/remove). */
+  /**
+   * True when the protocol enforces a multi-step waiting period (retire/remove).
+   * Change-validator notes a reporting window separately via waitingPeriodNote.
+   */
   hasWaitingPeriod: boolean
   waitingPeriodNote: string | null
   /** Optional free-form notes from the server (neutral). */
   notes?: string[]
+  /** Network context from the server (mainnet/testnet). */
+  networkNote?: string | null
+}
+
+/** Raw wire summary may use server field names (fromState / toStateHint). */
+type WireIntentSummary = IntentSummary & {
+  fromState?: string | null
+  toStateHint?: string | null
+}
+
+/**
+ * Normalize server summary field names to the client review contract.
+ * Server (P1-06) uses fromState/toStateHint; client ReviewSheet uses stateFrom/stateTo.
+ */
+export function normalizeIntentSummary(raw: WireIntentSummary): IntentSummary {
+  const stateFrom = raw.stateFrom ?? raw.fromState ?? null
+  const stateTo = raw.stateTo ?? raw.toStateHint ?? null
+  const waitingPeriodNote = raw.waitingPeriodNote ?? null
+  const hasWaitingPeriod =
+    typeof raw.hasWaitingPeriod === 'boolean'
+      ? raw.hasWaitingPeriod
+      : raw.operation === 'retire' || raw.operation === 'remove'
+  const notes = raw.notes
+    ? [...raw.notes]
+    : raw.networkNote
+      ? [raw.networkNote]
+      : undefined
+  return {
+    operation: raw.operation,
+    operationLabel: raw.operationLabel,
+    amountLuna: raw.amountLuna ?? null,
+    amountNim: raw.amountNim ?? null,
+    validatorName: raw.validatorName ?? null,
+    validatorAddress: raw.validatorAddress ?? null,
+    stateFrom,
+    stateTo,
+    hasWaitingPeriod,
+    waitingPeriodNote,
+    notes,
+    networkNote: raw.networkNote ?? null,
+  }
 }
 
 export interface CreateIntentRequest {
@@ -99,10 +145,14 @@ function isErrorEnvelope(body: unknown): body is ErrorEnvelope {
  * Create a single-use staking intent (15 min expiry on the server).
  * Requires an authenticated session cookie.
  */
-export function createStakingIntent(
+export async function createStakingIntent(
   body: CreateIntentRequest,
 ): Promise<CreateIntentResponse> {
-  return apiPost<CreateIntentResponse>('/api/staking/intent', body)
+  const res = await apiPost<CreateIntentResponse>('/api/staking/intent', body)
+  return {
+    ...res,
+    summary: normalizeIntentSummary(res.summary as WireIntentSummary),
+  }
 }
 
 /**

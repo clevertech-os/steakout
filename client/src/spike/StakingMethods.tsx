@@ -1,5 +1,11 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { init, type ErrorResponse, type NimiqProvider } from '@nimiq/mini-app-sdk'
+import {
+  normalizeProviderTxResult,
+  providerTxClassification,
+  type ProviderTxClassification,
+  type ProviderTxOutcome,
+} from '../nimiq'
 import './StakingMethods.css'
 
 const SDK_INIT_TIMEOUT_MS = 10_000
@@ -27,9 +33,27 @@ type MethodResult = {
   resultType: string
   raw: string
   providerError?: string
+  /** hash | serialized→hash | raw | error */
+  classification: ProviderTxClassification
+  /** Derived or direct 64-hex when available. */
+  derivedHash?: string
+  /** How hash was obtained when classification is hash-like. */
+  hashSource?: 'hash' | 'serialized'
+  /** Full normalized outcome for report JSON. */
+  outcome: ProviderTxOutcome
+  recordedAt: string
 }
 
 type ProviderState = 'waiting' | 'warming' | 'ready' | 'unavailable'
+
+const METHOD_NAMES: MethodName[] = [
+  'sendNewStakerTransaction',
+  'sendStakeTransaction',
+  'sendSetActiveStakeTransaction',
+  'sendUpdateStakerTransaction',
+  'sendRetireStakeTransaction',
+  'sendRemoveStakeTransaction',
+]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -75,6 +99,22 @@ function getErrorMessage(value: unknown): string {
   return formatRaw(value)
 }
 
+function outcomeToMethodFields(outcome: ProviderTxOutcome): Pick<
+  MethodResult,
+  'classification' | 'derivedHash' | 'hashSource' | 'outcome'
+> {
+  const classification = providerTxClassification(outcome)
+  if (outcome.kind === 'hash') {
+    return {
+      classification,
+      derivedHash: outcome.hash,
+      hashSource: outcome.source,
+      outcome,
+    }
+  }
+  return { classification, outcome }
+}
+
 function StakingMethods() {
   const [provider, setProvider] = useState<NimiqProvider | null>(null)
   const [providerState, setProviderState] = useState<ProviderState>('waiting')
@@ -92,6 +132,7 @@ function StakingMethods() {
     reactivateAllStake: false,
   })
   const [results, setResults] = useState<Partial<Record<MethodName, MethodResult>>>({})
+  const [copyStatus, setCopyStatus] = useState<string | null>(null)
   const warmupInFlight = useRef<Promise<NimiqProvider> | null>(null)
 
   const setInput = <K extends keyof MethodInputs>(key: K, value: MethodInputs[K]) => {
@@ -119,8 +160,79 @@ function StakingMethods() {
     }
   }
 
+  const buildReport = () => {
+    const methodReports = METHOD_NAMES.map((method) => {
+      const result = results[method]
+      if (!result) {
+        return { method, status: 'not-run' as const }
+      }
+      return {
+        method,
+        status: result.status,
+        classification: result.classification,
+        arguments: result.arguments,
+        resultType: result.resultType,
+        raw: result.raw,
+        providerError: result.providerError ?? null,
+        derivedHash: result.derivedHash ?? null,
+        hashSource: result.hashSource ?? null,
+        outcome: result.outcome,
+        recordedAt: result.recordedAt,
+      }
+    })
+
+    return {
+      spike: 'P0-03',
+      reportVersion: 1,
+      generatedAt: new Date().toISOString(),
+      note:
+        'Device observations only. Do not invent results. Paste into docs/spikes/staking-methods.md.',
+      context: {
+        harnessRoute: '/spike/staking-methods',
+        providerPresent: typeof window.nimiq !== 'undefined',
+        providerState,
+        network,
+        // Address is needed for fixture form; redact in public paste if required.
+        connectedAddress: account,
+        testnetAcknowledged,
+        sdkPackage: '@nimiq/mini-app-sdk (see lockfile for exact version)',
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      },
+      methods: methodReports,
+    }
+  }
+
+  const copyReportJson = async () => {
+    const json = JSON.stringify(buildReport(), null, 2)
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(json)
+        setCopyStatus('Report JSON copied to clipboard. Paste into docs/spikes/staking-methods.md.')
+      } else {
+        setCopyStatus('Clipboard unavailable. Use Download report instead.')
+      }
+    } catch {
+      setCopyStatus('Copy failed. Use Download report instead.')
+    }
+  }
+
+  const downloadReportJson = () => {
+    const json = JSON.stringify(buildReport(), null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'steakout-p0-03-report.json'
+    anchor.click()
+    URL.revokeObjectURL(url)
+    setCopyStatus('Downloaded steakout-p0-03-report.json')
+  }
+
   const runMethod = async (method: MethodName) => {
     setRunningMethod(method)
+    const placeholderOutcome = normalizeProviderTxResult({
+      error: { type: 'pending', message: 'The method has not returned yet.' },
+    })
     setResults((current) => ({
       ...current,
       [method]: {
@@ -128,6 +240,9 @@ function StakingMethods() {
         arguments: 'Preparing provider call...',
         resultType: 'not available',
         raw: 'The method has not returned yet.',
+        classification: 'error',
+        outcome: placeholderOutcome,
+        recordedAt: new Date().toISOString(),
       },
     }))
 
@@ -194,7 +309,10 @@ function StakingMethods() {
         }
       }
 
-      if (isProviderError(result)) {
+      const outcome = normalizeProviderTxResult(result)
+      const fields = outcomeToMethodFields(outcome)
+
+      if (isProviderError(result) || outcome.kind === 'error') {
         setResults((current) => ({
           ...current,
           [method]: {
@@ -202,7 +320,14 @@ function StakingMethods() {
             arguments: argumentSummary,
             resultType: typeof result,
             raw: formatRaw(result),
-            providerError: `${result.error.type}: ${result.error.message}`,
+            providerError:
+              isProviderError(result)
+                ? `${result.error.type}: ${result.error.message}`
+                : outcome.kind === 'error'
+                  ? outcome.message
+                  : undefined,
+            ...fields,
+            recordedAt: new Date().toISOString(),
           },
         }))
       } else {
@@ -213,6 +338,8 @@ function StakingMethods() {
             arguments: argumentSummary,
             resultType: typeof result,
             raw: formatRaw(result),
+            ...fields,
+            recordedAt: new Date().toISOString(),
           },
         }))
       }
@@ -221,6 +348,15 @@ function StakingMethods() {
         cause instanceof Error &&
         (cause.message.includes('must be') || cause.message.endsWith('is required.'))
       const providerError = isProviderError(cause)
+      const outcome = providerError
+        ? normalizeProviderTxResult(cause)
+        : normalizeProviderTxResult({
+            error: {
+              type: validationError ? 'validation' : 'thrown',
+              message: getErrorMessage(cause),
+            },
+          })
+      const fields = outcomeToMethodFields(outcome)
       setResults((current) => ({
         ...current,
         [method]: {
@@ -229,6 +365,8 @@ function StakingMethods() {
           resultType: typeof cause,
           raw: formatRaw(cause),
           providerError: providerError || !validationError ? getErrorMessage(cause) : undefined,
+          ...fields,
+          recordedAt: new Date().toISOString(),
         },
       }))
     } finally {
@@ -279,14 +417,39 @@ function StakingMethods() {
           <div className="staking-result" aria-live="polite">
             <p className="staking-result-status">Result: {result.status}</p>
             <dl className="staking-result-details">
+              <div>
+                <dt>Classification</dt>
+                <dd>
+                  <code className="staking-classification">{result.classification}</code>
+                </dd>
+              </div>
+              {result.derivedHash && (
+                <div>
+                  <dt>Derived / direct hash</dt>
+                  <dd>
+                    <code>{result.derivedHash}</code>
+                    {result.hashSource ? ` (source: ${result.hashSource})` : ''}
+                  </dd>
+                </div>
+              )}
               <div><dt>Arguments</dt><dd><pre>{result.arguments}</pre></dd></div>
               <div><dt>Exact typeof</dt><dd><code>{result.resultType}</code></dd></div>
               {result.providerError && <div><dt>Provider error</dt><dd>{result.providerError}</dd></div>}
               <div><dt>Raw return or error</dt><dd><pre>{result.raw}</pre></dd></div>
             </dl>
-            {result.status === 'success' && (
+            {result.status === 'success' && result.classification === 'raw' && (
               <p className="staking-result-note">
-                Do not label this value a hash. Copy it into the report and resolve hash/serialized-transaction semantics independently.
+                String could not be classified as 64-hex or parseable serialized tx. Paste the raw value into the spike report; do not invent a hash.
+              </p>
+            )}
+            {result.status === 'success' && result.classification === 'serialized→hash' && (
+              <p className="staking-result-note">
+                Package hypothesis: serialized tx. Hash was derived via Transaction.fromAny. Device + RPC must still confirm broadcast and chain visibility.
+              </p>
+            )}
+            {result.status === 'success' && result.classification === 'hash' && (
+              <p className="staking-result-note">
+                Provider returned a 64-hex string treated as a direct hash. Still verify via getTransactionByHash on testnet RPC.
               </p>
             )}
           </div>
@@ -327,6 +490,18 @@ function StakingMethods() {
           <div><dt>Network after click</dt><dd>{network ?? 'Not checked'}</dd></div>
           <div><dt>Connected address</dt><dd>{account ?? 'Not checked'}</dd></div>
         </dl>
+        <div className="staking-report-actions">
+          <button className="nq-button nq-button-secondary" type="button" onClick={() => void copyReportJson()}>
+            Copy report JSON
+          </button>
+          <button className="nq-button nq-button-secondary" type="button" onClick={downloadReportJson}>
+            Download steakout-p0-03-report.json
+          </button>
+        </div>
+        {copyStatus && <p className="staking-copy-status" role="status">{copyStatus}</p>}
+        <p className="staking-result-note">
+          Report includes every method result + classification (`hash` | `serialized→hash` | `raw` | `error`). Paste into `docs/spikes/staking-methods.md` after a real device run only.
+        </p>
       </section>
 
       <section className="staking-method-list" aria-labelledby="staking-methods-title">

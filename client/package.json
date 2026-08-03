@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@nimiq/core": "^2.7.2",
     "@nimiq/hub-api": "^1.14.0",
     "@nimiq/mini-app-sdk": "^0.1.0",
     "@nimiq/rpc": "^0.4.1",

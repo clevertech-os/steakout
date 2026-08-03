@@ -9,6 +9,8 @@ import type { IntentSummary } from '../api/staking'
 import {
   formatStateTransition,
   OPERATION_LABELS,
+  REMOVE_REVIEW_TITLE,
+  RETIRE_REVIEW_TITLE,
   STAKE_CANCEL,
   STAKE_CONFIRM_CTA,
   STAKE_MAINNET_REAL_AMOUNTS,
@@ -17,6 +19,7 @@ import {
   STAKE_NO_WAITING_PERIOD,
   STAKE_REVIEW_BEFORE_CONFIRM,
   STAKE_REVIEW_TITLE,
+  UPDATE_REVIEW_TITLE,
 } from './copy'
 import './ReviewSheet.css'
 
@@ -34,10 +37,23 @@ export default function ReviewSheet({
   onConfirm,
   onCancel,
 }: ReviewSheetProps) {
+  const isUpdate = summary.operation === 'update-staker'
+  const isRetire = summary.operation === 'retire'
+  const isRemove = summary.operation === 'remove'
+  const isLifecycle = isRetire || isRemove
+
   const operationLabel =
     summary.operationLabel?.trim() ||
     OPERATION_LABELS[summary.operation] ||
     summary.operation
+
+  const reviewTitle = isUpdate
+    ? UPDATE_REVIEW_TITLE
+    : isRetire
+      ? RETIRE_REVIEW_TITLE
+      : isRemove
+        ? REMOVE_REVIEW_TITLE
+        : STAKE_REVIEW_TITLE
 
   const validatorLabel =
     summary.validatorName?.trim() ||
@@ -71,7 +87,7 @@ export default function ReviewSheet({
         <header className="review-sheet-header">
           <p className="card-kicker">Review before wallet</p>
           <h2 id="review-sheet-title" className="review-sheet-title">
-            {STAKE_REVIEW_TITLE}
+            {reviewTitle}
           </h2>
           <p className="review-sheet-lede">{STAKE_REVIEW_BEFORE_CONFIRM}</p>
         </header>
@@ -85,17 +101,37 @@ export default function ReviewSheet({
           <div className="review-sheet-fact">
             <dt className="nq-label">Amount</dt>
             <dd className="review-sheet-amount">
-              <Amount luna={summary.amountLuna} size="lg" label="Stake amount" />
-              {summary.amountLuna != null && Number.isFinite(summary.amountLuna) ? (
-                <span className="review-sheet-luna mono">
-                  {summary.amountLuna.toLocaleString()} Luna
+              {isUpdate ? (
+                <span className="review-sheet-no-amount">
+                  No stake amount moves. Only the delegation target changes.
                 </span>
-              ) : null}
+              ) : (
+                <>
+                  <Amount
+                    luna={summary.amountLuna}
+                    size="lg"
+                    label={
+                      isRetire
+                        ? 'Retire amount'
+                        : isRemove
+                          ? 'Remove amount'
+                          : 'Stake amount'
+                    }
+                  />
+                  {summary.amountLuna != null && Number.isFinite(summary.amountLuna) ? (
+                    <span className="review-sheet-luna mono">
+                      {summary.amountLuna.toLocaleString()} Luna
+                    </span>
+                  ) : null}
+                </>
+              )}
             </dd>
           </div>
 
           <div className="review-sheet-fact">
-            <dt className="nq-label">Validator</dt>
+            <dt className="nq-label">
+              {isUpdate ? 'New validator' : isLifecycle ? 'Delegated validator' : 'Validator'}
+            </dt>
             <dd>
               <span className="review-sheet-validator-name">{validatorLabel}</span>
               {summary.validatorAddress ? (
@@ -134,7 +170,11 @@ export default function ReviewSheet({
         <div className="review-sheet-actions">
           <button
             type="button"
-            className="nq-pill-blue nq-pill-lg review-sheet-confirm"
+            className={
+              isLifecycle
+                ? 'nq-pill-red nq-pill-lg review-sheet-confirm'
+                : 'nq-pill-blue nq-pill-lg review-sheet-confirm'
+            }
             disabled={busy}
             onClick={onConfirm}
           >

@@ -469,14 +469,20 @@ Board: [README.md](README.md#phase-1--foundation--first-stake-aug-1016)
 - `tests/integration/` suites above; server booted in-test on ephemeral port + temp DB
 
 **Acceptance criteria:**
-- [ ] All listed flows green without any live network
-- [ ] Temp DB per suite; no cross-test bleed
-- [ ] Failure assertions match API.md error codes exactly
+- [x] All listed flows green without any live network
+- [x] Temp DB per suite; no cross-test bleed
+- [x] Failure assertions match API.md error codes exactly
 
 **Verification:** `npm test` green in clean env.
 
 **Notes:**
--
+- Done 2026-08-03. Suite: `tests/integration/auth-registry-intent.test.ts` (9 cases) + existing P2-15 indexer suite.
+- **Auth:** full HTTP challenge → real `@nimiq/core` sign → verify → session cookie → `/api/me`; rejection codes `CHALLENGE_EXPIRED`, `SIGNATURE_REJECTED`, `WALLET_NOT_CONNECTED`. No P0-02 wallet fixture dir (same gap as P1-02); zero-key deterministic crypto.
+- **Intent/confirm:** mint-session helper for auth on staking routes; `TX_PENDING` (202) → confirmed (200); `TX_FAILED` (422); `TX_MISMATCH` amount/sender (422, intent stays pending); `INTENT_NOT_FOUND` (404); unauth → `WALLET_NOT_CONNECTED`. Injected `fetchTx` + synthetic txs (no live RPC).
+- **Registry:** fixture fetcher (known-only + all-observable) → `syncValidators` upsert → `GET /api/validators` envelope (78) + listed=24 + detail profile.
+- **RPC normalization:** mockRpc + P0-04 fixtures through `getBlockNumber` / validator / active / account / staker-not-found / `fetchTransaction`.
+- Temp SQLite + ephemeral port per case; rate-limit + response-cache cleared in `afterEach`. No live network/device.
+- Verified: `npm run test:integration` 15/15; `npm test` green.
 
 ---
 

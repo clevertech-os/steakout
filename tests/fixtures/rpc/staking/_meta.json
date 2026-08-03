@@ -1,0 +1,15 @@
+{
+  "capture": "P0-03 staking provider method txs (testnet)",
+  "status": "template-only",
+  "note": "Fill after Nimiq Pay testnet device run. Do not invent hashes or responses.",
+  "endpoint": "REPLACE_WITH_TESTNET_RPC_URL",
+  "network": "testnet",
+  "capturedAt": null,
+  "timeoutMs": 10000,
+  "redaction": {
+    "userAddressInputs": "replace with deterministic NQ00 test addresses if not required",
+    "validatorAddresses": "retained as public chain data",
+    "secrets": "never store seed, mnemonic, privateKey, passphrase, or secret"
+  },
+  "captures": []
+}

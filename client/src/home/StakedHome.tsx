@@ -1,32 +1,51 @@
 /**
- * Home — connected with a staked position (SPEC §6.1).
+ * Home — connected with a staked position (SPEC §6.1, P3-01 retire/remove).
  */
 
+import { useState } from 'react'
+import type { NimiqProvider } from '@nimiq/mini-app-sdk'
 import Amount from '../components/Amount'
 import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
 import FreshnessTag from '../components/FreshnessTag'
 import PositionStateBadge from '../components/PositionStateBadge'
 import type { PositionState, StakingPositionEnvelope } from '../api/position'
 import { buildNimiqExplorerUrl } from '../explorer'
+import StakeFlow, { type StakeFlowMode } from '../staking/StakeFlow'
+import {
+  RETIRE_PROGRESS_NO_TIMESTAMP,
+  RETIRE_PROGRESS_RETIRING,
+  RETIRE_PROGRESS_WITHDRAWABLE,
+} from '../staking/copy'
+import { maxRemoveLuna, maxRetireLuna } from '../staking/amounts'
 
 export interface StakedHomeProps {
   address: string
   envelope: StakingPositionEnvelope
+  /** Pay provider for lifecycle txs (optional until connect). */
+  nimiq?: NimiqProvider | null
   onRetry: () => void
   onDisconnect: () => void
+  onPositionChanged?: () => void
 }
 
 export default function StakedHome({
   address,
   envelope,
+  nimiq,
   onRetry,
   onDisconnect,
+  onPositionChanged,
 }: StakedHomeProps) {
   const { data, updatedAt, dataFreshness, status: envelopeStatus } = envelope
-  const { staker, state, lastRewardObservation } = data
+  const { staker, state, lastRewardObservation, retire } = data
   const shortAddress = shortenAddress(address)
-  const primaryCta = primaryAction(state, staker.delegation)
+  const actions = positionActions(state, staker)
   const monitoring = monitoringCopy(envelopeStatus, lastRewardObservation)
+
+  const [flowMode, setFlowMode] = useState<StakeFlowMode | null>(null)
+
+  const retirableLuna = maxRetireLuna(staker)
+  const removableLuna = maxRemoveLuna(staker.retiredLuna)
 
   return (
     <>
@@ -85,6 +104,38 @@ export default function StakedHome({
           </div>
         </dl>
 
+        {(state === 'Retiring' || state === 'Withdrawable') && (
+          <div className="home-retire-progress" role="region" aria-label="Retire progression">
+            <p className="nq-label">Retire / remove status</p>
+            <p className="home-copy">
+              {state === 'Retiring'
+                ? RETIRE_PROGRESS_RETIRING
+                : RETIRE_PROGRESS_WITHDRAWABLE}
+            </p>
+            <p className="home-copy home-copy--muted">
+              {retire.withdrawableAt ? (
+                <>
+                  Protocol release time (when reported):{' '}
+                  <time className="mono" dateTime={retire.withdrawableAt}>
+                    {formatWhen(retire.withdrawableAt)}
+                  </time>
+                </>
+              ) : (
+                RETIRE_PROGRESS_NO_TIMESTAMP
+              )}
+            </p>
+            <p className="home-copy home-copy--muted">
+              Observed at{' '}
+              <time className="mono" dateTime={updatedAt}>
+                {formatWhen(updatedAt)}
+              </time>
+              {dataFreshness.ageSeconds != null
+                ? ` · snapshot age ${Math.max(0, Math.floor(dataFreshness.ageSeconds))}s`
+                : null}
+            </p>
+          </div>
+        )}
+
         <div className="home-validator">
           <p className="nq-label">Delegated validator</p>
           {staker.delegation ? (
@@ -142,65 +193,202 @@ export default function StakedHome({
         </div>
 
         <div className="home-actions">
-          <a className="nq-pill-blue nq-pill-lg home-cta" href={primaryCta.href}>
-            {primaryCta.label}
-          </a>
-          {primaryCta.secondary ? (
-            <a className="nq-pill-secondary home-cta" href={primaryCta.secondary.href}>
-              {primaryCta.secondary.label}
+          {actions.primary.kind === 'link' ? (
+            <a className="nq-pill-blue nq-pill-lg home-cta" href={actions.primary.href}>
+              {actions.primary.label}
             </a>
-          ) : null}
+          ) : (
+            <button
+              type="button"
+              className={
+                actions.primary.destructive
+                  ? 'nq-pill-red nq-pill-lg home-cta'
+                  : 'nq-pill-blue nq-pill-lg home-cta'
+              }
+              onClick={() => {
+                if (actions.primary.kind === 'flow') setFlowMode(actions.primary.mode)
+              }}
+            >
+              {actions.primary.label}
+            </button>
+          )}
+
+          {actions.secondary.map((action) =>
+            action.kind === 'link' ? (
+              <a
+                key={action.label}
+                className="nq-pill-secondary home-cta"
+                href={action.href}
+              >
+                {action.label}
+              </a>
+            ) : (
+              <button
+                key={action.label}
+                type="button"
+                className={
+                  action.destructive
+                    ? 'nq-pill-secondary home-cta home-cta--careful'
+                    : 'nq-pill-secondary home-cta'
+                }
+                onClick={() => setFlowMode(action.mode)}
+              >
+                {action.label}
+              </button>
+            ),
+          )}
+
           <button type="button" className="nq-ghost-btn home-cta" onClick={onDisconnect}>
             Disconnect
           </button>
         </div>
+
+        {retirableLuna > 0 && state !== 'Withdrawable' && state !== 'Pending' ? (
+          <p className="home-copy home-copy--muted home-lifecycle-hint">
+            Retire moves active/inactive stake into a waiting period. It does not return NIM
+            immediately.
+          </p>
+        ) : null}
+        {removableLuna > 0 && state === 'Withdrawable' ? (
+          <p className="home-copy home-copy--muted home-lifecycle-hint">
+            Remove returns retired stake only. Active stake must be retired first.
+          </p>
+        ) : null}
       </section>
+
+      {flowMode ? (
+        <StakeFlow
+          mode={flowMode}
+          validatorAddress={staker.delegation ?? ''}
+          validatorName={staker.validatorName}
+          walletAddress={address}
+          nimiq={nimiq}
+          positionState={state}
+          availableLuna={data.accountBalanceLuna}
+          currentDelegation={staker.delegation}
+          stakerBalances={{
+            activeLuna: staker.activeLuna,
+            inactiveLuna: staker.inactiveLuna,
+            retiredLuna: staker.retiredLuna,
+          }}
+          onClose={() => setFlowMode(null)}
+          onSuccess={() => {
+            setFlowMode(null)
+            onPositionChanged?.()
+          }}
+        />
+      ) : null}
     </>
   )
 }
 
-function primaryAction(
-  state: PositionState,
-  delegation: string | null | undefined,
-): {
+type FlowAction = {
+  kind: 'flow'
+  label: string
+  mode: StakeFlowMode
+  destructive?: boolean
+}
+
+type LinkAction = {
+  kind: 'link'
   label: string
   href: string
-  secondary?: { label: string; href: string }
-} {
+}
+
+type Action = FlowAction | LinkAction
+
+function positionActions(
+  state: PositionState,
+  staker: StakingPositionEnvelope['data']['staker'],
+): { primary: Action; secondary: Action[] } {
+  const changeHref = '#/validators'
+  const stakeMoreHref = staker.delegation?.trim()
+    ? `#/validators/${encodeURIComponent(staker.delegation)}?stake=1`
+    : '#/validators'
+  const canRetire =
+    (state === 'Active' || state === 'Inactive' || state === 'Retiring') &&
+    maxRetireLuna(staker) > 0
+  const canRemove = state === 'Withdrawable' && maxRemoveLuna(staker.retiredLuna) > 0
+
   switch (state) {
     case 'Pending':
       return {
-        label: 'View activity',
-        href: '#/activity',
-        secondary: { label: 'Explore validators', href: '#/validators' },
+        primary: { kind: 'link', label: 'View activity', href: '#/activity' },
+        secondary: [{ kind: 'link', label: 'Explore validators', href: '#/validators' }],
       }
     case 'Inactive':
       return {
-        label: 'View position',
-        href: '#/activity',
-        secondary: { label: 'Choose a validator', href: '#/validators' },
+        primary: {
+          kind: 'link',
+          label: 'Stake more',
+          href: stakeMoreHref,
+        },
+        secondary: [
+          { kind: 'link', label: 'Change validator', href: changeHref },
+          ...(canRetire
+            ? [
+                {
+                  kind: 'flow' as const,
+                  label: 'Retire stake',
+                  mode: 'retire' as const,
+                  destructive: true,
+                },
+              ]
+            : []),
+        ],
       }
     case 'Retiring':
       return {
-        label: 'View position',
-        href: '#/activity',
-        secondary: { label: 'Explore validators', href: '#/validators' },
+        primary: { kind: 'link', label: 'View activity', href: '#/activity' },
+        secondary: [
+          ...(canRetire
+            ? [
+                {
+                  kind: 'flow' as const,
+                  label: 'Retire more',
+                  mode: 'retire' as const,
+                  destructive: true,
+                },
+              ]
+            : []),
+          { kind: 'link', label: 'Explore validators', href: '#/validators' },
+        ],
       }
     case 'Withdrawable':
       return {
-        label: 'View position',
-        href: '#/activity',
-        secondary: { label: 'Explore validators', href: '#/validators' },
+        primary: canRemove
+          ? {
+              kind: 'flow',
+              label: 'Remove stake',
+              mode: 'remove',
+              destructive: true,
+            }
+          : { kind: 'link', label: 'View activity', href: '#/activity' },
+        secondary: [
+          { kind: 'link', label: 'Explore validators', href: '#/validators' },
+        ],
       }
     case 'Active':
     default:
       return {
-        label: 'Stake more',
-        href:
-          delegation?.trim()
-            ? `#/validators/${encodeURIComponent(delegation)}?stake=1`
-            : '#/validators',
-        secondary: { label: 'Change validator', href: '#/validators' },
+        primary: {
+          kind: 'link',
+          label: 'Stake more',
+          href: stakeMoreHref,
+        },
+        secondary: [
+          { kind: 'link', label: 'Change validator', href: changeHref },
+          ...(canRetire
+            ? [
+                {
+                  kind: 'flow' as const,
+                  label: 'Retire stake',
+                  mode: 'retire' as const,
+                  destructive: true,
+                },
+              ]
+            : []),
+        ],
       }
   }
 }

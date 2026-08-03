@@ -1,18 +1,22 @@
 /**
- * Base document styles + self-hosted fonts (P1-08).
+ * Base document styles + self-hosted fonts (P1-08, weights V-01).
  *
- * nimiq-css `fonts.css` expects:
- *   /assets/fonts/Mulish-VariableFont_wght.ttf
- *   /assets/fonts/FiraMono-400.ttf
- * We ship Mulish-Regular.ttf + FiraMono-Regular.ttf, so @font-face
- * lives here with corrected paths instead of importing fonts.css.
+ * Ships real weights so `font-synthesis: none` below stays honest:
+ *   Mulish     variable font 100–1000 (Mulish-VariableFont_wght.ttf —
+ *              the exact name nimiq-css `fonts.css` expects)
+ *   Fira Mono  static faces 400 / 500 / 700
+ *              (FiraMono-{Regular,Medium,Bold}.ttf)
+ * nimiq-css `fonts.css` expects different Fira names (FiraMono-400.ttf),
+ * so @font-face lives here with corrected paths instead of importing it.
+ * Fira Mono has no 600 face; CSS weight 600 requests match 700 per the
+ * font-matching algorithm.
  */
 
 @font-face {
   font-family: 'Mulish';
-  src: url('/assets/fonts/Mulish-Regular.ttf') format('truetype');
+  src: url('/assets/fonts/Mulish-VariableFont_wght.ttf') format('truetype');
   font-style: normal;
-  font-weight: 400;
+  font-weight: 100 1000;
   font-display: swap;
 }
 
@@ -21,6 +25,22 @@
   src: url('/assets/fonts/FiraMono-Regular.ttf') format('truetype');
   font-style: normal;
   font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fira Mono';
+  src: url('/assets/fonts/FiraMono-Medium.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fira Mono';
+  src: url('/assets/fonts/FiraMono-Bold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
   font-display: swap;
 }
 

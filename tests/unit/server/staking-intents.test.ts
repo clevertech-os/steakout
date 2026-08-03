@@ -6,6 +6,13 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { createServer, type Server } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import {
+  Address,
+  KeyPair,
+  PrivateKey,
+  Transaction,
+  TransactionBuilder,
+} from '@nimiq/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createApp } from '../../../server/src/app.js'
 import { mintSessionCookie } from '../../../server/src/auth.js'
@@ -154,13 +161,27 @@ describe('normalizeProviderTxRef', () => {
     expect(normalizeProviderTxRef({ txHash: `0x${TX_HASH}` })).toBe(TX_HASH)
   })
 
-  it('rejects non-hash / serialized blobs with VALIDATION', () => {
+  it('derives hash from known serialized basic tx via Transaction.fromAny', () => {
+    const keyPair = KeyPair.derive(PrivateKey.generate())
+    const sender = keyPair.toAddress()
+    const recipient = Address.fromString(
+      'NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
+    )
+    const tx = TransactionBuilder.newBasic(sender, recipient, 100_000n, 0n, 1, 5)
+    tx.sign(keyPair)
+    const hex = tx.toHex()
+    const expected = Transaction.fromAny(hex).hash().replace(/^0x/i, '').toLowerCase()
+    expect(hex.length).toBeGreaterThan(64)
+    expect(normalizeProviderTxRef(hex)).toBe(expected)
+  })
+
+  it('rejects non-hash / unparseable blobs with VALIDATION', () => {
     expect(() => normalizeProviderTxRef('not-a-hash')).toThrow(StakingIntentError)
     try {
       normalizeProviderTxRef('aabbcc')
     } catch (error) {
       expect(error).toMatchObject({ code: 'VALIDATION', httpStatus: 400 })
-      expect(String((error as Error).message)).toMatch(/device evidence|P0-03/i)
+      expect(String((error as Error).message)).toMatch(/hex hash|serialized/i)
     }
     expect(() => normalizeProviderTxRef({ serialized: 'deadbeef' })).toThrow(
       StakingIntentError,
@@ -299,6 +320,180 @@ describe('createStakingIntent', () => {
     expect(result.summary.operation).toBe('remove')
     expect(result.summary.toStateHint).toBe('NotStaked')
     expect(result.summary.waitingPeriodNote).toMatch(/Withdrawable/i)
+    expect(result.summary.waitingPeriodNote).toMatch(/does not skip|cannot remove Active/i)
+  })
+
+  it('happy path: retire from Active with waiting-period note', async () => {
+    const result = await createStakingIntent(
+      {
+        database,
+        now: () => FIXED_NOW,
+        readPosition: async () => activeEnvelope(),
+      },
+      TEST_ADDRESS,
+      { operation: 'retire', params: { retireStakeLuna: 1_000_000 } },
+    )
+    expect(result.summary.operation).toBe('retire')
+    expect(result.summary.operationLabel).toBe('Retire stake')
+    expect(result.summary.amountLuna).toBe(1_000_000)
+    expect(result.summary.fromState).toBe('Active')
+    expect(result.summary.toStateHint).toBe('Retiring')
+    expect(result.summary.waitingPeriodNote).toMatch(/does not immediately return NIM/i)
+    expect(result.summary.waitingPeriodNote).toMatch(/not instant unstake/i)
+    expect(result.summary.validatorAddress).toBe(VALIDATOR_ADDRESS)
+
+    const row = database
+      .prepare(`SELECT params_json FROM staking_intents WHERE id = ?`)
+      .get(result.intentId) as { params_json: string }
+    expect(JSON.parse(row.params_json)).toEqual({ retireStakeLuna: 1_000_000 })
+  })
+
+  it('retire allowed from Retiring when active/inactive remains', async () => {
+    const result = await createStakingIntent(
+      {
+        database,
+        now: () => FIXED_NOW,
+        readPosition: async () => retiringEnvelope(),
+      },
+      TEST_ADDRESS,
+      { operation: 'retire', params: { retireStakeLuna: 500_000 } },
+    )
+    expect(result.summary.operation).toBe('retire')
+    expect(result.summary.fromState).toBe('Retiring')
+  })
+
+  it('precondition fail: retire amount exceeds retirable pool', async () => {
+    await expect(
+      createStakingIntent(
+        {
+          database,
+          now: () => FIXED_NOW,
+          readPosition: async () => activeEnvelope(),
+        },
+        TEST_ADDRESS,
+        { operation: 'retire', params: { retireStakeLuna: 9_999_999 } },
+      ),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: expect.stringMatching(/exceeds retirable/i),
+    })
+  })
+
+  it('precondition fail: remove amount exceeds retired pool', async () => {
+    await expect(
+      createStakingIntent(
+        {
+          database,
+          now: () => FIXED_NOW,
+          readPosition: async () => withdrawableEnvelope(),
+        },
+        TEST_ADDRESS,
+        { operation: 'remove', params: { valueLuna: 9_999_999 } },
+      ),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: expect.stringMatching(/exceeds retired/i),
+    })
+  })
+
+  it('precondition fail: retire when fully Withdrawable', async () => {
+    await expect(
+      createStakingIntent(
+        {
+          database,
+          now: () => FIXED_NOW,
+          readPosition: async () => withdrawableEnvelope(),
+        },
+        TEST_ADDRESS,
+        { operation: 'retire', params: { retireStakeLuna: 1_000_000 } },
+      ),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: expect.stringMatching(/Withdrawable|remove stake/i),
+    })
+  })
+
+  it('happy path: update-staker with newDelegation + reactivate note', async () => {
+    const NEW_VALIDATOR = 'NQ0500000000000000000000000000000000'
+    database
+      .prepare(
+        `INSERT INTO validators (address, name, is_listed) VALUES (?, ?, 1)`,
+      )
+      .run(NEW_VALIDATOR, 'Next Pool')
+
+    const result = await createStakingIntent(
+      {
+        database,
+        now: () => FIXED_NOW,
+        readPosition: async () => activeEnvelope(),
+      },
+      TEST_ADDRESS,
+      {
+        operation: 'update-staker',
+        params: {
+          newDelegation: NEW_VALIDATOR,
+          reactivateAllStake: true,
+        },
+      },
+    )
+
+    expect(result.summary.operation).toBe('update-staker')
+    expect(result.summary.operationLabel).toBe('Change validator')
+    expect(result.summary.amountLuna).toBeNull()
+    expect(result.summary.validatorAddress).toBe(NEW_VALIDATOR)
+    expect(result.summary.validatorName).toBe('Next Pool')
+    expect(result.summary.fromState).toBe('Active')
+    expect(result.summary.toStateHint).toBe('Active')
+    expect(result.summary.waitingPeriodNote).toMatch(/reporting window|reactivat/i)
+    expect(result.summary.waitingPeriodNote).toMatch(/not the multi-step retire\/remove/i)
+
+    const row = database
+      .prepare(`SELECT params_json FROM staking_intents WHERE id = ?`)
+      .get(result.intentId) as { params_json: string }
+    expect(JSON.parse(row.params_json)).toEqual({
+      newDelegation: NEW_VALIDATOR,
+      reactivateAllStake: true,
+    })
+  })
+
+  it('precondition fail: update-staker when NotStaked', async () => {
+    await expect(
+      createStakingIntent(
+        {
+          database,
+          now: () => FIXED_NOW,
+          readPosition: async () => notStakedEnvelope(),
+        },
+        TEST_ADDRESS,
+        {
+          operation: 'update-staker',
+          params: { newDelegation: VALIDATOR_ADDRESS },
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: expect.stringMatching(/Active or Inactive/i),
+    })
+  })
+
+  it('precondition fail: update-staker same as current delegation', async () => {
+    await expect(
+      createStakingIntent(
+        {
+          database,
+          now: () => FIXED_NOW,
+          readPosition: async () => activeEnvelope(),
+        },
+        TEST_ADDRESS,
+        {
+          operation: 'update-staker',
+          params: { newDelegation: VALIDATOR_ADDRESS },
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: expect.stringMatching(/differ from the current/i),
+    })
   })
 
   it('rejects invalid operation and amounts', async () => {

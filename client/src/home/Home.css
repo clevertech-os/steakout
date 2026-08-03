@@ -123,6 +123,21 @@
   margin-top: 1.25rem;
 }
 
+.home-retire-progress {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--so-rule);
+}
+
+.home-retire-progress .nq-label {
+  margin: 0 0 0.5rem;
+  color: var(--so-muted);
+}
+
+.home-lifecycle-hint {
+  margin-top: 1rem;
+}
+
 .home-cta {
   display: inline-flex;
   align-items: center;

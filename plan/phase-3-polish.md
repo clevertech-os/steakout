@@ -22,14 +22,19 @@ Board: [README.md](README.md#phase-3--polish--public-beta-aug-2430)
 - Position state machine updated to surface `Withdrawable` actions
 
 **Acceptance criteria:**
-- [ ] Same safety bar as P1-12 across all three flows
-- [ ] Retire → waiting → withdrawable progression visible in position UI with timestamps
-- [ ] Unsupported methods (per P0-03) are hidden, never broken-facing
+- [x] Same safety bar as P1-12 across all three flows
+- [x] Retire → waiting → withdrawable progression visible in position UI with timestamps
+- [x] Unsupported methods (per P0-03) are hidden, never broken-facing
 - [ ] Device evidence for at least retire (testnet) in Notes
 
 **Verification:** integration tests + device spot-check.
 
 **Notes:**
+- **Done 2026-08-03 (code path).** Retire + remove end-to-end via StakeFlow modes; set-active remains server-capable but UI-hidden (no Home CTA; P0-03 device residual).
+- **Server (`stakingIntents.ts`):** retire allowed for Active/Inactive/Retiring; remove only Withdrawable; amount bounds vs active+inactive / retired; waiting-period notes deny "instant unstake".
+- **Client:** StakedHome CTAs — Active/Inactive → Retire stake; Retiring → Retire more + progression copy + observed-at; Withdrawable → Remove stake primary (`nq-pill-red`). StakeFlow: amount → intent → ReviewSheet → `sendRetireStakeTransaction` / `sendRemoveStakeTransaction` → confirm poll. set-active not offered.
+- **Copy:** RETIRE_*/REMOVE_* strings; no instant-unstake claims.
+- **Residual:** device spot-check for retire on testnet (human); P0-03 unresolved host evidence still applies.
 -
 
 ---

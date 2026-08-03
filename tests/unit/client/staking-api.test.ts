@@ -7,6 +7,7 @@ import { ApiError } from '../../../client/src/api/http.ts'
 import {
   confirmStakingIntent,
   createStakingIntent,
+  normalizeIntentSummary,
   pollConfirmStakingIntent,
 } from '../../../client/src/api/staking.ts'
 
@@ -15,6 +16,28 @@ const originalFetch = globalThis.fetch
 afterEach(() => {
   globalThis.fetch = originalFetch
   vi.restoreAllMocks()
+})
+
+describe('normalizeIntentSummary', () => {
+  it('maps server fromState/toStateHint to client stateFrom/stateTo', () => {
+    const summary = normalizeIntentSummary({
+      operation: 'update-staker',
+      operationLabel: 'Change validator',
+      amountLuna: null,
+      validatorName: 'Next',
+      validatorAddress: 'NQ02',
+      fromState: 'Active',
+      toStateHint: 'Active',
+      waitingPeriodNote: 'Reporting window note',
+      networkNote: 'This action will be submitted on mainnet.',
+    } as Parameters<typeof normalizeIntentSummary>[0])
+
+    expect(summary.stateFrom).toBe('Active')
+    expect(summary.stateTo).toBe('Active')
+    expect(summary.hasWaitingPeriod).toBe(false)
+    expect(summary.waitingPeriodNote).toMatch(/Reporting window/)
+    expect(summary.notes).toEqual(['This action will be submitted on mainnet.'])
+  })
 })
 
 describe('createStakingIntent', () => {
@@ -47,6 +70,38 @@ describe('createStakingIntent', () => {
     })
     expect(res.intentId).toBe('intent-1')
     expect(res.summary.amountLuna).toBe(100_000)
+  })
+
+  it('normalizes server update-staker summary field names', async () => {
+    const body = {
+      intentId: 'intent-upd',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      summary: {
+        operation: 'update-staker',
+        operationLabel: 'Change validator',
+        amountNim: null,
+        amountLuna: null,
+        validatorName: 'Next Pool',
+        validatorAddress: 'NQ02 NEW',
+        fromState: 'Active',
+        toStateHint: 'Active',
+        waitingPeriodNote: 'Changing validator is not the multi-step retire/remove wait.',
+        networkNote: 'This action will be submitted on mainnet.',
+      },
+    }
+    globalThis.fetch = vi.fn(async () => {
+      return new Response(JSON.stringify(body), { status: 200 })
+    }) as typeof fetch
+
+    const res = await createStakingIntent({
+      operation: 'update-staker',
+      params: { newDelegation: 'NQ02 NEW', reactivateAllStake: true },
+    })
+    expect(res.summary.operation).toBe('update-staker')
+    expect(res.summary.stateFrom).toBe('Active')
+    expect(res.summary.stateTo).toBe('Active')
+    expect(res.summary.hasWaitingPeriod).toBe(false)
+    expect(res.summary.waitingPeriodNote).toMatch(/not the multi-step/i)
   })
 })
 

@@ -20,6 +20,7 @@ import {
   peekHubRedirectInUrl,
   RPC_ID_SEARCH_PARAM,
 } from './hubRedirectParse'
+import { tryDeriveTxHash } from './txHashFromSerialized'
 import { walletLog, walletWarn } from './walletDebug'
 
 export { peekHubRedirectInUrl, RPC_ID_SEARCH_PARAM }
@@ -803,17 +804,41 @@ export async function copyNimiqPayDeepLink(appUrl?: string): Promise<string> {
 // (spike harness is testnet-only). Callers must show ReviewSheet first.
 
 export type ProviderTxOutcome =
-  | { kind: 'hash'; hash: string; raw: string }
+  | {
+      kind: 'hash'
+      hash: string
+      raw: string
+      /** How the hash was obtained from the provider string. */
+      source: 'hash' | 'serialized'
+    }
   | { kind: 'raw'; value: string; raw: string }
   | { kind: 'error'; message: string; type?: string; raw: string }
 
-const TX_HASH_HEX = /^[0-9a-fA-F]{64}$/
+/**
+ * Classification label for harness / debug UI.
+ * - `hash` — provider returned a 64-hex hash directly
+ * - `serialized→hash` — non-64-hex string parsed via Transaction.fromAny
+ * - `raw` — string that could not be derived into a hash
+ * - `error` — ErrorResponse or unexpected shape
+ */
+export type ProviderTxClassification = 'hash' | 'serialized→hash' | 'raw' | 'error'
+
+export function providerTxClassification(
+  outcome: ProviderTxOutcome,
+): ProviderTxClassification {
+  if (outcome.kind === 'error') return 'error'
+  if (outcome.kind === 'raw') return 'raw'
+  return outcome.source === 'serialized' ? 'serialized→hash' : 'hash'
+}
 
 /**
  * Normalize a provider staking return for confirm polling.
- * - 64-hex string → treat as tx hash
- * - other string → use as-is for confirm (may still be a hash-like id); keep raw for debug
+ * - 64-hex string → treat as tx hash (source: 'hash')
+ * - other hex string → try Transaction.fromAny(...).hash() (source: 'serialized'); on failure kind:'raw'
  * - ErrorResponse → cancel/error neutrally
+ *
+ * Provisional: package types document basic tx as serialized; staking methods share
+ * the same Promise<string | ErrorResponse> family. Device must confirm semantics.
  */
 export function normalizeProviderTxResult(result: unknown): ProviderTxOutcome {
   const errMsg = getProviderErrorMessage(result)
@@ -835,8 +860,14 @@ export function normalizeProviderTxResult(result: unknown): ProviderTxOutcome {
 
   if (typeof result === 'string') {
     const trimmed = result.trim()
-    if (TX_HASH_HEX.test(trimmed)) {
-      return { kind: 'hash', hash: trimmed.toLowerCase(), raw: trimmed }
+    const derived = tryDeriveTxHash(trimmed)
+    if (derived) {
+      return {
+        kind: 'hash',
+        hash: derived.hash,
+        raw: trimmed,
+        source: derived.source,
+      }
     }
     return { kind: 'raw', value: trimmed, raw: trimmed }
   }

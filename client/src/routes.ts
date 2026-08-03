@@ -75,6 +75,16 @@ export function hashWantsStake(hash: string): boolean {
   return v === '1' || v === 'true'
 }
 
+/**
+ * True when the hash asks to open change-validator flow (`?change=1`).
+ * Takes precedence over stake when both are present.
+ */
+export function hashWantsChange(hash: string): boolean {
+  const q = hashQuery(hash)
+  const v = q.get('change')
+  return v === '1' || v === 'true'
+}
+
 function isLearnArticle(slug: string): slug is LearnArticleId {
   return (LEARN_ARTICLES as readonly string[]).includes(slug)
 }

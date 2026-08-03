@@ -4,9 +4,13 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+  isPoolAmountAllowed,
   isStakeAmountAllowed,
+  maxRemoveLuna,
+  maxRetireLuna,
   maxSafeStakeLuna,
   parseNimInputToLuna,
+  presetPoolLuna,
   presetStakeLuna,
   STAKE_FEE_HEADROOM_LUNA,
 } from '../../../client/src/staking/amounts.ts'
@@ -83,5 +87,33 @@ describe('isStakeAmountAllowed', () => {
   it('rejects over max-safe or full balance', () => {
     expect(isStakeAmountAllowed(maxSafe + 1, balance)).toBe(false)
     expect(isStakeAmountAllowed(balance, balance)).toBe(false)
+  })
+})
+
+describe('maxRetireLuna / maxRemoveLuna (P3-01)', () => {
+  it('retirable is active + inactive only', () => {
+    expect(
+      maxRetireLuna({ activeLuna: 100, inactiveLuna: 50, retiredLuna: 999 } as {
+        activeLuna: number
+        inactiveLuna: number
+      }),
+    ).toBe(150)
+    expect(maxRetireLuna({ activeLuna: 0, inactiveLuna: 0 })).toBe(0)
+    expect(maxRetireLuna(null)).toBe(0)
+  })
+
+  it('removable is retired only', () => {
+    expect(maxRemoveLuna(2_000_000)).toBe(2_000_000)
+    expect(maxRemoveLuna(0)).toBe(0)
+    expect(maxRemoveLuna(null)).toBe(0)
+  })
+
+  it('pool presets use full pool without fee headroom', () => {
+    const pool = 400
+    expect(presetPoolLuna(pool, 'max-safe')).toBe(400)
+    expect(presetPoolLuna(pool, '25')).toBe(100)
+    expect(presetPoolLuna(pool, '50')).toBe(200)
+    expect(isPoolAmountAllowed(400, pool)).toBe(true)
+    expect(isPoolAmountAllowed(401, pool)).toBe(false)
   })
 })

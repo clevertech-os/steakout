@@ -47,7 +47,7 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 |---|---|---|---|---|
 | P0-01 | App scaffold & engineering baseline | Implementation | — | done |
 | P0-02 | Mini App SDK smoke screen | Implementation | P0-01 | blocked: device verification |
-| P0-03 | Testnet staking-method spike | Implementation | P0-02 | blocked: device/testnet |
+| P0-03 | Testnet staking-method spike | Implementation | P0-02 | blocked: device (prep done) |
 | P0-04 | RPC read-layer probe + fixtures | Implementation | P0-01 | blocked: testnet fixtures |
 | P0-05 | Validators API ingestion probe | Implementation | P0-01 | done |
 | P0-06 | Schema + payout indexer live | Implementation | P0-04, P0-05 | done (24h continuity residual) |
@@ -73,7 +73,7 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 | P1-12 | Stake flow end-to-end | Implementation | P1-06, P1-09, P1-10, P1-11 | done 2026-08-03 |
 | P1-13 | Non-custodial explainer + review-screen copy | Polishing | P1-12 | done 2026-08-03 |
 | P1-14 | Unit tests: addresses, luna, position, intent | Testing | P1-01, P1-05, P1-06 | partial 2026-08-03 (intent residual → P1-06) |
-| P1-15 | Integration: auth, registry, intent/confirm | Testing | P0-08, P1-02, P1-04, P1-06 | backlog |
+| P1-15 | Integration: auth, registry, intent/confirm | Testing | P0-08, P1-02, P1-04, P1-06 | done 2026-08-03 |
 | P1-16 | Device smoke: Pay Android/iOS + Hub fallback | Testing | P1-12 | backlog (human-assisted) |
 
 ### Phase 2 — Accountability engine (Aug 17–23) → [cards](phase-2-accountability.md)
@@ -90,7 +90,7 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 | P2-08 | Evidence layer UI | Implementation | P1-11, P2-06 | done 2026-08-03 |
 | P2-09 | Status labels + official-vs-observed UI | Implementation | P2-08 | done 2026-08-03 |
 | P2-10 | Activity timeline (personal + network) | Implementation | P1-05, P2-05 | done 2026-08-03 |
-| P2-11 | Change-delegation lifecycle action | Implementation | P0-03, P1-06 | backlog |
+| P2-11 | Change-delegation lifecycle action | Implementation | P0-03, P1-06 | done 2026-08-03 |
 | P2-12 | Learn: staking, methodology, limitations | Polishing | P1-07 | done 2026-08-03 |
 | P2-13 | Caching, rate limits, indexer diagnostics | Implementation | P2-06 | done 2026-08-03 |
 | P2-14 | Unit tests: classifier, scoring, cursor | Testing | P2-01, P2-02, P2-03, P2-04 | done 2026-08-03 |
@@ -101,7 +101,7 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 
 | ID | Task | Team | Depends on | Status |
 |---|---|---|---|---|
-| P3-01 | Retire + remove flows | Implementation | P0-03, P2-11 | backlog |
+| P3-01 | Retire + remove flows | Implementation | P0-03, P2-11 | done 2026-08-03 |
 | P3-02 | Restake position-growth analytics | Implementation | P0-04, P2-10 | backlog (conditional on P0-04) |
 | P3-03 | RPC fallback / graceful degraded mode | Implementation | P2-13 | done 2026-08-03 (pragmatic) |
 | P3-04 | Telemetry (aggregate, disclosed) | Implementation | P2-16 | done 2026-08-03 |

@@ -5,10 +5,10 @@
  * client's word alone. Confirm always loads the tx from chain and matches
  * authenticated address + recorded intent (operation, amount where applicable).
  *
- * Provider return-value residual (P0-03): device evidence unresolved; package
- * docs disagree on hash vs serialized tx. v1 `normalizeProviderTxRef` accepts
- * a 64-hex hash (optional 0x) or an object with a hash field only. Serialized
- * tx decoding is deferred until P0-03 device evidence lands.
+ * Provider return-value residual (P0-03): device evidence still required for
+ * host semantics. Package types document basic txs as serialized; staking
+ * methods share Promise<string | ErrorResponse>. `normalizeProviderTxRef`
+ * accepts 64-hex hashes and, provisionally, long hex via Transaction.fromAny.
  */
 
 import { randomUUID } from 'node:crypto'
@@ -25,6 +25,7 @@ import {
   toRpcApiError,
   type NimiqTransaction,
 } from './nimiq-rpc.js'
+import { tryDeriveTxHash } from './txHashFromSerialized.js'
 import {
   clearPositionCache,
   readStakingPosition,
@@ -124,7 +125,7 @@ const OPERATION_LABELS: Record<StakingOperation, string> = {
   'new-staker': 'Create staker',
   stake: 'Add stake',
   'set-active': 'Set active stake',
-  'update-staker': 'Update staker',
+  'update-staker': 'Change validator',
   retire: 'Retire stake',
   remove: 'Remove stake',
 }
@@ -144,8 +145,12 @@ export interface StakingIntentsOptions {
 
 /**
  * Normalize a client/provider return value into a chain tx hash.
- * Accepts 64-hex (optional 0x) or `{ hash: string }`. Rejects serialized-tx
- * blobs until P0-03 device evidence proves decoding.
+ * Accepts:
+ * - 64-hex (optional 0x)
+ * - `{ hash: string }` / `{ txHash: string }`
+ * - longer hex provisionally treated as serialized tx → Transaction.fromAny → hash()
+ *
+ * Device must still confirm that the Pay host returns serialized txs vs hashes.
  */
 export function normalizeProviderTxRef(raw: unknown): string {
   if (raw == null) {
@@ -165,7 +170,7 @@ export function normalizeProviderTxRef(raw: unknown): string {
       return normalizeProviderTxRef(record.txHash)
     }
     throw new StakingIntentError(
-      'Transaction reference must be a hex hash. Serialized transaction decoding awaits device evidence (P0-03); send a 64-character hex hash only.',
+      'Transaction reference must be a hex hash or serialized transaction hex (optional 0x), or an object with hash/txHash.',
       400,
       'VALIDATION',
     )
@@ -173,22 +178,20 @@ export function normalizeProviderTxRef(raw: unknown): string {
 
   if (typeof raw !== 'string' || raw.trim() === '') {
     throw new StakingIntentError(
-      'Transaction reference must be a hex hash. Serialized transaction decoding awaits device evidence (P0-03); send a 64-character hex hash only.',
+      'Transaction reference must be a hex hash or serialized transaction hex (optional 0x).',
       400,
       'VALIDATION',
     )
   }
 
-  const trimmed = raw.trim()
-  const withoutPrefix = trimmed.replace(/^0x/i, '')
-  if (!/^[0-9a-fA-F]{64}$/.test(withoutPrefix)) {
-    throw new StakingIntentError(
-      'Transaction reference must be a 64-character hex hash (optional 0x). Serialized transaction decoding awaits device evidence (P0-03).',
-      400,
-      'VALIDATION',
-    )
-  }
-  return normalizeTxHash(withoutPrefix)
+  const derived = tryDeriveTxHash(raw)
+  if (derived) return derived.hash
+
+  throw new StakingIntentError(
+    'Transaction reference must be a 64-character hex hash or a parseable serialized transaction hex (optional 0x).',
+    400,
+    'VALIDATION',
+  )
 }
 
 export function countPendingIntents(
@@ -449,11 +452,14 @@ function assertStatePreconditions(
       }
       break
     case 'retire':
-      if (state !== 'Active' && state !== 'Inactive') {
+      // Active / Inactive: first retire. Retiring: remaining active/inactive may still retire.
+      if (state !== 'Active' && state !== 'Inactive' && state !== 'Retiring') {
         throw new StakingIntentError(
           state === 'Pending'
             ? 'A staking action is already pending. Wait for it to complete before retiring stake.'
-            : 'Retire stake requires an Active or Inactive position.',
+            : state === 'Withdrawable'
+              ? 'This position is already fully retired and Withdrawable. Use remove stake to return NIM to your account.'
+              : 'Retire stake requires an Active, Inactive, or Retiring position with retirable stake.',
           400,
           'VALIDATION',
         )
@@ -463,16 +469,68 @@ function assertStatePreconditions(
       if (state === 'Withdrawable') break
       if (state === 'Retiring') {
         throw new StakingIntentError(
-          'Stake is still retiring and is not yet ready to remove. Wait until the position is Withdrawable.',
+          'Stake is still retiring and is not yet ready to remove. Wait until the position is Withdrawable (retired balance only). Retire stake does not immediately return NIM.',
           400,
           'VALIDATION',
         )
       }
       throw new StakingIntentError(
-        'Remove stake is available when the position is Withdrawable.',
+        'Remove stake is available when the position is Withdrawable. It is not an instant unstake from Active stake.',
         400,
         'VALIDATION',
       )
+  }
+}
+
+/**
+ * Soft balance checks against the latest position read.
+ * Chain remains authoritative at confirm; this rejects obvious over-asks early.
+ */
+function assertAmountAgainstPosition(
+  operation: StakingOperation,
+  params: IntentParams,
+  staker: {
+    activeLuna: number
+    inactiveLuna: number
+    retiredLuna: number
+  },
+): void {
+  if (operation === 'retire' && params.retireStakeLuna != null) {
+    const retirable = Math.max(
+      0,
+      Math.floor(staker.activeLuna) + Math.floor(staker.inactiveLuna),
+    )
+    if (retirable <= 0) {
+      throw new StakingIntentError(
+        'No active or inactive stake is available to retire on this position.',
+        400,
+        'VALIDATION',
+      )
+    }
+    if (params.retireStakeLuna > retirable) {
+      throw new StakingIntentError(
+        `retireStakeLuna exceeds retirable stake (${retirable} Luna from active + inactive).`,
+        400,
+        'VALIDATION',
+      )
+    }
+  }
+  if (operation === 'remove' && params.valueLuna != null) {
+    const removable = Math.max(0, Math.floor(staker.retiredLuna))
+    if (removable <= 0) {
+      throw new StakingIntentError(
+        'No retired stake is available to remove on this position.',
+        400,
+        'VALIDATION',
+      )
+    }
+    if (params.valueLuna > removable) {
+      throw new StakingIntentError(
+        `valueLuna exceeds retired (removable) stake (${removable} Luna).`,
+        400,
+        'VALIDATION',
+      )
+    }
   }
 }
 
@@ -518,12 +576,24 @@ function validatorFromParamsAndPosition(
   return null
 }
 
-function waitingPeriodNote(operation: StakingOperation): string | null {
+function waitingPeriodNote(
+  operation: StakingOperation,
+  params: IntentParams = {},
+): string | null {
   if (operation === 'retire') {
-    return 'Retire stake does not immediately return NIM. Funds move to a retired balance and become removable after the protocol waiting period.'
+    return 'Retire stake does not immediately return NIM. Funds move to a retired balance. Remove is only available after the protocol waiting period when the position is Withdrawable. This is not instant unstake.'
   }
   if (operation === 'remove') {
-    return 'Remove returns retired stake to your available account balance when the position is Withdrawable.'
+    return 'Remove returns retired stake that is already Withdrawable to your available account balance. It does not skip the retire waiting period and cannot remove Active stake.'
+  }
+  if (operation === 'update-staker') {
+    if (params.reactivateAllStake) {
+      return 'Changing validator is not the multi-step retire/remove wait. Delegation updates on confirmation. Reactivate is requested so stake aims to stay (or become) active after the current network reporting window; exact timing follows the protocol, not Steakout.'
+    }
+    return 'Changing validator is not the multi-step retire/remove wait. Delegation updates on confirmation. Stake may sit inactive until reactivated after the current network reporting window.'
+  }
+  if (operation === 'set-active') {
+    return 'Set active adjusts how much of your stake is active versus inactive. It is not retire or remove and does not return NIM to your account balance.'
   }
   return null
 }
@@ -553,6 +623,7 @@ function buildSummary(
     positionDelegation,
   )
   const validatorName = resolveValidatorName(database, validatorAddress)
+  const note = waitingPeriodNote(operation, params)
   return {
     operation,
     operationLabel: OPERATION_LABELS[operation],
@@ -562,7 +633,7 @@ function buildSummary(
     validatorName,
     fromState,
     toStateHint: toStateHint(operation, params, fromState),
-    waitingPeriodNote: waitingPeriodNote(operation),
+    waitingPeriodNote: note,
     networkNote: networkNote(),
   }
 }
@@ -592,13 +663,29 @@ export async function createStakingIntent(
   // state when available, but still block when Pending (concurrent intent).
   const fromState = envelope.data.state
   assertStatePreconditions(operation, fromState)
+  assertAmountAgainstPosition(operation, params, envelope.data.staker)
+
+  const positionDelegation = envelope.data.staker.delegation
+  // Change-validator must target a different address when newDelegation is set.
+  if (
+    operation === 'update-staker' &&
+    params.newDelegation &&
+    positionDelegation &&
+    addressesEqual(params.newDelegation, positionDelegation)
+  ) {
+    throw new StakingIntentError(
+      'newDelegation must differ from the current delegation. Pick a different validator to change to.',
+      400,
+      'VALIDATION',
+    )
+  }
 
   const summary = buildSummary(
     options.database,
     operation,
     params,
     fromState === 'Pending' ? 'Pending' : fromState,
-    envelope.data.staker.delegation,
+    positionDelegation,
   )
 
   const intentId = randomUUID()

@@ -24,6 +24,29 @@ export const STAKE_NO_ILLUSTRATIVE_ON_REVIEW =
 export const STAKE_NO_WAITING_PERIOD =
   'Creating a staker or adding stake does not use a protocol waiting period. Retire and remove do, and those are separate actions.'
 
+/** Change-validator: not retire/remove wait; reporting window / reactivate note. */
+export const UPDATE_WAITING_PERIOD_NOTE =
+  'Changing validator is not the multi-step retire/remove wait. Delegation updates on confirmation. Stake may sit inactive until reactivated after the current network reporting window.'
+
+/** Change-validator with reactivate requested. */
+export const UPDATE_REACTIVATE_NOTE =
+  'Changing validator is not the multi-step retire/remove wait. Delegation updates on confirmation. Reactivate is requested so stake aims to stay (or become) active after the current network reporting window; exact timing follows the protocol, not Steakout.'
+
+/** Change-validator flow titles. */
+export const UPDATE_AMOUNT_TITLE = 'Change validator'
+export const UPDATE_AMOUNT_LEDE =
+  'You will review the new validator and the position transition, then approve in your wallet. No stake amount is moved; only the delegation target changes.'
+export const UPDATE_REVIEW_TITLE = 'Review change'
+export const UPDATE_SUCCESS_TITLE = 'Validator change confirmed'
+export const UPDATE_SUCCESS_BODY =
+  'The server matched the transaction to your intent. Delegation and position details below come from chain data, not a client estimate.'
+export const UPDATE_SAME_VALIDATOR =
+  'You already delegate to this validator. Pick a different validator to change to, or use Stake more to add stake here.'
+export const UPDATE_NEED_POSITION =
+  'Change validator requires an Active or Inactive staker position. Create a staker first if you are not staked yet.'
+export const UPDATE_CONTINUE_REVIEW = 'Continue to review'
+export const UPDATE_CONFIRM_CTA = 'Confirm in wallet'
+
 /** Generic cancel after wallet dismissal. */
 export const STAKE_CANCELLED =
   'Wallet confirmation was cancelled. No staking transaction was submitted from this step.'
@@ -101,6 +124,46 @@ export const STAKE_BACK_HOME = 'View position'
 /** Fee headroom note under presets. */
 export const STAKE_FEE_HEADROOM_NOTE =
   'Maximum safe reserves 1 NIM of available balance so fees and leftover spending room are not zeroed out by accident.'
+
+/** Retire stake flow (P3-01). */
+export const RETIRE_AMOUNT_TITLE = 'Retire stake'
+export const RETIRE_AMOUNT_LEDE =
+  'Choose how much staked NIM to move into retirement. Retire does not return NIM to your account. After a protocol waiting period the position can become Withdrawable, and only then can you remove stake.'
+export const RETIRE_REVIEW_TITLE = 'Review retire'
+export const RETIRE_SUCCESS_TITLE = 'Retire confirmed'
+export const RETIRE_SUCCESS_BODY =
+  'The server matched the transaction to your intent. Funds are on the retirement path. Remove is not available until the position is Withdrawable.'
+export const RETIRE_WAITING_PERIOD_NOTE =
+  'Retire stake does not immediately return NIM. Funds move to a retired balance. Remove is only available after the protocol waiting period when the position is Withdrawable. This is not instant unstake.'
+export const RETIRE_NEED_POSITION =
+  'Retire stake requires Active, Inactive, or Retiring stake with an active or inactive balance. Fully Withdrawable positions use Remove instead.'
+export const RETIRE_POOL_NOTE =
+  'Amount is taken from active and inactive stake. Already retired balance is not retired again.'
+export const RETIRE_PRESET_MAX = 'All retirable'
+
+/** Remove stake flow (P3-01). */
+export const REMOVE_AMOUNT_TITLE = 'Remove stake'
+export const REMOVE_AMOUNT_LEDE =
+  'Choose how much retired NIM to return to your available account balance. Remove is only for Withdrawable retired stake. It cannot skip the retire waiting period or remove Active stake.'
+export const REMOVE_REVIEW_TITLE = 'Review remove'
+export const REMOVE_SUCCESS_TITLE = 'Remove confirmed'
+export const REMOVE_SUCCESS_BODY =
+  'The server matched the transaction to your intent. Position details below come from chain data, not a client estimate.'
+export const REMOVE_WAITING_PERIOD_NOTE =
+  'Remove returns retired stake that is already Withdrawable to your available account balance. It does not skip the retire waiting period and cannot remove Active stake.'
+export const REMOVE_NEED_WITHDRAWABLE =
+  'Remove stake is available only when the position is Withdrawable (retired balance only). If you still have active or inactive stake, finish retire first and wait for the protocol waiting period.'
+export const REMOVE_POOL_NOTE =
+  'Amount is taken from retired stake only. Active and inactive balances are not removable here.'
+export const REMOVE_PRESET_MAX = 'All removable'
+
+/** Home progression copy when retiring / withdrawable. */
+export const RETIRE_PROGRESS_RETIRING =
+  'Retire is in progress. Retired balance is observed, but active or inactive stake remains. Remove is not available until the position is fully Withdrawable. Waiting period timing follows the protocol; Steakout does not invent a release time when the chain does not expose one.'
+export const RETIRE_PROGRESS_WITHDRAWABLE =
+  'This position is Withdrawable. You can remove retired stake to your available account balance. This is not the same as retiring active stake.'
+export const RETIRE_PROGRESS_NO_TIMESTAMP =
+  'No protocol release timestamp is available from the network for this position. Status is based on observed balances only.'
 
 /** Operation labels (client fallback when summary is incomplete). */
 export const OPERATION_LABELS: Record<string, string> = {

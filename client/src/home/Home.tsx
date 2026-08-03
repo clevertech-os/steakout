@@ -156,8 +156,10 @@ export default function Home() {
         <StakedHome
           address={wallet.address}
           envelope={envelope}
+          nimiq={wallet.nimiq}
           onRetry={position.refresh}
           onDisconnect={handleDisconnect}
+          onPositionChanged={position.refresh}
         />
       </div>
     )

@@ -103,6 +103,13 @@
   color: var(--so-muted);
 }
 
+.review-sheet-no-amount {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--so-muted);
+  line-height: 1.4;
+}
+
 .review-sheet-validator-name {
   display: block;
 }
