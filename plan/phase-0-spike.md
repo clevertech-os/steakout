@@ -159,7 +159,7 @@ Board: [README.md](README.md#phase-0--de-risk-spike-aug-29)
 **Verification:** fixture-based vitest asserting normalization rules; report reviewed.
 
 **Notes:**
--
+- Complete. Mainnet capture includes 24 known and 78 observable validators. Reward resolution reached 19/24 listed validators; the remaining RPC errors/429s are documented in `docs/spikes/validators-api.md` and require a later retry or less rate-limited source.
 
 ---
 
@@ -247,7 +247,7 @@ Board: [README.md](README.md#phase-0--de-risk-spike-aug-29)
 **Verification:** example suite runs in CI-equivalent clean env (`npm ci && npm test`).
 
 **Notes:**
--
+- Complete. Typed fixture loader, metadata validation, mock RPC mapping, call counting, error/timeout injection, and example tests are implemented.
 
 ---
 

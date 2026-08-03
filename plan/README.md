@@ -49,10 +49,10 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 | P0-02 | Mini App SDK smoke screen | Implementation | P0-01 | blocked: device verification |
 | P0-03 | Testnet staking-method spike | Implementation | P0-02 | backlog (human-assisted) |
 | P0-04 | RPC read-layer probe + fixtures | Implementation | P0-01 | blocked: testnet fixtures |
-| P0-05 | Validators API ingestion probe | Implementation | P0-01 | backlog |
+| P0-05 | Validators API ingestion probe | Implementation | P0-01 | done |
 | P0-06 | Schema + payout indexer live | Implementation | P0-04, P0-05 | backlog |
 | P0-07 | Direct-payout classification spike | Implementation | P0-06 | backlog |
-| P0-08 | Test fixture harness | Testing | P0-04, P0-05 | backlog |
+| P0-08 | Test fixture harness | Testing | P0-04, P0-05 | done |
 | P0-09 | Kill-decision memo + scope freeze | Owner | P0-03, P0-04, P0-06, P0-07 | backlog (owner) |
 
 ### Phase 1 — Foundation & first stake (Aug 10–16) → [cards](phase-1-foundation.md)

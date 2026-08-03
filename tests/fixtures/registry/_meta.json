@@ -1,0 +1,47 @@
+{
+  "capture": "P0-05 validators API ingestion probe",
+  "endpoint": "https://validators-api-main.je-cf9.workers.dev/api/v1/validators",
+  "network": "mainnet",
+  "capturedAt": "2026-08-03T05:24:27.000Z",
+  "queries": {
+    "knownOnly": "only-known=true",
+    "allObservable": "only-known=false"
+  },
+  "redaction": {
+    "omittedFields": [
+      "logo",
+      "accentColor"
+    ],
+    "reason": "logo payloads are presentation-only and may contain large base64 data",
+    "validatorAddresses": "retained as public chain data",
+    "secrets": "registry payload contains no private key material"
+  },
+  "fixtures": [
+    {
+      "file": "p0-05-validators-known-mainnet.json",
+      "mode": "known-only",
+      "count": 24
+    },
+    {
+      "file": "p0-05-validators-observable-mainnet.json",
+      "mode": "all-observable",
+      "count": 78
+    }
+  ],
+  "captures": [
+    {
+      "file": "p0-05-validators-known-mainnet.json",
+      "method": "GET /api/v1/validators",
+      "params": ["only-known=true"],
+      "httpStatus": 200,
+      "outcome": "result"
+    },
+    {
+      "file": "p0-05-validators-observable-mainnet.json",
+      "method": "GET /api/v1/validators",
+      "params": ["only-known=false"],
+      "httpStatus": 200,
+      "outcome": "result"
+    }
+  ]
+}
