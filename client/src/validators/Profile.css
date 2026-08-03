@@ -3,7 +3,8 @@
 .profile {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--so-space-4, 1rem) var(--so-space-4, 1rem);
+  row-gap: 1.35rem;
   min-width: 0;
 }
 
@@ -168,15 +169,11 @@
   background: color-mix(in srgb, var(--so-info-soft) 55%, var(--so-card));
 }
 
-.profile-card--declared {
-  border-left: 3px solid var(--so-info);
-}
-
+/* Observation only: thin status accent (intentional official vs observation separation). */
 .profile-card--observation {
-  border-left: 3px solid var(--so-disabled);
+  border-left: 2px solid var(--so-disabled);
 }
 
-/* Observation card accent tracks status tone without blending with official (info) card. */
 .profile-card--observation[data-observation-status='on-schedule'] {
   border-left-color: var(--so-verified);
 }
@@ -322,7 +319,7 @@
 
 @media (min-width: 600px) {
   .profile {
-    gap: 1.15rem;
+    row-gap: 1.5rem;
   }
 
   .profile-card {

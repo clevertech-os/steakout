@@ -33,7 +33,6 @@ export default function NotStakedHome({
   return (
     <>
       <header className="shell-header home-header">
-        <p className="eyebrow">Your wallet</p>
         <h1 className="home-title">Not staked yet</h1>
         <p className="home-lede home-address" title={address}>
           {shortAddress}

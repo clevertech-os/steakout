@@ -54,11 +54,10 @@
 
 .learn-index-kicker {
   margin: 0;
-  color: var(--so-accent);
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: var(--so-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .learn-index-title {
@@ -189,14 +188,13 @@
 .learn-def-status {
   display: inline-block;
   margin: 0 0 0.35rem;
-  padding: 0.1rem 0.45rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 999px;
   background: var(--so-info-soft);
   color: var(--so-info-strong);
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
-  font-size: 0.7rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .learn-def-status--disabled {
@@ -221,11 +219,12 @@
   line-height: 1.45;
 }
 
+/* Full soft border, not a decorative side-stripe (anti-slop §3). */
 .learn-callout {
-  margin: 1rem 0;
+  margin: 1.25rem 0;
   padding: 0.9rem 1rem;
   border-radius: 0.75rem;
-  border-left: 3px solid var(--so-info);
+  border: 1px solid var(--so-info);
   background: var(--so-info-soft);
 }
 
@@ -245,9 +244,14 @@
   padding-top: 1rem;
   border-top: 1px solid var(--so-rule);
   color: var(--so-muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* Version id only; surrounding prose stays UI sans. */
+.learn-meta .mono {
   font-family: var(--nq-font-mono, 'Fira Mono', monospace);
   font-size: 0.8rem;
-  line-height: 1.4;
 }
 
 .learn-footer-nav {

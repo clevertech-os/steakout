@@ -1,9 +1,51 @@
 # Design audit — P3-05 / P3-06 / P3-07
 
 Pragmatic combined pass (2026-08-03). Scope: shipped product screens only (not `/spike*`).  
-Contract: [`STYLING.md`](STYLING.md) + SPEC §10. No business-logic or API changes.
+Contract: [`STYLING.md`](STYLING.md) + SPEC §10 + **[`anti-slop.md`](anti-slop.md)**. No business-logic or API changes.
+
+Any further visual work must load `anti-slop.md` first (ban list + section 5 self-check).
 
 **Residual:** owner walkthrough sign-off (P3-05 AC); full keyboard stake flow (blocked until P1-12 ReviewSheet ships); automated contrast tooling in CI not wired.
+
+---
+
+## Anti-slop pass
+
+Scoped visual cleanup (2026-08-03, Polishing). Loaded `anti-slop.md` + STYLING §8–10. No API/business logic, no new fonts/gradients.
+
+### Fixed this pass
+
+1. **Eyebrow / card-kicker scaffold** — global styles no longer ember mono uppercase on every section. Muted UI weight; optional `.eyebrow--brand` only on disconnected home identity.
+2. **Side-stripes** — removed declared-card left bar and Learn callout stripe; observation profile accent kept thin (2px) for official-vs-observation separation only.
+3. **Nested card chrome** — home position stat tiles flattened (no mini-cards inside the main card).
+4. **Mono scope** — kickers/def-status/meta prose use UI sans; mono reserved for amounts, hashes, timestamps, version ids (global `.mono` utility).
+5. **Em dashes** — user-facing product copy (Home, Activity, Directory, Evidence, Profile share, Learn) rewritten with commas/periods/colons. Empty-value `—` placeholders kept.
+6. **Redundant kickers** — dropped page-level “Steakout” / “Your wallet” eyebrows and duplicate Timeline/error kickers where the heading already names the state.
+7. **Vague CTA** — removed “Get started” kicker on disconnected home; primary remains Connect wallet / Explore validators.
+
+### Residual findings (next pass)
+
+| Finding | Where | Severity | Note |
+|---|---|---|---|
+| Still many section `card-kicker`s on Profile/Evidence | Profile official / declared / on-chain; Evidence observation | Low | Now muted; could collapse into h2 captions if still noisy |
+| Equal-ish vertical rhythm on multi-card Profile | Profile stack | Low | `row-gap` increased; not a full density redesign |
+| Learn index is four similar cards | Learn hub | Low | Content IA, not marketing feature grid; leave unless copy redesign |
+| nq-label letter-spacing may still track slightly | nimiq-css defaults | Low | Local overrides reduced; framework defaults untouched |
+| Stake CTA still disabled stub | Profile | Expected | P1-12 ReviewSheet |
+| Spike routes still use old ember mono kickers | `/spike*` | Out of scope | Harness only |
+| Real-device 320 walkthrough | All | Owner residual | Unchanged |
+| Em dashes in code comments | Various | Ignore | Not user-facing |
+
+### Self-check (anti-slop §5)
+
+- [x] `--so-*` only; no purple gradients / new fonts
+- [x] Mulish UI; Fira Mono for amounts / hashes / timestamps / calc version
+- [x] Ember on active nav + rare brand kicker only
+- [x] One primary CTA look (blue pill) per screen state
+- [x] Official Trust Score still info-tinted vs observation
+- [x] No nested decorative cards on home stats
+- [x] No em dashes in product copy strings
+- [ ] Owner visual sign-off still open
 
 ---
 

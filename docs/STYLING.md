@@ -162,6 +162,19 @@ These don't exist in nimiq-css; build them in `client/src/components/` with co-l
 
 **Don't:** neon crypto gradients, dense exchange tables on mobile, fake precision (`99.83% trust`), guarantee-implying badges, dark-glass-everywhere, aggressive red alarms for ordinary uncertainty.
 
+## 9. Anti-slop (agents — mandatory for UI work)
+
+Before restyling or adding chrome, load **[`anti-slop.md`](anti-slop.md)** (ported from VeriLock `journey-anti-slop.md`).
+
+- Workflow: intent → constraints → tokens → one surface → checklist → ugly states  
+- Ban list: purple SaaS gradients, Inter-as-brand, glass-everywhere, three-card marketing grids, vague “Get started”, crypto-neon, nested decorative cards, APY/best-validator copy, em dashes  
+- Pre-ship: section 5 of `anti-slop.md`  
+- Pragmatic audit notes: [`design-audit.md`](design-audit.md)
+
+## 10. Design audit index
+
+Per-screen do/don’t and a11y notes from the pragmatic polish pass: [`design-audit.md`](design-audit.md).
+
 ## 9. Review gate
 
 Polishing reviews any new screen against this file and SPEC §10 before it can be marked `done`. If a needed pattern isn't covered here, extend this document first, then build.

@@ -199,8 +199,9 @@
 .evidence-row-stat .nq-label {
   margin: 0 0 0.15rem;
   color: var(--so-muted);
-  font-size: 0.68rem;
-  letter-spacing: 0.05em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .evidence-row-stat-value {

@@ -90,7 +90,6 @@ function TimelineList({
         {envelopeStatus ? (
           <EnvelopeStatusBanner status={envelopeStatus} onRetry={onRetry} />
         ) : null}
-        <p className="card-kicker">Timeline</p>
         <h2 id="activity-empty-title">{emptyTitle}</h2>
         <p className="activity-copy">{emptyBody}</p>
         {emptyActions ? (
@@ -105,7 +104,6 @@ function TimelineList({
       {envelopeStatus ? (
         <EnvelopeStatusBanner status={envelopeStatus} onRetry={onRetry} />
       ) : null}
-      <p className="card-kicker">Timeline</p>
       <ul className="activity-list">
         {items.map((item, index) => (
           <li
@@ -181,7 +179,7 @@ function TimelineList({
       </ul>
       <p className="activity-footnote">
         Observations are based on indexed chain data. A missing entry does not
-        prove wrongdoing — it may mean insufficient history or data not yet
+        prove wrongdoing. It may mean insufficient history or data not yet
         indexed.
       </p>
     </section>
@@ -281,7 +279,6 @@ export default function Activity() {
     return (
       <div className="activity">
         <header className="shell-header activity-header">
-          <p className="eyebrow">Steakout</p>
           <h1 className="activity-title">Activity</h1>
         </header>
         <p className="activity-status" role="status">
@@ -299,10 +296,9 @@ export default function Activity() {
   return (
     <div className="activity">
       <header className="shell-header activity-header">
-        <p className="eyebrow">Steakout</p>
         <h1 className="activity-title">Activity</h1>
         <p className="activity-lede">
-          Personal staking events and network payout observations — from indexed
+          Personal staking events and network payout observations from indexed
           chain data, labeled observed / not observed / insufficient data.
         </p>
       </header>
@@ -342,7 +338,6 @@ export default function Activity() {
               className="activity-card"
               aria-labelledby="activity-connect-title"
             >
-              <p className="card-kicker">Your timeline</p>
               <h2 id="activity-connect-title">Connect to see personal activity</h2>
               <p className="activity-copy">
                 Connect a wallet to load observed direct payouts, position
@@ -386,7 +381,6 @@ export default function Activity() {
             </div>
           ) : personalStatus === 'error' ? (
             <section className="activity-card" aria-labelledby="activity-err-title">
-              <p className="card-kicker">Personal</p>
               <h2 id="activity-err-title">Could not load timeline</h2>
               <p className="activity-copy">
                 {personalError instanceof ApiError &&
@@ -427,7 +421,7 @@ export default function Activity() {
               envelopeStatus={personal?.status}
               onRetry={refresh}
               emptyTitle="No personal activity observed yet"
-              emptyBody="Steakout has not indexed direct payouts, observed position growth, or staking actions for this address yet. That is insufficient data — not a claim that rewards were missed or withheld. History may still be accumulating."
+              emptyBody="Steakout has not indexed direct payouts, observed position growth, or staking actions for this address yet. That is insufficient data, not a claim that rewards were missed or withheld. History may still be accumulating."
               emptyActions={
                 <>
                   <a className="nq-pill-blue activity-cta" href="#/validators">
@@ -458,7 +452,6 @@ export default function Activity() {
           </div>
         ) : networkStatus === 'error' ? (
           <section className="activity-card" aria-labelledby="activity-net-err">
-            <p className="card-kicker">Network</p>
             <h2 id="activity-net-err">Could not load network feed</h2>
             <p className="activity-copy">
               {humanizeFetchError(
@@ -485,7 +478,7 @@ export default function Activity() {
             envelopeStatus={network?.status}
             onRetry={refresh}
             emptyTitle="No network observations yet"
-            emptyBody="Observed payout runs will appear here once the indexer has classified activity for listed validators. Insufficient data is a valid result — not an error and not a judgment of any validator."
+            emptyBody="Observed payout runs will appear here once the indexer has classified activity for listed validators. Insufficient data is a valid result, not an error and not a judgment of any validator."
             emptyActions={
               <>
                 <a className="nq-pill-blue activity-cta" href="#/validators">

@@ -41,7 +41,12 @@
 }
 
 .home-card > .card-kicker {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+/* Primary CTA reads as the one solid action; secondary stays outline/ghost. */
+.home-actions .nq-pill-blue {
+  font-weight: 700;
 }
 
 .home-card h2 {
@@ -200,9 +205,10 @@ a.home-cta {
 .home-stat-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.75rem;
-  margin: 1.25rem 0 0;
-  padding: 0;
+  gap: 0.85rem 1.25rem;
+  margin: 1.5rem 0 0;
+  padding: 1rem 0 0;
+  border-top: 1px solid var(--so-rule);
 }
 
 @media (min-width: 360px) {
@@ -211,12 +217,10 @@ a.home-cta {
   }
 }
 
+/* Flat metrics: avoid nested card-in-card chrome (anti-slop §3). */
 .home-stat {
   margin: 0;
-  padding: 0.75rem;
-  border: 1px solid var(--so-rule);
-  border-radius: 0.75rem;
-  background: var(--so-surface);
+  padding: 0.15rem 0;
   min-width: 0;
 }
 

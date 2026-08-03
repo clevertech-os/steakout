@@ -28,11 +28,11 @@ const LIMITATION_COPY: Record<string, string> = {
   'registry-staker-list-may-be-incomplete':
     'The registry staker list may be incomplete or out of date.',
   'analysis-covers-indexed-history-only':
-    'Analysis covers indexed history only — activity before indexing started is not observed.',
+    'Analysis covers indexed history only. Activity before indexing started is not observed.',
   'missing-payment-does-not-prove-wrongdoing':
     'A payment not observed in a window does not prove wrongdoing.',
   'schedule-cannot-be-normalized':
-    'The declared schedule cannot be normalized, so no adherence grade is shown — only raw observed runs.',
+    'The declared schedule cannot be normalized, so no adherence grade is shown. Only raw observed runs are listed.',
   'insufficient-history':
     'Indexed history is still short; treat any status as provisional.',
 }
@@ -413,7 +413,7 @@ export default function Evidence({
       <p className="nq-subline profile-section-note">
         {showGrade
           ? 'Status is based on indexed chain activity against the declared schedule. Every run links to explorer transactions. Insufficient history is a valid result, not a failure.'
-          : 'This validator’s declared schedule is free-text or ambiguous, so Steakout shows raw observed payout runs only — no adherence grade.'}
+          : 'This validator’s declared schedule is free-text or ambiguous, so Steakout shows raw observed payout runs only. No adherence grade is applied.'}
       </p>
 
       <dl className="evidence-summary">
@@ -548,7 +548,7 @@ export default function Evidence({
           <p className="evidence-empty-label">Insufficient data</p>
           <p className="nq-subline">
             No payout runs have been indexed for this validator yet. That is a valid
-            result — not a negative score or failure.
+            result, not a negative score or failure.
           </p>
           <StatusChip
             status={status === 'unavailable' ? 'unavailable' : 'insufficient-data'}

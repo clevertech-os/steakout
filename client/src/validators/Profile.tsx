@@ -280,7 +280,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
       await navigator.clipboard.writeText(url)
       setShareFeedback('Link copied')
     } catch {
-      setShareFeedback('Copy failed — select the address bar URL')
+      setShareFeedback('Copy failed. Select the address bar URL')
     }
   }
 
@@ -291,7 +291,6 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           <a className="profile-back nq-arrow-back" href="#/validators">
             Validators
           </a>
-          <p className="eyebrow">Validator profile</p>
           <h1 className="profile-title">Loading…</h1>
         </header>
         <section
@@ -320,11 +319,9 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           <a className="profile-back nq-arrow-back" href="#/validators">
             Validators
           </a>
-          <p className="eyebrow">Validator profile</p>
           <h1 className="profile-title">Invalid address</h1>
         </header>
         <section className="nq-card nq-card-lg shell-card profile-state-card" aria-labelledby="profile-invalid-title">
-          <p className="card-kicker">Not found</p>
           <h2 id="profile-invalid-title">This is not a valid Nimiq address.</h2>
           <p>Check the URL and try again from the validators directory.</p>
           <div className="profile-state-actions">
@@ -344,11 +341,9 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           <a className="profile-back nq-arrow-back" href="#/validators">
             Validators
           </a>
-          <p className="eyebrow">Validator profile</p>
           <h1 className="profile-title">Not found</h1>
         </header>
         <section className="nq-card nq-card-lg shell-card profile-state-card" aria-labelledby="profile-missing-title">
-          <p className="card-kicker">Registry</p>
           <h2 id="profile-missing-title">No registry record for this address.</h2>
           <p>
             {state.message ||
@@ -374,11 +369,9 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           <a className="profile-back nq-arrow-back" href="#/validators">
             Validators
           </a>
-          <p className="eyebrow">Validator profile</p>
           <h1 className="profile-title">Unavailable</h1>
         </header>
         <section className="nq-card nq-card-lg shell-card profile-state-card" aria-labelledby="profile-error-title">
-          <p className="card-kicker">Error</p>
           <h2 id="profile-error-title">Could not load this profile.</h2>
           <p>{state.message}</p>
           <div className="profile-state-actions">

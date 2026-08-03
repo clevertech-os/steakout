@@ -25,7 +25,7 @@ type LoadState =
     }
 
 const RECOMMENDED_EXPLAINER =
-  'Recommended order uses listed registry presence, normalizable payout schedule, payout observability (direct before restake), live Steakout observation status when available, lower dominance, then the official Nimiq Validator Trust Score — not financial advice, and not a “best validator” ranking.'
+  'Recommended order uses listed registry presence, normalizable payout schedule, payout observability (direct before restake), live Steakout observation status when available, lower dominance, then the official Nimiq Validator Trust Score. Not financial advice, and not a “best validator” ranking.'
 
 function SkeletonCard() {
   return (
@@ -89,7 +89,6 @@ export default function Directory() {
   return (
     <div className="directory">
       <header className="shell-header directory-header">
-        <p className="eyebrow">Steakout</p>
         <h1>Validators</h1>
         <p className="directory-lede">
           Compare registry metadata and Steakout observation status. No wallet
@@ -147,7 +146,6 @@ export default function Directory() {
 
       {state.kind === 'error' ? (
         <section className="nq-card directory-state" aria-labelledby="directory-error-title">
-          <p className="card-kicker">Unavailable</p>
           <h2 id="directory-error-title">Could not load validators</h2>
           <p className="directory-state-body">{state.message}</p>
           <div className="directory-state-actions">
@@ -163,12 +161,11 @@ export default function Directory() {
 
       {state.kind === 'ready' && state.validators.length === 0 ? (
         <section className="nq-card directory-state" aria-labelledby="directory-empty-title">
-          <p className="card-kicker">Empty</p>
           <h2 id="directory-empty-title">No validators to show</h2>
           <p className="directory-state-body">
             {listedOnly
               ? 'No listed validators match this view. Turn off “Listed only” to include all observable validators.'
-              : 'The registry has not returned any validators yet. Check back after the next sync — empty is a valid result, not an error.'}
+              : 'The registry has not returned any validators yet. Check back after the next sync. Empty is a valid result, not an error.'}
           </p>
           {listedOnly ? (
             <button

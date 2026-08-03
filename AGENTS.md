@@ -53,6 +53,7 @@ Until the scaffold exists, the repo is docs-only; there is nothing to run.
 - Server runs via `tsx`; production start is `node --import tsx src/index.ts` (same as VeriLock).
 - **SQLite via `better-sqlite3`.** Schema lives in `server/src/db.ts` and must match [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md). Migrations are additive only.
 - **Styling:** `nimiq-css` native CSS layers + Steakout token overrides. No Tailwind/UnoCSS unless [`docs/STYLING.md`](docs/STYLING.md) is updated first. No CSS-in-JS libraries.
+- **Anti-slop (UI work):** before any visual restyle or new chrome, load [`docs/anti-slop.md`](docs/anti-slop.md) (ported from VeriLock). Run the ban list + section 5 pre-ship checklist. Prefer scoped passes over “make it pretty.”
 - **Components:** plain React function components, co-located CSS files (`Foo.tsx` + `Foo.css`), matching the VeriLock style.
 - **Minimal diffs.** Touch only what your task requires. Follow existing patterns rather than introducing new libraries.
 - **No secrets.** Nothing sensitive is committed. Config comes from env vars; add new vars to `.env.example`.

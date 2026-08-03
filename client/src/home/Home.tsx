@@ -41,7 +41,6 @@ export default function Home() {
     return (
       <div className="home">
         <header className="shell-header home-header">
-          <p className="eyebrow">Steakout</p>
           <h1 className="home-title">Loading…</h1>
         </header>
         <section className="nq-card nq-card-lg shell-card home-card" aria-busy="true">
@@ -81,7 +80,6 @@ export default function Home() {
     return (
       <div className="home">
         <header className="shell-header home-header">
-          <p className="eyebrow">Your wallet</p>
           <h1 className="home-title">Loading position…</h1>
         </header>
         <section className="nq-card nq-card-lg shell-card home-card" aria-busy="true">
@@ -113,7 +111,6 @@ export default function Home() {
     return (
       <div className="home">
         <header className="shell-header home-header">
-          <p className="eyebrow">Your wallet</p>
           <h1 className="home-title">{needsReauth ? 'Sign in to continue' : 'Position unavailable'}</h1>
         </header>
         <section className="nq-card nq-card-lg shell-card home-card">

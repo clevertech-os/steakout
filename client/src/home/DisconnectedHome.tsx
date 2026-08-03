@@ -25,15 +25,14 @@ export default function DisconnectedHome({
   return (
     <>
       <header className="shell-header home-header">
-        <p className="eyebrow">Steakout</p>
+        <p className="eyebrow eyebrow--brand">Steakout</p>
         <h1 className="home-title">Your NIM may be idle</h1>
         <p className="home-lede">
-          See what it could do — without giving up control of your keys.
+          See what it could do without giving up control of your keys.
         </p>
       </header>
 
       <section className="nq-card nq-card-lg shell-card home-card" aria-labelledby="home-connect-title">
-        <p className="card-kicker">Get started</p>
         <h2 id="home-connect-title">Connect or browse</h2>
         <p className="home-copy">
           Steakout is non-custodial: private keys never leave your wallet. Connect with
@@ -89,7 +88,7 @@ export default function DisconnectedHome({
 
         {showOpenInPay ? (
           <p className="home-hint nq-subline">
-            Install Nimiq Pay, then return here — or continue with Nimiq Hub above.
+            Install Nimiq Pay, then return here, or continue with Nimiq Hub above.
           </p>
         ) : null}
       </section>

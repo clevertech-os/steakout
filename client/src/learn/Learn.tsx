@@ -21,7 +21,7 @@ const ARTICLES: {
     id: 'staking',
     kicker: 'Basics',
     title: 'How staking works',
-    blurb: 'Non-custodial delegation on Nimiq — what you approve, what stays in your wallet.',
+    blurb: 'Non-custodial delegation on Nimiq: what you approve, what stays in your wallet.',
   },
   {
     id: 'methodology',
@@ -74,7 +74,6 @@ function Hub() {
   return (
     <>
       <header className="shell-header learn-header">
-        <p className="eyebrow">Steakout</p>
         <h1>Learn</h1>
         <p className="learn-lede">
           Plain-language guides to staking in Nimiq Pay, how Steakout observes
@@ -105,14 +104,14 @@ function StakingArticle() {
       <p>
         Staking on Nimiq means you <strong>delegate</strong> NIM to a validator so that
         stake helps secure the network. Your funds stay in a protocol staker account
-        controlled by <em>your</em> wallet — not by Steakout and not by the validator as a
+        controlled by <em>your</em> wallet, not by Steakout and not by the validator as a
         custodian.
       </p>
 
       <h3>Non-custodial by design</h3>
       <p>
-        Steakout never asks for private keys or seed phrases. Every staking write —
-        create staker, add stake, change validator, retire, or remove — goes through
+        Steakout never asks for private keys or seed phrases. Every staking write
+        (create staker, add stake, change validator, retire, or remove) goes through
         the Nimiq Pay provider. You review the action, then approve it in your wallet.
         If you decline, nothing is sent.
       </p>
@@ -127,12 +126,12 @@ function StakingArticle() {
       <h3>What you choose</h3>
       <ul>
         <li>
-          <strong>A validator</strong> — operators that produce blocks. The official{' '}
+          <strong>A validator</strong>: operators that produce blocks. The official{' '}
           <strong>Validator Trust Score</strong> describes block-production performance.
           Steakout shows that score alongside its own observations; it never replaces it.
         </li>
         <li>
-          <strong>An amount</strong> — how much NIM to put into your staker position.
+          <strong>An amount</strong>: how much NIM to put into your staker position.
           Leave room for fees; avoid staking every last Luna by accident.
         </li>
       </ul>
@@ -170,7 +169,7 @@ function StakingArticle() {
       <p>
         Validators may distribute rewards according to their own arrangements with
         stakers. Some send direct payments; some restake. Steakout may show an{' '}
-        <strong>illustrative network estimate</strong> — never a guaranteed return or
+        <strong>illustrative network estimate</strong>, never a guaranteed return or
         APY. Estimates always link back to{' '}
         <a href="#/learn/methodology">methodology</a> and{' '}
         <a href="#/learn/limitations">limitations</a>.
@@ -209,7 +208,7 @@ function MethodologyArticle() {
           <span className="learn-def-status">Registry declaration</span>
           <span className="learn-def-term">Supplied by the validators registry</span>
           <p className="learn-def-body">
-            Fee, schedule, and payout type as published — not independently verified by
+            Fee, schedule, and payout type as published, not independently verified by
             Steakout.
           </p>
         </li>
@@ -225,14 +224,14 @@ function MethodologyArticle() {
           <span className="learn-def-term">Not enough history yet</span>
           <p className="learn-def-body">
             Too little indexed history, or a policy we cannot normalize. This is a valid
-            result — not a negative score.
+            result, not a negative score.
           </p>
         </li>
         <li className="learn-def-item">
           <span className="learn-def-status learn-def-status--disabled">Unavailable</span>
           <span className="learn-def-term">Source did not provide data</span>
           <p className="learn-def-body">
-            RPC, indexer, or API gap — we could not obtain the required input.
+            RPC, indexer, or API gap: we could not obtain the required input.
           </p>
         </li>
       </ul>
@@ -257,7 +256,7 @@ function MethodologyArticle() {
           <span className="learn-def-term">Irregular</span>
           <p className="learn-def-body">
             Under 80% observed, with a normalizable schedule and at least 14 days of
-            history. Still a description of windows — not an accusation.
+            history. Still a description of windows, not an accusation.
           </p>
         </li>
         <li className="learn-def-item">
@@ -282,17 +281,17 @@ function MethodologyArticle() {
       </p>
       <ul>
         <li>
-          <strong>Observed payout runs</strong> — outbound transactions within a
+          <strong>Observed payout runs</strong>: outbound transactions within a
           60-minute sliding window are grouped as one run (window start/end, transaction
           count, distinct recipients, block range, transaction hashes).
         </li>
         <li>
-          <strong>Schedule adherence</strong> — only unambiguous declared forms are
+          <strong>Schedule adherence</strong>: only unambiguous declared forms are
           normalized (for example hourly, every N hours, daily, twice daily). Free-text
           schedules are shown raw; we never grade a schedule we cannot normalize.
         </li>
         <li>
-          <strong>Observed recipient coverage</strong> — distinct recipients per run, and
+          <strong>Observed recipient coverage</strong>: distinct recipients per run, and
           when the registry lists known stakers, a covered/total pair. Consolidation,
           thresholds, and incomplete lists mean this is <em>not</em> proof that every
           staker was paid. We never say &quot;paid everyone.&quot;
@@ -304,7 +303,7 @@ function MethodologyArticle() {
         When you connect a wallet, Steakout may show personal continuity fields: last
         observed payment to your address, consecutive observed windows that include you,
         time since last observed payment, and whether your address appears in a known
-        staker set. Each field can be empty on its own — empty means{' '}
+        staker set. Each field can be empty on its own. Empty means{' '}
         <span className="learn-term">not observed</span> or{' '}
         <span className="learn-term">insufficient data</span>, not wrongdoing.
       </p>
@@ -314,7 +313,7 @@ function MethodologyArticle() {
         Some validators restake rewards instead of sending direct payments. For those,
         Steakout tracks staker account state over time and may show{' '}
         <strong>observed position growth</strong> against an{' '}
-        <strong>illustrative expected range</strong> — never &quot;validator payout
+        <strong>illustrative expected range</strong>, never &quot;validator payout
         verified.&quot; If growth data is unreliable, restake analytics stay limited and
         that limit is stated on the{' '}
         <a href="#/learn/limitations">limitations</a> page.
@@ -339,11 +338,11 @@ function MethodologyArticle() {
           <span className="learn-term">needs review</span>
         </li>
         <li>
-          <span className="learn-term">declared fee (registry)</span> — not
+          <span className="learn-term">declared fee (registry)</span>, not
           &quot;actual fee&quot;
         </li>
         <li>
-          <span className="learn-term">illustrative network estimate</span> — not
+          <span className="learn-term">illustrative network estimate</span>, not
           guaranteed return
         </li>
       </ul>
@@ -370,24 +369,24 @@ function LimitationsArticle() {
       <h3>What we never claim in v1</h3>
       <ul>
         <li>
-          <strong>No effective validator fee</strong> — outflows mix principal returns,
+          <strong>No effective validator fee</strong>: outflows mix principal returns,
           treasury transfers, and unrelated movements. Naive fee math is reputationally
           harmful and banned.
         </li>
         <li>
-          <strong>No fraud or scam labels</strong> — missing or irregular observations
+          <strong>No fraud or scam labels</strong>: missing or irregular observations
           are never treated as proof of wrongdoing.
         </li>
         <li>
-          <strong>No guaranteed APY or guaranteed payout</strong> — estimates are
+          <strong>No guaranteed APY or guaranteed payout</strong>: estimates are
           illustrative only.
         </li>
         <li>
-          <strong>No &quot;best validator&quot; ranking</strong> — we do not publish an
+          <strong>No &quot;best validator&quot; ranking</strong>: we do not publish an
           objective financial ranking of operators.
         </li>
         <li>
-          <strong>A missing payment does not prove intent</strong> — we report what was{' '}
+          <strong>A missing payment does not prove intent</strong>: we report what was{' '}
           <span className="learn-term">observed</span> or{' '}
           <span className="learn-term">not observed in this window</span>.
         </li>
@@ -396,31 +395,31 @@ function LimitationsArticle() {
       <h3>What we cannot always see</h3>
       <ul>
         <li>
-          <strong>History depth</strong> — observations only cover the period Steakout
+          <strong>History depth</strong>: observations only cover the period Steakout
           has indexed. Short history yields{' '}
           <span className="learn-term">insufficient data</span>, never a grade that
           pretends certainty.
         </li>
         <li>
-          <strong>Indexer and RPC gaps</strong> — when sources fail, metrics show{' '}
+          <strong>Indexer and RPC gaps</strong>: when sources fail, metrics show{' '}
           <span className="learn-term">unavailable</span> with freshness when known.
         </li>
         <li>
-          <strong>Schedules we cannot normalize</strong> — free-text policies stay as
+          <strong>Schedules we cannot normalize</strong>: free-text policies stay as
           declared text plus raw observed runs. We do not invent a numeric schedule.
         </li>
         <li>
-          <strong>Recipient coverage caveats</strong> — consolidation addresses,
+          <strong>Recipient coverage caveats</strong>: consolidation addresses,
           minimum thresholds, and incomplete registry staker lists mean coverage is not
           a full-payout proof.
         </li>
         <li>
-          <strong>Restake paths</strong> — rewards may not appear as direct payments.
+          <strong>Restake paths</strong>: rewards may not appear as direct payments.
           Position growth, when shown, is labeled illustrative and limited by how
           reliably staker state can be read.
         </li>
         <li>
-          <strong>Off-chain arrangements</strong> — anything that never hits the public
+          <strong>Off-chain arrangements</strong>: anything that never hits the public
           chain is outside Steakout&apos;s observation target.
         </li>
       </ul>
@@ -440,9 +439,9 @@ function LimitationsArticle() {
         audit trail for how observations were computed.
       </p>
       <p className="learn-meta nq-not-prose">
-        Current calc_version: {CALC_VERSION}
+        Current calc_version: <span className="mono">{CALC_VERSION}</span>
         <br />
-        Effective date: {CALC_VERSION_DATE}
+        Effective date: <span className="mono">{CALC_VERSION_DATE}</span>
         <br />
         Source: observation classifier baseline (see methodology).
       </p>
@@ -481,7 +480,7 @@ function PrivacyArticle() {
 
       <h3>What we do not collect in v1</h3>
       <ul>
-        <li>No private keys or seed phrases — ever.</li>
+        <li>No private keys or seed phrases. Ever.</li>
         <li>No name, email, or location required for core staking and observation.</li>
         <li>
           Product analytics are <strong>aggregate and minimal</strong>: server-side
@@ -496,7 +495,7 @@ function PrivacyArticle() {
       <p>
         Authentication uses a signed-message challenge verified on the server. Session
         cookies are short-lived. Challenges and staking intents expire and are cleaned
-        up. Stored application data is described in the open data model — no keys, no
+        up. Stored application data is described in the open data model: no keys, no
         seeds, no unnecessary personal fields.
       </p>
 

@@ -31,7 +31,6 @@ export default function StakedHome({
   return (
     <>
       <header className="shell-header home-header">
-        <p className="eyebrow">Your position</p>
         <div className="home-title-row">
           <h1 className="home-title">Staked</h1>
           <PositionStateBadge state={state} />
@@ -48,7 +47,7 @@ export default function StakedHome({
           envelopeStatus === 'stale'
             ? 'Position snapshot may be outdated. Showing the last known on-chain read.'
             : envelopeStatus === 'partial'
-              ? 'Position data is partial — some fields may be incomplete.'
+              ? 'Position data is partial. Some fields may be incomplete.'
               : envelopeStatus === 'unavailable'
                 ? 'Some position data is unavailable from the network right now.'
                 : undefined
@@ -132,7 +131,7 @@ export default function StakedHome({
             </>
           ) : (
             <p className="nq-subline home-copy">
-              Insufficient data — no personal reward observation yet.
+              Insufficient data. No personal reward observation yet.
             </p>
           )}
         </div>
@@ -211,7 +210,7 @@ function monitoringCopy(
     return 'Watching this position from a stale snapshot. Reconnect or refresh when the network is reachable.'
   }
   if (!lastReward) {
-    return 'Watching this position. No personal reward events observed yet — insufficient data for continuity claims.'
+    return 'Watching this position. No personal reward events observed yet. Insufficient data for continuity claims.'
   }
   return 'Watching this position. Observations are limited to confirmed chain data; gaps never prove wrongdoing.'
 }

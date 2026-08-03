@@ -141,8 +141,9 @@
 .validator-card-observation-caption {
   margin: 0 0 0.2rem;
   color: var(--so-muted);
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 /* Official score column: subtle info tint so it never reads as an observation chip. */
