@@ -29,16 +29,20 @@ const RECOMMENDED_EXPLAINER =
 
 function SkeletonCard() {
   return (
-    <div className="directory-skeleton nq-card" aria-hidden="true">
+    <div className="directory-skeleton nq-card shell-card" aria-hidden="true">
       <div className="directory-skeleton-row">
-        <span className="directory-skeleton-avatar" />
+        <span className="so-skeleton-line directory-skeleton-avatar" />
         <span className="directory-skeleton-lines">
-          <span className="directory-skeleton-line directory-skeleton-line--wide" />
-          <span className="directory-skeleton-line directory-skeleton-line--narrow" />
+          <span className="so-skeleton-line directory-skeleton-line directory-skeleton-line--name" />
+          <span className="so-skeleton-line directory-skeleton-line directory-skeleton-line--addr" />
         </span>
+        <span className="so-skeleton-line directory-skeleton-chip" />
       </div>
-      <span className="directory-skeleton-line" />
-      <span className="directory-skeleton-line directory-skeleton-line--mid" />
+      <div className="directory-skeleton-metrics">
+        <span className="so-skeleton-line directory-skeleton-line directory-skeleton-line--metric" />
+        <span className="so-skeleton-line directory-skeleton-line directory-skeleton-line--metric" />
+      </div>
+      <span className="so-skeleton-line directory-skeleton-line directory-skeleton-line--footer" />
     </div>
   )
 }
@@ -88,9 +92,9 @@ export default function Directory() {
 
   return (
     <div className="directory">
-      <header className="shell-header directory-header">
-        <h1>Validators</h1>
-        <p className="directory-lede">
+      <header className="shell-header page-header">
+        <h1 className="page-title">Validators</h1>
+        <p className="page-lede">
           Compare registry metadata and Steakout observation status. No wallet
           connection required.
         </p>
@@ -131,7 +135,7 @@ export default function Directory() {
       </section>
 
       {sort === 'recommended' ? (
-        <p className="directory-explainer" role="note">
+        <p className="directory-explainer so-notice--info" role="note">
           {RECOMMENDED_EXPLAINER}
         </p>
       ) : null}
@@ -145,7 +149,7 @@ export default function Directory() {
       ) : null}
 
       {state.kind === 'error' ? (
-        <section className="nq-card directory-state" aria-labelledby="directory-error-title">
+        <section className="nq-card shell-card directory-state" aria-labelledby="directory-error-title">
           <h2 id="directory-error-title">Could not load validators</h2>
           <p className="directory-state-body">{state.message}</p>
           <div className="directory-state-actions">
@@ -160,7 +164,7 @@ export default function Directory() {
       ) : null}
 
       {state.kind === 'ready' && state.validators.length === 0 ? (
-        <section className="nq-card directory-state" aria-labelledby="directory-empty-title">
+        <section className="nq-card shell-card directory-state" aria-labelledby="directory-empty-title">
           <h2 id="directory-empty-title">No validators to show</h2>
           <p className="directory-state-body">
             {listedOnly

@@ -40,17 +40,22 @@ export default function Home() {
   if (!wallet.bootReady) {
     return (
       <div className="home">
-        <header className="shell-header home-header">
-          <h1 className="home-title">Loading…</h1>
+        <header className="shell-header page-header">
+          <h1 className="page-title">Loading…</h1>
         </header>
         <section className="nq-card nq-card-lg shell-card home-card" aria-busy="true">
           <p className="home-status" role="status">
             Starting wallet session…
           </p>
           <div className="home-skeleton" aria-hidden="true">
-            <span className="home-skeleton-line home-skeleton-line--title" />
-            <span className="home-skeleton-line home-skeleton-line--mid" />
-            <span className="home-skeleton-line home-skeleton-line--narrow" />
+            <span className="so-skeleton-line home-skeleton-line home-skeleton-line--amount" />
+            <span className="so-skeleton-line home-skeleton-line home-skeleton-line--narrow" />
+            <div className="home-skeleton-stats">
+              <span className="so-skeleton-line home-skeleton-line home-skeleton-line--stat" />
+              <span className="so-skeleton-line home-skeleton-line home-skeleton-line--stat" />
+              <span className="so-skeleton-line home-skeleton-line home-skeleton-line--stat" />
+            </div>
+            <span className="so-skeleton-line home-skeleton-line home-skeleton-line--section" />
           </div>
         </section>
       </div>
@@ -79,18 +84,22 @@ export default function Home() {
   if (position.status === 'loading' && !position.envelope) {
     return (
       <div className="home">
-        <header className="shell-header home-header">
-          <h1 className="home-title">Loading position…</h1>
+        <header className="shell-header page-header">
+          <h1 className="page-title">Loading position…</h1>
         </header>
         <section className="nq-card nq-card-lg shell-card home-card" aria-busy="true">
           <p className="home-status" role="status">
             Reading on-chain staking state…
           </p>
           <div className="home-skeleton" aria-hidden="true">
-            <span className="home-skeleton-line home-skeleton-line--title" />
-            <span className="home-skeleton-line home-skeleton-line--mid" />
-            <span className="home-skeleton-line" />
-            <span className="home-skeleton-line home-skeleton-line--narrow" />
+            <span className="so-skeleton-line home-skeleton-line home-skeleton-line--amount" />
+            <span className="so-skeleton-line home-skeleton-line home-skeleton-line--narrow" />
+            <div className="home-skeleton-stats">
+              <span className="so-skeleton-line home-skeleton-line home-skeleton-line--stat" />
+              <span className="so-skeleton-line home-skeleton-line home-skeleton-line--stat" />
+              <span className="so-skeleton-line home-skeleton-line home-skeleton-line--stat" />
+            </div>
+            <span className="so-skeleton-line home-skeleton-line home-skeleton-line--section" />
           </div>
           <div className="home-actions">
             <a className="nq-pill-secondary home-cta" href="#/validators">
@@ -110,8 +119,8 @@ export default function Home() {
 
     return (
       <div className="home">
-        <header className="shell-header home-header">
-          <h1 className="home-title">{needsReauth ? 'Sign in to continue' : 'Position unavailable'}</h1>
+        <header className="shell-header page-header">
+          <h1 className="page-title">{needsReauth ? 'Sign in to continue' : 'Position unavailable'}</h1>
         </header>
         <section className="nq-card nq-card-lg shell-card home-card">
           <p className="home-error" role="alert">

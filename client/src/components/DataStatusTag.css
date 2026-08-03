@@ -10,8 +10,8 @@
   border: 1px solid var(--so-rule);
   background: var(--so-disabled-soft);
   color: var(--so-disabled-ink);
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
-  font-size: 0.65rem;
+  font-family: var(--so-mono);
+  font-size: var(--so-text-2xs);
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1.3;
@@ -26,6 +26,7 @@
   justify-content: center;
   min-width: 0.7rem;
   opacity: 0.85;
+  /* Mark glyph denser than 2xs; documented exception (V-07). */
   font-size: 0.6rem;
   line-height: 1;
 }

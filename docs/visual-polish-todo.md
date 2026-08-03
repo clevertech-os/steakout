@@ -39,20 +39,24 @@ for a subagent implementer with an architect reviewing between milestones.
 
 ### Mechanical slop sweep (run before requesting review; paste output in the review note)
 
+Use pipe filters (this shell mangles rg `--glob '!…'` exclusions):
+
 ```bash
-# Raw palette vars outside tokens.css — expect zero hits
-rg -n -- '--colors-' client/src -g '!styles/tokens.css' -g '!spike/**'
-# Hardcoded hex outside tokens.css — expect only var() fallbacks like var(--so-warn-ink, #6b4f06)
-rg -n '#[0-9a-fA-F]{6}\b' client/src -g '*.css' -g '!styles/tokens.css' -g '!spike/**'
-# Gradient / glass — expect zero hits
-rg -ni 'gradient|backdrop-filter' client/src -g '!spike/**' -g '!*.md'
+# Raw palette vars outside tokens.css — expect zero hits after filter
+rg -n -- '--colors-' client/src | rg -v 'tokens\.css|spike/'
+# Hardcoded hex outside tokens.css — expect only var() fallbacks
+rg -n '#[0-9a-fA-F]{6}\b' client/src --glob '*.css' | rg -v 'tokens\.css|spike/'
+# Gradient / glass — expect zero in product (staking/ may have scroll curtains; do not edit staking/)
+rg -ni 'gradient|backdrop-filter' client/src | rg -v 'spike/|staking/|\.md'
 # Inline styles in product TSX — expect zero hits
-rg -n 'style=\{\{' client/src -g '!spike/**' -g '*.tsx'
+rg -n 'style=\{\{' client/src --glob '*.tsx' | rg -v 'spike/'
 # Em dash in product TS/TSX — expect only empty-value placeholders ('—' as a value)
-rg -n --pcre2 '\x{2014}' client/src -g '!spike/**' -g '*.ts' -g '*.tsx'
+rg -n --pcre2 '\x{2014}' client/src --glob '*.ts' --glob '*.tsx' | rg -v 'spike/'
 # Side-stripe borders — expect only Profile observation card
-rg -n 'border-left' client/src -g '*.css' -g '!spike/**'
+rg -n 'border-left' client/src --glob '*.css' | rg -v 'spike/'
 ```
+
+**Concurrent surface:** `client/src/staking/` is Implementation (P1-12) in flight. Do **not** restyle or edit it. Shared `base.css` changes must not break it — spot-check only; flag conflicts in the review note.
 
 ### Rejection criteria (architect will bounce the milestone if any fail)
 
@@ -384,8 +388,8 @@ screens at 320/375/430, reduced-motion pass, build+tests+smoke green.
 
 | Gate | Date | Result | Notes |
 |------|------|--------|-------|
-| G0 | | | |
-| G1 | | | |
-| G2 | | | |
-| G3 | | | |
-| G4 | | | |
+| G0 | 2026-08-03 | **pass** | V-01: Mulish variable 100–1000 + Fira Mono 400/500/700 OFL binaries; Mulish-Regular deleted; base.css @font-face + STYLING §2 + fonts README. Magic bytes `00010000` all TTFs. `npm run build` green. Footprint exact (no TSX). Concurrent `client/src/staking/` (P1-12) excluded from this cycle. |
+| G1 | 2026-08-03 | **pass** | V-02–V-06: −179 net LOC. Shared so-pulse/page-*/shell-card/nq-card reset/--so-mono. Acceptance greps clean (staking leftovers expected). Build green. Profile header 1.5rem intentional. |
+| G2 | 2026-08-03 | **pass** | V-07–V-09: 44px→--so-touch; --so-text-2xs; VeriLock h1/shell-card h2 removed; profile row-gap only. Build green. |
+| G3 | 2026-08-03 | **pass** | V-10–V-13: so-notice--info; dead home-banner removed; nimiq.ts em dash fixed; evidence-no-grade→status-chip--disabled. Sweep clean. Build green. |
+| G4 | 2026-08-03 | **pass** | V-14–V-16: app-main word-break scoped; home/directory skeleton parity; evidence thin scrollbar + existing nq-curtain-y kept. Build+test green. Smoke script stub (env). Full cycle M0–M4 closed. |

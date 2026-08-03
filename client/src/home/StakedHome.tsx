@@ -49,12 +49,12 @@ export default function StakedHome({
 
   return (
     <>
-      <header className="shell-header home-header">
+      <header className="shell-header page-header">
         <div className="home-title-row">
-          <h1 className="home-title">Staked</h1>
+          <h1 className="page-title">Staked</h1>
           <PositionStateBadge state={state} />
         </div>
-        <p className="home-lede home-address" title={address}>
+        <p className="page-lede home-address" title={address}>
           {shortAddress}
         </p>
       </header>

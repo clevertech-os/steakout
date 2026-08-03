@@ -81,11 +81,13 @@ npm install
 cp .env.example .env
 # Edit .env: at minimum set SESSION_SECRET to a long random string.
 # Defaults point at testnet RPC; mainnet reads need NIMIQ_NETWORK + NIMIQ_RPC_URL accordingly.
+# Root `.env` is loaded by both the server and Vite (client `envDir` → monorepo root).
 npm run dev
 ```
 
 - **API + static:** [http://localhost:3000](http://localhost:3000)  
 - **Vite client (dev):** [http://localhost:5173](http://localhost:5173) (proxies API via CORS / `CORS_ORIGIN`)
+- **Network badge:** yellow when `VITE_NIMIQ_NETWORK` is not `mainnet`. Restart `npm run dev` after changing `.env` (Vite only reads env at startup).
 
 ### Useful scripts
 
@@ -111,7 +113,8 @@ Copy [`.env.example`](.env.example). Important variables:
 | `INDEXER_ENABLED` | Enable reward-address payout indexing (off by default in example) |
 | `DATA_DIR` | SQLite location |
 | `CORS_ORIGIN` | Browser origin allowed to call the API (dev: `http://localhost:5173`) |
-| `VITE_NIMIQ_NETWORK` | Client network badge (`mainnet` hides badge) |
+| `VITE_NIMIQ_NETWORK` | Client network badge + Hub/RPC defaults (`mainnet` hides badge; `testnet` → hub.nimiq-testnet.com) |
+| `VITE_NIMIQ_HUB_URL` | Optional Hub override (else derived from network) |
 | `PUBLIC_APP_URL` | Canonical origin for shareable profile meta |
 
 Indexer and diagnostics options are documented in `.env.example`.

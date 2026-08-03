@@ -15,8 +15,6 @@
   margin: 0 auto;
   /* Bottom clearance keeps content above the fixed BottomNav. */
   padding: 2.5rem 0 calc(var(--bottom-nav-height, 4rem) + env(safe-area-inset-bottom, 0px) + 1.5rem);
-  overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
 /* 320px: slightly tighter horizontal margin so cards keep usable width. */

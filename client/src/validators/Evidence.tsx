@@ -286,7 +286,7 @@ export default function Evidence({
   if (state.kind === 'loading') {
     return (
       <section
-        className="nq-card profile-card profile-card--observation evidence"
+        className="nq-card shell-card profile-card profile-card--observation evidence"
         aria-labelledby="evidence-title"
         aria-busy="true"
         data-observation-status={profileStatus}
@@ -305,9 +305,9 @@ export default function Evidence({
           Loading observed payout runs…
         </p>
         <div className="evidence-skeleton" aria-hidden="true">
-          <span className="evidence-skeleton-line evidence-skeleton-line--wide" />
-          <span className="evidence-skeleton-line" />
-          <span className="evidence-skeleton-line evidence-skeleton-line--mid" />
+          <span className="so-skeleton-line evidence-skeleton-line evidence-skeleton-line--wide" />
+          <span className="so-skeleton-line evidence-skeleton-line" />
+          <span className="so-skeleton-line evidence-skeleton-line evidence-skeleton-line--mid" />
         </div>
       </section>
     )
@@ -316,7 +316,7 @@ export default function Evidence({
   if (state.kind === 'error') {
     return (
       <section
-        className="nq-card profile-card profile-card--observation evidence"
+        className="nq-card shell-card profile-card profile-card--observation evidence"
         aria-labelledby="evidence-title"
       >
         <p className="card-kicker">Steakout observation</p>
@@ -324,7 +324,7 @@ export default function Evidence({
           Payout evidence
         </h2>
         <p className="nq-subline profile-section-note">{state.message}</p>
-        <div className="evidence-empty evidence-empty--error">
+        <div className="evidence-empty so-notice--info">
           <DataStatusTag status="unavailable" />
           <button type="button" className="nq-pill-blue evidence-retry" onClick={retry}>
             Try again
@@ -372,7 +372,7 @@ export default function Evidence({
 
   return (
     <section
-      className="nq-card profile-card profile-card--observation evidence"
+      className="nq-card shell-card profile-card profile-card--observation evidence"
       aria-labelledby="evidence-title"
     >
       <EnvelopeStatusBanner
@@ -397,7 +397,7 @@ export default function Evidence({
           />
         ) : (
           <span
-            className="evidence-no-grade"
+            className="status-chip status-chip--disabled"
             title="Declared schedule is free-text or ambiguous; Steakout does not grade it."
           >
             Schedule cannot be normalized

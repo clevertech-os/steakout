@@ -24,10 +24,10 @@ export default function DisconnectedHome({
 }: DisconnectedHomeProps) {
   return (
     <>
-      <header className="shell-header home-header">
+      <header className="shell-header page-header">
         <p className="eyebrow eyebrow--brand">Steakout</p>
-        <h1 className="home-title">Your NIM may be idle</h1>
-        <p className="home-lede">
+        <h1 className="page-title">Your NIM may be idle</h1>
+        <p className="page-lede">
           See what it could do without giving up control of your keys.
         </p>
       </header>

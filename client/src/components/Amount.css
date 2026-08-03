@@ -1,7 +1,7 @@
 /* NIM amounts — Fira Mono; never wrap mid-number (STYLING §5/§6). */
 .so-amount {
   display: inline-block;
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-family: var(--so-mono);
   font-variant-numeric: tabular-nums;
   color: var(--so-ink);
   white-space: nowrap;
@@ -17,6 +17,7 @@
 }
 
 .so-amount--lg {
+  /* Amount display — outside --so-text-* UI scale. */
   font-size: clamp(1.35rem, 6vw, 2.25rem);
   letter-spacing: -0.02em;
   line-height: 1.15;
@@ -24,6 +25,7 @@
 
 @media (max-width: 359px) {
   .so-amount--lg {
+    /* Amount display — outside --so-text-* UI scale. */
     font-size: clamp(1.2rem, 7.5vw, 1.75rem);
   }
 }

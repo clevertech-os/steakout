@@ -110,9 +110,9 @@ body {
    Ember stays on active nav + rare brand moments only. */
 .eyebrow,
 .card-kicker {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--so-space-2);
   color: var(--so-muted);
-  font-size: 0.75rem;
+  font-size: var(--so-text-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: none;
@@ -124,47 +124,132 @@ body {
   color: var(--so-accent);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  font-size: 0.7rem;
+  font-size: var(--so-text-2xs);
 }
 
 /* Mono utility: amounts, hashes, blocks, timestamps, version ids only. */
 .mono {
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-family: var(--so-mono);
 }
 
+/* Screen-reader-only utility (shared). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Page header system (V-03) — one title/lede/header rhythm. */
+.page-header {
+  margin-bottom: var(--so-space-6);
+}
+
+.page-title {
+  margin: 0;
+  /* Display size — outside --so-text-* UI scale by design (V-03). */
+  font-size: clamp(2rem, 9vw, 3.25rem);
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.page-title--profile {
+  /* Display size — outside --so-text-* UI scale by design (V-03). */
+  font-size: clamp(1.5rem, 8vw, 2.75rem);
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.page-lede {
+  margin: var(--so-space-3) 0 0;
+  color: var(--so-muted);
+  font-size: var(--so-text-md);
+  line-height: 1.45;
+  max-width: 40rem;
+}
+
+/* Skeleton system (V-02) — one pulse + line base. */
+.so-skeleton-line {
+  display: block;
+  height: var(--so-space-3);
+  border-radius: 0.35rem;
+  background: var(--so-disabled-soft);
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .so-skeleton-line {
+    animation: so-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes so-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* Plain heading/paragraph margin reset (V-08). Display type lives on
+   .page-title / screen section titles — not global h1/h2. */
 h1,
 h2,
 p {
   margin-top: 0;
 }
 
-h1 {
+h1,
+h2 {
   margin-bottom: 0;
-  font-size: clamp(3rem, 12vw, 5.5rem);
-  letter-spacing: -0.07em;
-  line-height: 0.95;
 }
 
+/* Single card chrome (V-04). Layout/padding stay on screen classes. */
 .shell-card {
   border: 1px solid var(--so-rule);
-  border-radius: 1.25rem;
+  border-radius: var(--so-radius-card);
   background: var(--so-card);
   box-shadow: var(--so-shadow);
 }
 
-.shell-card h2 {
-  max-width: 16ch;
-  margin-bottom: 1rem;
-  font-size: clamp(1.75rem, 6vw, 2.5rem);
-  letter-spacing: -0.04em;
-  line-height: 1.05;
+/* nq-card provides flex structure; chrome is --so-* only (F3 / V-05). */
+.app-main .nq-card,
+.app-main .nq-card-lg {
+  max-width: none;
+  margin: 0;
+  outline: none;
+  overflow: visible;
+}
+
+/* Info notice (V-10) — one recipe for Directory / Learn / Evidence. */
+.so-notice--info {
+  margin: 0 0 var(--so-space-4);
+  padding: var(--so-space-3) var(--so-space-4);
+  border-radius: var(--so-space-3);
+  border: 1px solid color-mix(in srgb, var(--so-info) 35%, transparent);
+  background: var(--so-info-soft);
+  color: var(--so-info-strong);
+  font-size: var(--so-text-sm);
+  line-height: 1.45;
 }
 
 .shell-card p:last-child {
   max-width: 42ch;
   margin-bottom: 0;
   color: var(--so-muted);
-  font-size: 1rem;
+  font-size: var(--so-text-md);
   line-height: 1.6;
 }
 

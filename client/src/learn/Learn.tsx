@@ -73,9 +73,9 @@ function ArticleFooter({ current }: { current: LearnArticleId }) {
 function Hub() {
   return (
     <>
-      <header className="shell-header learn-header">
-        <h1>Learn</h1>
-        <p className="learn-lede">
+      <header className="shell-header page-header">
+        <h1 className="page-title">Learn</h1>
+        <p className="page-lede">
           Plain-language guides to staking in Nimiq Pay, how Steakout observes
           validators, and what this product cannot claim.
         </p>
@@ -84,7 +84,7 @@ function Hub() {
       <ul className="learn-index">
         {ARTICLES.map((a) => (
           <li key={a.id}>
-            <a className="learn-index-link nq-focusable" href={`#/learn/${a.id}`}>
+            <a className="learn-index-link shell-card nq-focusable" href={`#/learn/${a.id}`}>
               <p className="learn-index-kicker">{a.kicker}</p>
               <p className="learn-index-title">{a.title}</p>
               <p className="learn-index-blurb">{a.blurb}</p>
@@ -99,7 +99,7 @@ function Hub() {
 
 function StakingArticle() {
   return (
-    <article className="learn-article nq-prose" aria-labelledby="learn-staking-title">
+    <article className="learn-article shell-card nq-prose" aria-labelledby="learn-staking-title">
       <h2 id="learn-staking-title">How staking works</h2>
       <p>
         Staking on Nimiq means you <strong>delegate</strong> NIM to a validator so that
@@ -115,7 +115,7 @@ function StakingArticle() {
         the Nimiq Pay provider. You review the action, then approve it in your wallet.
         If you decline, nothing is sent.
       </p>
-      <div className="learn-callout nq-not-prose">
+      <div className="learn-callout so-notice--info nq-not-prose">
         <p>
           Before any confirmation, Steakout shows a review screen: action type, amount
           in NIM, validator name and address, and the resulting position state. No
@@ -186,7 +186,7 @@ function StakingArticle() {
 
 function MethodologyArticle() {
   return (
-    <article className="learn-article nq-prose" aria-labelledby="learn-methodology-title">
+    <article className="learn-article shell-card nq-prose" aria-labelledby="learn-methodology-title">
       <h2 id="learn-methodology-title">Methodology</h2>
       <p>
         Steakout separates what a validator <strong>declares</strong> (registry policy)
@@ -358,7 +358,7 @@ function MethodologyArticle() {
 
 function LimitationsArticle() {
   return (
-    <article className="learn-article nq-prose" aria-labelledby="learn-limitations-title">
+    <article className="learn-article shell-card nq-prose" aria-labelledby="learn-limitations-title">
       <h2 id="learn-limitations-title">Limitations</h2>
       <p>
         Steakout is an observation and education product. It is not a guarantee of
@@ -424,7 +424,7 @@ function LimitationsArticle() {
         </li>
       </ul>
 
-      <div className="learn-callout nq-not-prose">
+      <div className="learn-callout so-notice--info nq-not-prose">
         <p>
           Server confirmation never trusts a client claim that a transaction succeeded.
           Each confirmation is matched against chain data for the authenticated address
@@ -458,7 +458,7 @@ function LimitationsArticle() {
 
 function PrivacyArticle() {
   return (
-    <article className="learn-article nq-prose" aria-labelledby="learn-privacy-title">
+    <article className="learn-article shell-card nq-prose" aria-labelledby="learn-privacy-title">
       <h2 id="learn-privacy-title">Privacy</h2>
       <p>
         Steakout is built to need as little personal data as possible. Here is what
@@ -499,7 +499,7 @@ function PrivacyArticle() {
         seeds, no unnecessary personal fields.
       </p>
 
-      <div className="learn-callout nq-not-prose">
+      <div className="learn-callout so-notice--info nq-not-prose">
         <p>
           Non-custodial reminder: only you approve staking transactions in Nimiq Pay.
           Steakout cannot move funds without your wallet confirmation.
@@ -522,10 +522,10 @@ function ArticleView({ id }: { id: LearnArticleId }) {
 
   return (
     <>
-      <header className="shell-header learn-header">
+      <header className="shell-header page-header">
         <BackToLearn />
         <p className="eyebrow">{meta.kicker}</p>
-        <h1>{meta.title}</h1>
+        <h1 className="page-title">{meta.title}</h1>
       </header>
       {id === 'staking' && <StakingArticle />}
       {id === 'methodology' && <MethodologyArticle />}

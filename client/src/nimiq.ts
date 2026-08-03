@@ -27,10 +27,33 @@ export { peekHubRedirectInUrl, RPC_ID_SEARCH_PARAM }
 
 const { RequestType } = HubApi
 
-const HUB_ENDPOINT = import.meta.env.VITE_NIMIQ_HUB_URL ?? 'https://hub.nimiq.com'
-const NIMIQ_RPC_URL = import.meta.env.VITE_NIMIQ_RPC_URL ?? 'https://rpc.nimiqwatch.com'
+/**
+ * Client network label (same source as NetworkBadge).
+ * Hub + client RPC must follow this, otherwise "testnet" badge still opens mainnet Hub.
+ */
+const CLIENT_NETWORK = (import.meta.env.VITE_NIMIQ_NETWORK ?? 'mainnet').trim().toLowerCase()
+const IS_TESTNET = CLIENT_NETWORK === 'testnet' || CLIENT_NETWORK === 'test'
+
+/** Override with VITE_NIMIQ_HUB_URL; otherwise derive from network. */
+const HUB_ENDPOINT =
+  (import.meta.env.VITE_NIMIQ_HUB_URL as string | undefined)?.trim() ||
+  (IS_TESTNET ? 'https://hub.nimiq-testnet.com' : 'https://hub.nimiq.com')
+
+/** Override with VITE_NIMIQ_RPC_URL; used for client-side tx poll helpers. */
+const NIMIQ_RPC_URL =
+  (import.meta.env.VITE_NIMIQ_RPC_URL as string | undefined)?.trim() ||
+  (IS_TESTNET ? 'https://rpc.testnet.nimiq.com' : 'https://rpc.nimiqwatch.com')
+
 /** Shown in Nimiq Hub / Pay when approving login and transactions. */
 const APP_NAME = 'Steakout'
+
+export function getClientNetwork(): string {
+  return IS_TESTNET ? 'testnet' : CLIENT_NETWORK || 'mainnet'
+}
+
+export function getHubEndpoint(): string {
+  return HUB_ENDPOINT
+}
 
 export type WalletMode = 'nimiq-pay' | 'hub'
 
@@ -133,7 +156,7 @@ export function isPopupBlockedError(err: unknown): boolean {
 export function popupBlockedHelp(): string {
   return (
     'Pop-up blocked. Allow pop-ups for this site in your browser settings, ' +
-    'or open Steakout inside the Nimiq Pay app (recommended — no pop-ups needed).'
+    'or open Steakout inside the Nimiq Pay app (recommended, no pop-ups needed).'
   )
 }
 

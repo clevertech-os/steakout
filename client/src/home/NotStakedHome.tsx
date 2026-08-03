@@ -32,9 +32,9 @@ export default function NotStakedHome({
 
   return (
     <>
-      <header className="shell-header home-header">
-        <h1 className="home-title">Not staked yet</h1>
-        <p className="home-lede home-address" title={address}>
+      <header className="shell-header page-header">
+        <h1 className="page-title">Not staked yet</h1>
+        <p className="page-lede home-address" title={address}>
           {shortAddress}
         </p>
       </header>

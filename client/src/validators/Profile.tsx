@@ -342,14 +342,14 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
   if (state.kind === 'loading') {
     return (
       <div className="profile">
-        <header className="shell-header profile-header">
+        <header className="shell-header page-header">
           <a className="profile-back nq-arrow-back" href="#/validators">
             Validators
           </a>
-          <h1 className="profile-title">Loading…</h1>
+          <h1 className="page-title page-title--profile">Loading…</h1>
         </header>
         <section
-          className="nq-card profile-card"
+          className="nq-card shell-card profile-card"
           aria-busy="true"
           aria-labelledby="profile-loading-status"
         >
@@ -357,10 +357,10 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
             Loading validator profile…
           </p>
           <div className="profile-skeleton" aria-hidden="true">
-            <span className="profile-skeleton-line profile-skeleton-line--wide" />
-            <span className="profile-skeleton-line" />
-            <span className="profile-skeleton-line profile-skeleton-line--mid" />
-            <span className="profile-skeleton-line profile-skeleton-line--narrow" />
+            <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--wide" />
+            <span className="so-skeleton-line profile-skeleton-line" />
+            <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--mid" />
+            <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--narrow" />
           </div>
         </section>
       </div>
@@ -370,11 +370,11 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
   if (state.kind === 'invalid') {
     return (
       <div className="profile">
-        <header className="shell-header profile-header">
+        <header className="shell-header page-header">
           <a className="profile-back nq-arrow-back" href="#/validators">
             Validators
           </a>
-          <h1 className="profile-title">Invalid address</h1>
+          <h1 className="page-title page-title--profile">Invalid address</h1>
         </header>
         <section className="nq-card nq-card-lg shell-card profile-state-card" aria-labelledby="profile-invalid-title">
           <h2 id="profile-invalid-title">This is not a valid Nimiq address.</h2>
@@ -392,11 +392,11 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
   if (state.kind === 'not-found') {
     return (
       <div className="profile">
-        <header className="shell-header profile-header">
+        <header className="shell-header page-header">
           <a className="profile-back nq-arrow-back" href="#/validators">
             Validators
           </a>
-          <h1 className="profile-title">Not found</h1>
+          <h1 className="page-title page-title--profile">Not found</h1>
         </header>
         <section className="nq-card nq-card-lg shell-card profile-state-card" aria-labelledby="profile-missing-title">
           <h2 id="profile-missing-title">No registry record for this address.</h2>
@@ -420,11 +420,11 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
   if (state.kind === 'error') {
     return (
       <div className="profile">
-        <header className="shell-header profile-header">
+        <header className="shell-header page-header">
           <a className="profile-back nq-arrow-back" href="#/validators">
             Validators
           </a>
-          <h1 className="profile-title">Unavailable</h1>
+          <h1 className="page-title page-title--profile">Unavailable</h1>
         </header>
         <section className="nq-card nq-card-lg shell-card profile-state-card" aria-labelledby="profile-error-title">
           <h2 id="profile-error-title">Could not load this profile.</h2>
@@ -470,14 +470,14 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
             : undefined
         }
       />
-      <header className="shell-header profile-header">
+      <header className="shell-header page-header">
         <a className="profile-back nq-arrow-back" href="#/validators">
           Validators
         </a>
         <p className="eyebrow">
           {profile.isListed ? 'Listed validator' : 'Observable validator'}
         </p>
-        <h1 className="profile-title">{displayName}</h1>
+        <h1 className="page-title page-title--profile">{displayName}</h1>
         <p className="profile-address mono">
           <a
             className="profile-external"
@@ -521,7 +521,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
 
       {/* Official score — always distinct from Steakout observations (P2-09). */}
       <section
-        className="nq-card profile-card profile-card--official"
+        className="nq-card shell-card profile-card profile-card--official"
         aria-labelledby="profile-official-score"
       >
         <p className="card-kicker">Official score</p>
@@ -549,7 +549,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
 
       {/* Registry declarations — visually separated from observations */}
       <section
-        className="nq-card profile-card profile-card--declared"
+        className="nq-card shell-card profile-card profile-card--declared"
         aria-labelledby="profile-declared"
       >
         <p className="card-kicker">Registry declarations</p>
@@ -627,7 +627,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
 
       {/* Reward address */}
       <section
-        className="nq-card profile-card"
+        className="nq-card shell-card profile-card"
         aria-labelledby="profile-reward"
       >
         <p className="card-kicker">On-chain</p>
@@ -742,7 +742,7 @@ function ProfileStakeCta(props: {
 
   return (
     <section
-      className="nq-card profile-card profile-card--cta"
+      className="nq-card shell-card profile-card profile-card--cta"
       aria-labelledby="profile-stake-cta"
     >
       <h2 id="profile-stake-cta" className="profile-section-title">

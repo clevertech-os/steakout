@@ -23,8 +23,9 @@ const apiSecurityHeaders: RequestHandler = helmet({
 /**
  * Minimal headers for the React SPA.
  * Avoid COOP/CORP/strict CSP here — they break Nimiq Hub popup postMessage.
- * Referrer must be sent on cross-origin navigations to hub.nimiq.com; Nimiq's
- * redirect RPC rejects requests when document.referrer is empty (request-error).
+ * Referrer must be sent on cross-origin navigations to hub.nimiq.com /
+ * hub.nimiq-testnet.com; Nimiq's redirect RPC rejects requests when
+ * document.referrer is empty (request-error).
  */
 const spaSecurityHeaders: RequestHandler = (_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff')

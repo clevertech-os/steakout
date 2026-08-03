@@ -1,7 +1,13 @@
-import 'dotenv/config'
+import dotenv from 'dotenv'
 import express from 'express'
+import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createApp } from './app.js'
+
+// Load monorepo root `.env` (npm --prefix server runs with cwd=server/).
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+dotenv.config({ path: path.join(repoRoot, '.env') })
+
 import { openDatabase } from './db.js'
 import {
   clearIndexCursors,

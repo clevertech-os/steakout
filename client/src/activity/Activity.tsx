@@ -86,7 +86,7 @@ function TimelineList({
 }) {
   if (items.length === 0) {
     return (
-      <section className="activity-card" aria-labelledby="activity-empty-title">
+      <section className="shell-card activity-card" aria-labelledby="activity-empty-title">
         {envelopeStatus ? (
           <EnvelopeStatusBanner status={envelopeStatus} onRetry={onRetry} />
         ) : null}
@@ -100,7 +100,7 @@ function TimelineList({
   }
 
   return (
-    <section className="activity-card" aria-label="Activity timeline">
+    <section className="shell-card activity-card" aria-label="Activity timeline">
       {envelopeStatus ? (
         <EnvelopeStatusBanner status={envelopeStatus} onRetry={onRetry} />
       ) : null}
@@ -278,16 +278,16 @@ export default function Activity() {
   if (!wallet.bootReady) {
     return (
       <div className="activity">
-        <header className="shell-header activity-header">
-          <h1 className="activity-title">Activity</h1>
+        <header className="shell-header page-header">
+          <h1 className="page-title">Activity</h1>
         </header>
         <p className="activity-status" role="status">
           Loading session…
         </p>
-        <div className="activity-skeleton" aria-hidden="true">
-          <span className="activity-skeleton-line activity-skeleton-line--wide" />
-          <span className="activity-skeleton-line" />
-          <span className="activity-skeleton-line activity-skeleton-line--mid" />
+        <div className="shell-card activity-skeleton" aria-hidden="true">
+          <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--wide" />
+          <span className="so-skeleton-line activity-skeleton-line" />
+          <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--mid" />
         </div>
       </div>
     )
@@ -295,9 +295,9 @@ export default function Activity() {
 
   return (
     <div className="activity">
-      <header className="shell-header activity-header">
-        <h1 className="activity-title">Activity</h1>
-        <p className="activity-lede">
+      <header className="shell-header page-header">
+        <h1 className="page-title">Activity</h1>
+        <p className="page-lede">
           Personal staking events and network payout observations from indexed
           chain data, labeled observed / not observed / insufficient data.
         </p>
@@ -335,7 +335,7 @@ export default function Activity() {
         {tab === 'personal' ? (
           !connected ? (
             <section
-              className="activity-card"
+              className="shell-card activity-card"
               aria-labelledby="activity-connect-title"
             >
               <h2 id="activity-connect-title">Connect to see personal activity</h2>
@@ -373,14 +373,14 @@ export default function Activity() {
           ) : personalStatus === 'loading' || personalStatus === 'idle' ? (
             <div role="status" aria-busy="true" aria-label="Loading personal timeline">
               <p className="activity-status">Loading your timeline…</p>
-              <div className="activity-skeleton" aria-hidden="true">
-                <span className="activity-skeleton-line activity-skeleton-line--wide" />
-                <span className="activity-skeleton-line" />
-                <span className="activity-skeleton-line activity-skeleton-line--mid" />
+              <div className="shell-card activity-skeleton" aria-hidden="true">
+                <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--wide" />
+                <span className="so-skeleton-line activity-skeleton-line" />
+                <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--mid" />
               </div>
             </div>
           ) : personalStatus === 'error' ? (
-            <section className="activity-card" aria-labelledby="activity-err-title">
+            <section className="shell-card activity-card" aria-labelledby="activity-err-title">
               <h2 id="activity-err-title">Could not load timeline</h2>
               <p className="activity-copy">
                 {personalError instanceof ApiError &&
@@ -444,14 +444,14 @@ export default function Activity() {
         ) : networkStatus === 'loading' || networkStatus === 'idle' ? (
           <div role="status" aria-busy="true" aria-label="Loading network observations">
             <p className="activity-status">Loading network observations…</p>
-            <div className="activity-skeleton" aria-hidden="true">
-              <span className="activity-skeleton-line activity-skeleton-line--wide" />
-              <span className="activity-skeleton-line" />
-              <span className="activity-skeleton-line activity-skeleton-line--mid" />
+            <div className="shell-card activity-skeleton" aria-hidden="true">
+              <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--wide" />
+              <span className="so-skeleton-line activity-skeleton-line" />
+              <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--mid" />
             </div>
           </div>
         ) : networkStatus === 'error' ? (
-          <section className="activity-card" aria-labelledby="activity-net-err">
+          <section className="shell-card activity-card" aria-labelledby="activity-net-err">
             <h2 id="activity-net-err">Could not load network feed</h2>
             <p className="activity-copy">
               {humanizeFetchError(

@@ -5,14 +5,10 @@
   flex-direction: column;
   gap: 0.85rem;
   width: 100%;
-  min-height: 44px;
-  padding: 1rem 1.1rem;
+  min-height: var(--so-touch);
+  padding: var(--so-space-4) 1.1rem;
   text-decoration: none;
   color: inherit;
-  border: 1px solid var(--so-rule);
-  border-radius: 1.25rem;
-  background: var(--so-card);
-  box-shadow: var(--so-shadow);
   overflow-wrap: anywhere;
 }
 
@@ -25,13 +21,13 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--so-space-3);
 }
 
 .validator-card-identity {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--so-space-3);
   min-width: 0;
   flex: 1;
 }
@@ -41,7 +37,7 @@
   flex: 0 0 2.5rem;
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: 0.75rem;
+  border-radius: var(--so-space-3);
   border: 1px solid var(--so-rule);
   object-fit: cover;
   background: var(--so-disabled-soft);
@@ -52,8 +48,8 @@
   align-items: center;
   justify-content: center;
   color: var(--so-muted);
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
-  font-size: 0.75rem;
+  font-family: var(--so-mono);
+  font-size: var(--so-text-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
 }
@@ -68,7 +64,7 @@
 
 .validator-card-name {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--so-text-lg);
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.25;
@@ -82,8 +78,8 @@
 .validator-card-address {
   margin: 0.2rem 0 0;
   color: var(--so-muted);
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
-  font-size: 0.75rem;
+  font-family: var(--so-mono);
+  font-size: var(--so-text-xs);
   letter-spacing: 0.02em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -105,7 +101,7 @@
   padding: 0.3rem 0.65rem;
   border-radius: 999px;
   border: 1px solid transparent;
-  font-size: 0.72rem;
+  font-size: var(--so-text-2xs);
   font-weight: 600;
   line-height: 1.2;
   white-space: nowrap;
@@ -128,7 +124,7 @@
 .validator-card-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.65rem 0.75rem;
+  gap: 0.65rem var(--so-space-3);
   margin: 0;
 }
 
@@ -141,7 +137,7 @@
 .validator-card-observation-caption {
   margin: 0 0 0.2rem;
   color: var(--so-muted);
-  font-size: 0.72rem;
+  font-size: var(--so-text-2xs);
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -150,7 +146,7 @@
 .validator-card-metric--official {
   padding: 0.35rem 0.45rem;
   margin: -0.35rem -0.45rem;
-  border-radius: 0.5rem;
+  border-radius: var(--so-space-2);
   background: color-mix(in srgb, var(--so-info-soft) 60%, transparent);
   border: 1px solid color-mix(in srgb, var(--so-info) 35%, transparent);
 }
@@ -160,16 +156,16 @@
 }
 
 .validator-card-value {
-  font-size: 0.95rem;
+  font-size: var(--so-text-md);
   font-weight: 600;
   line-height: 1.3;
   color: var(--so-ink);
 }
 
 .validator-card-value--mono {
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  font-family: var(--so-mono);
   font-weight: 400;
-  font-size: 0.9rem;
+  font-size: var(--so-text-sm);
   font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -188,7 +184,7 @@
 
 .validator-card-declared-line {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--so-text-sm);
   line-height: 1.4;
   color: var(--so-ink);
 }
@@ -199,8 +195,8 @@
 }
 
 .validator-card-schedule {
-  margin: 0.25rem 0 0;
-  font-size: 0.85rem;
+  margin: var(--so-space-1) 0 0;
+  font-size: var(--so-text-sm);
   line-height: 1.35;
   color: var(--so-muted);
   display: -webkit-box;
@@ -213,9 +209,9 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--so-space-3);
   flex-wrap: wrap;
-  min-height: 44px;
+  min-height: var(--so-touch);
   padding-top: 0.35rem;
   border-top: 1px solid var(--so-rule);
 }
@@ -231,20 +227,20 @@
 
 .validator-card-observation .status-chip {
   /* Slightly denser on cards so the footer stays one line on 375px. */
-  font-size: 0.75rem;
+  font-size: var(--so-text-xs);
   padding: 0.3rem 0.55rem 0.3rem 0.65rem;
 }
 
 .validator-card-depth {
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
-  font-size: 0.7rem;
+  font-family: var(--so-mono);
+  font-size: var(--so-text-2xs);
   color: var(--so-muted);
   line-height: 1.2;
 }
 
 .validator-card-cta {
   color: var(--so-info);
-  font-size: 0.9rem;
+  font-size: var(--so-text-sm);
   font-weight: 600;
   white-space: nowrap;
   align-self: center;

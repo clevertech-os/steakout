@@ -1,7 +1,7 @@
 .so-freshness {
   display: inline-block;
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
-  font-size: 0.75rem;
+  font-family: var(--so-mono);
+  font-size: var(--so-text-xs);
   letter-spacing: 0.02em;
   color: var(--so-muted);
   line-height: 1.3;

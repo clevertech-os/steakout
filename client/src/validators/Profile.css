@@ -3,40 +3,25 @@
 .profile {
   display: flex;
   flex-direction: column;
-  gap: var(--so-space-4, 1rem) var(--so-space-4, 1rem);
+  /* 1.35rem: between space-5 (1.25) and space-6 (1.5); keep one-off (V-09). */
   row-gap: 1.35rem;
   min-width: 0;
-}
-
-.profile-header {
-  margin-bottom: 0.5rem;
 }
 
 .profile-back {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
-  margin-bottom: 0.5rem;
+  min-height: var(--so-touch);
+  margin-bottom: var(--so-space-2);
   color: var(--so-info);
   text-decoration: none;
-  font-size: 0.95rem;
-}
-
-.profile-title {
-  font-size: clamp(1.5rem, 8vw, 2.75rem);
-  letter-spacing: -0.04em;
-  line-height: 1.1;
-  overflow-wrap: anywhere;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
+  font-size: var(--so-text-md);
 }
 
 .profile-address {
-  margin: 0.5rem 0 0;
+  margin: var(--so-space-2) 0 0;
   color: var(--so-muted);
-  font-size: 0.85rem;
+  font-size: var(--so-text-sm);
   overflow-wrap: anywhere;
 }
 
@@ -52,32 +37,32 @@
 }
 
 .profile-description {
-  margin: 0.75rem 0 0;
+  margin: var(--so-space-3) 0 0;
   color: var(--so-muted);
-  font-size: 1rem;
+  font-size: var(--so-text-md);
   line-height: 1.45;
   max-width: 40rem;
 }
 
 .profile-website {
-  margin: 0.5rem 0 0;
+  margin: var(--so-space-2) 0 0;
 }
 
 .profile-share {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.75rem;
+  gap: var(--so-space-2) var(--so-space-3);
   margin-top: 0.85rem;
 }
 
 .profile-share-btn {
-  min-height: 44px;
+  min-height: var(--so-touch);
 }
 
 .profile-share-feedback {
   color: var(--so-muted);
-  font-size: 0.85rem;
+  font-size: var(--so-text-sm);
 }
 
 .profile-status {
@@ -86,25 +71,21 @@
 }
 
 .profile-state-card {
-  padding: 1.25rem 1.35rem;
-}
-
-.profile-state-card h2 {
-  max-width: none;
+  padding: var(--so-space-5) 1.35rem;
 }
 
 .profile-state-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 1.25rem;
+  gap: var(--so-space-3);
+  margin-top: var(--so-space-5);
 }
 
 .profile-state-cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
+  min-height: var(--so-touch);
   text-decoration: none;
   box-sizing: border-box;
   cursor: pointer;
@@ -114,15 +95,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  margin-top: 1rem;
-}
-
-.profile-skeleton-line {
-  display: block;
-  height: 0.75rem;
-  border-radius: 0.35rem;
-  background: var(--so-disabled-soft);
-  width: 100%;
+  margin-top: var(--so-space-4);
 }
 
 .profile-skeleton-line--wide {
@@ -138,28 +111,8 @@
   width: 35%;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .profile-skeleton-line {
-    animation: profile-pulse 1.2s ease-in-out infinite;
-  }
-}
-
-@keyframes profile-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
-}
-
 .profile-card {
-  padding: 1.15rem 1.25rem;
-  border: 1px solid var(--so-rule);
-  border-radius: 1.25rem;
-  background: var(--so-card);
-  box-shadow: var(--so-shadow);
+  padding: 1.15rem var(--so-space-5);
   min-width: 0;
 }
 
@@ -189,23 +142,24 @@
 }
 
 .profile-section-title {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--so-space-2);
+  /* Section display — outside --so-text-* UI scale. */
   font-size: clamp(1.15rem, 4vw, 1.4rem);
   letter-spacing: -0.02em;
   line-height: 1.2;
-  max-width: none;
 }
 
 .profile-section-note {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--so-space-4);
   color: var(--so-muted);
-  font-size: 0.9rem;
+  font-size: var(--so-text-sm);
   line-height: 1.45;
 }
 
 .profile-score-value {
-  margin: 0.25rem 0 0.75rem;
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
+  margin: var(--so-space-1) 0 var(--so-space-3);
+  font-family: var(--so-mono);
+  /* Score display — outside --so-text-* UI scale. */
   font-size: clamp(1.75rem, 8vw, 2.75rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -215,7 +169,7 @@
 }
 
 .profile-observation-chip {
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--so-space-3);
 }
 
 .profile-metrics {
@@ -228,7 +182,7 @@
 
 .profile-metric {
   margin: 0;
-  padding-top: 0.75rem;
+  padding-top: var(--so-space-3);
   border-top: 1px solid var(--so-rule);
 }
 
@@ -242,8 +196,8 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.35rem 0.75rem;
-  margin-bottom: 0.25rem;
+  gap: 0.35rem var(--so-space-3);
+  margin-bottom: var(--so-space-1);
 }
 
 .profile-metric-label {
@@ -252,7 +206,7 @@
 
 .profile-metric-value {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--so-text-md);
   font-weight: 600;
   line-height: 1.3;
   overflow-wrap: anywhere;
@@ -267,13 +221,13 @@
 
 .profile-metric-def {
   color: var(--so-muted);
-  font-size: 0.8rem;
+  font-size: var(--so-text-xs);
   line-height: 1.35;
 }
 
 .profile-freshness {
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
-  font-size: 0.72rem;
+  font-family: var(--so-mono);
+  font-size: var(--so-text-2xs);
   color: var(--so-muted);
 }
 
@@ -281,18 +235,18 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.75rem;
-  margin-top: 0.75rem;
+  gap: var(--so-space-2) var(--so-space-3);
+  margin-top: var(--so-space-3);
 }
 
 .profile-limitations-link {
   margin: 0.85rem 0 0;
-  font-size: 0.9rem;
+  font-size: var(--so-text-sm);
 }
 
 .profile-reward {
-  margin: 0 0 0.5rem;
-  font-size: 0.9rem;
+  margin: 0 0 var(--so-space-2);
+  font-size: var(--so-text-sm);
   overflow-wrap: anywhere;
 }
 
@@ -300,19 +254,19 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: var(--so-space-2);
 }
 
 .profile-cta-actions {
   display: flex;
   flex-direction: column;
-  gap: var(--so-space-2, 0.5rem);
-  margin-top: var(--so-space-3, 0.75rem);
+  gap: var(--so-space-2);
+  margin-top: var(--so-space-3);
 }
 
 .profile-stake-btn {
-  min-height: 44px;
-  margin-top: 0.25rem;
+  min-height: var(--so-touch);
+  margin-top: var(--so-space-1);
 }
 
 .profile-stake-btn:disabled {
@@ -321,22 +275,18 @@
 }
 
 .profile-stake-error {
-  margin: 0.5rem 0 0;
+  margin: var(--so-space-2) 0 0;
   color: var(--so-ink);
-  font-size: 0.85rem;
+  font-size: var(--so-text-sm);
   line-height: 1.4;
-}
-
-.mono {
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
 }
 
 @media (min-width: 600px) {
   .profile {
-    row-gap: 1.5rem;
+    row-gap: var(--so-space-6);
   }
 
   .profile-card {
-    padding: 1.35rem 1.5rem;
+    padding: 1.35rem var(--so-space-6);
   }
 }

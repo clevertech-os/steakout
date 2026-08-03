@@ -2,10 +2,10 @@
   display: inline-flex;
   align-items: center;
   max-width: 100%;
-  padding: 0.35rem 0.75rem;
-  border-radius: var(--so-radius-chip, 999px);
+  padding: 0.35rem var(--so-space-3);
+  border-radius: var(--so-radius-chip);
   border: 1px solid transparent;
-  font-size: 0.8rem;
+  font-size: var(--so-text-xs);
   font-weight: 600;
   line-height: 1.25;
   white-space: nowrap;

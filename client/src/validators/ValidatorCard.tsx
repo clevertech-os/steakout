@@ -37,7 +37,7 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
 
   return (
     <a
-      className="validator-card nq-card nq-hoverable nq-hoverable-cta nq-focusable"
+      className="validator-card nq-card shell-card nq-hoverable nq-hoverable-cta nq-focusable"
       href={profileHref}
       aria-label={`View record for ${displayName}`}
     >

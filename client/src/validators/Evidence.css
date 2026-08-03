@@ -17,11 +17,7 @@
 }
 
 .evidence-skeleton-line {
-  display: block;
   height: 0.7rem;
-  border-radius: 0.35rem;
-  background: var(--so-disabled-soft);
-  width: 100%;
 }
 
 .evidence-skeleton-line--wide {
@@ -32,42 +28,12 @@
   width: 50%;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .evidence-skeleton-line {
-    animation: evidence-pulse 1.2s ease-in-out infinite;
-  }
-}
-
-@keyframes evidence-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
-}
-
 .evidence-status-block {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.85rem;
-  margin: 0 0 0.75rem;
-}
-
-.evidence-no-grade {
-  display: inline-flex;
-  align-items: center;
-  max-width: 100%;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid var(--so-disabled);
-  background: var(--so-disabled-soft);
-  color: var(--so-disabled-ink);
-  font-size: 0.8rem;
-  font-weight: 600;
-  line-height: 1.25;
+  gap: var(--so-space-2) 0.85rem;
+  margin: 0 0 var(--so-space-3);
 }
 
 .evidence-summary {
@@ -80,7 +46,7 @@
 
 .evidence-summary-item {
   margin: 0;
-  padding-top: 0.75rem;
+  padding-top: var(--so-space-3);
   border-top: 1px solid var(--so-rule);
 }
 
@@ -94,20 +60,20 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.35rem 0.75rem;
-  margin-bottom: 0.25rem;
+  gap: 0.35rem var(--so-space-3);
+  margin-bottom: var(--so-space-1);
 }
 
 .evidence-summary-value {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--so-text-md);
   font-weight: 600;
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
 
 .evidence-summary-value--sm {
-  font-size: 0.9rem;
+  font-size: var(--so-text-sm);
   font-weight: 500;
 }
 
@@ -123,7 +89,7 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: var(--so-space-2);
   margin: 0 0 0.65rem;
   padding-top: 0.35rem;
   border-top: 1px solid var(--so-rule);
@@ -131,7 +97,7 @@
 
 .evidence-runs-title {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--so-text-md);
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.25;
@@ -143,9 +109,11 @@
   gap: 0;
   max-height: min(28rem, 70vh);
   overflow-y: auto;
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--so-space-3);
   padding: 0;
   min-width: 0;
+  /* Thin scrollbar (Amount parity); curtain via nq-curtain-y in TSX (V-16). */
+  scrollbar-width: thin;
 }
 
 /* —— EvidenceRow —— */
@@ -159,7 +127,7 @@
 
 .evidence-row:first-child {
   border-top: none;
-  padding-top: 0.25rem;
+  padding-top: var(--so-space-1);
 }
 
 .evidence-row-head {
@@ -167,7 +135,7 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.35rem 0.75rem;
+  gap: 0.35rem var(--so-space-3);
   margin-bottom: 0.35rem;
 }
 
@@ -177,7 +145,7 @@
 
 .evidence-row-window {
   margin: 0 0 0.65rem;
-  font-size: 0.82rem;
+  font-size: var(--so-text-xs);
   color: var(--so-ink);
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -186,7 +154,7 @@
 .evidence-row-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.55rem 0.75rem;
+  gap: 0.55rem var(--so-space-3);
   margin: 0 0 0.65rem;
   padding: 0;
 }
@@ -199,44 +167,44 @@
 .evidence-row-stat .nq-label {
   margin: 0 0 0.15rem;
   color: var(--so-muted);
-  font-size: 0.72rem;
+  font-size: var(--so-text-2xs);
   font-weight: 600;
   letter-spacing: 0.01em;
 }
 
 .evidence-row-stat-value {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--so-text-md);
   font-weight: 600;
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
 
 .evidence-row-txs {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--so-space-2);
   min-width: 0;
 }
 
 .evidence-row-txs .nq-label {
   margin: 0 0 0.3rem;
   color: var(--so-muted);
-  font-size: 0.68rem;
+  font-size: var(--so-text-2xs);
 }
 
 .evidence-tx-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem 0.75rem;
+  gap: 0.35rem var(--so-space-3);
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 .evidence-tx-link {
-  font-size: 0.85rem;
+  font-size: var(--so-text-sm);
   color: var(--so-info);
   text-decoration: none;
-  min-height: 44px;
+  min-height: var(--so-touch);
   display: inline-flex;
   align-items: center;
 }
@@ -248,13 +216,13 @@
 }
 
 .evidence-tx-more {
-  margin: 0.25rem 0 0;
-  font-size: 0.8rem;
+  margin: var(--so-space-1) 0 0;
+  font-size: var(--so-text-xs);
 }
 
 .evidence-row-no-tx {
-  margin: 0 0 0.5rem;
-  font-size: 0.85rem;
+  margin: 0 0 var(--so-space-2);
+  font-size: var(--so-text-sm);
 }
 
 .evidence-row-meta {
@@ -266,7 +234,7 @@
 
 .evidence-row-def {
   color: var(--so-muted);
-  font-size: 0.78rem;
+  font-size: var(--so-text-xs);
   line-height: 1.35;
 }
 
@@ -277,63 +245,62 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 0.65rem;
-  margin: 0 0 1rem;
-  padding: 1rem;
-  border-radius: 1rem;
+  margin: 0 0 var(--so-space-4);
+}
+
+/* Neutral empty chrome; error empty uses .so-notice--info instead (V-10). */
+.evidence-empty:not(.so-notice--info) {
+  padding: var(--so-space-4);
+  border-radius: var(--so-space-4);
   border: 1px solid var(--so-rule);
   background: var(--so-disabled-soft);
   /* Never failure red — insufficient data is neutral (METHODOLOGY §5). */
   color: var(--so-ink);
 }
 
-.evidence-empty--error {
-  background: color-mix(in srgb, var(--so-info-soft) 70%, var(--so-card));
-  border-color: var(--so-info);
-}
-
 .evidence-empty-label {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--so-text-md);
   font-weight: 700;
   color: var(--so-disabled-ink);
 }
 
 .evidence-retry,
 .evidence-load-more {
-  min-height: 44px;
-  margin-top: 0.25rem;
+  min-height: var(--so-touch);
+  margin-top: var(--so-space-1);
 }
 
 .evidence-load-more {
   align-self: flex-start;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--so-space-3);
 }
 
 /* —— Limitations block —— */
 
 .evidence-limitations {
-  margin-top: 0.5rem;
+  margin-top: var(--so-space-2);
   padding-top: 0.85rem;
   border-top: 1px solid var(--so-rule);
 }
 
 .evidence-limitations-title {
   margin: 0 0 0.35rem;
-  font-size: 0.95rem;
+  font-size: var(--so-text-md);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .evidence-limitations-lede {
-  margin: 0 0 0.5rem;
-  font-size: 0.85rem;
+  margin: 0 0 var(--so-space-2);
+  font-size: var(--so-text-sm);
 }
 
 .evidence-limitations-list {
   margin: 0 0 0.65rem;
   padding-left: 1.15rem;
   color: var(--so-muted);
-  font-size: 0.85rem;
+  font-size: var(--so-text-sm);
   line-height: 1.45;
 }
 
@@ -343,10 +310,6 @@
 
 .evidence-limitations-list li:last-child {
   margin-bottom: 0;
-}
-
-.mono {
-  font-family: var(--nq-font-mono, 'Fira Mono', monospace);
 }
 
 @media (max-width: 359px) {
