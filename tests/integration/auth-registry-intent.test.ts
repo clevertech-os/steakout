@@ -138,6 +138,9 @@ function notStakedEnvelope(addressBalance = 1_000_000): StakingPositionEnvelope 
     data: {
       state: 'NotStaked',
       accountBalanceLuna: addressBalance,
+      htlcBalanceLuna: 0,
+      walletBalanceLuna: addressBalance,
+      htlcCount: 0,
       staker: {
         activeLuna: 0,
         inactiveLuna: 0,
@@ -163,6 +166,9 @@ function activeEnvelope(
     data: {
       state: 'Active',
       accountBalanceLuna: 50_000,
+      htlcBalanceLuna: 0,
+      walletBalanceLuna: 50_000,
+      htlcCount: 0,
       staker: {
         activeLuna: 1_000_000,
         inactiveLuna: 0,

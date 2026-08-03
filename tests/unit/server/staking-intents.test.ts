@@ -48,6 +48,9 @@ function notStakedEnvelope(): StakingPositionEnvelope {
     data: {
       state: 'NotStaked',
       accountBalanceLuna: 1_000_000,
+      htlcBalanceLuna: 0,
+      walletBalanceLuna: 1_000_000,
+      htlcCount: 0,
       staker: {
         activeLuna: 0,
         inactiveLuna: 0,
@@ -73,6 +76,9 @@ function activeEnvelope(
     data: {
       state: 'Active',
       accountBalanceLuna: 50_000,
+      htlcBalanceLuna: 0,
+      walletBalanceLuna: 50_000,
+      htlcCount: 0,
       staker: {
         activeLuna: 5_000_000,
         inactiveLuna: 0,
@@ -97,6 +103,9 @@ function withdrawableEnvelope(): StakingPositionEnvelope {
     data: {
       state: 'Withdrawable',
       accountBalanceLuna: 0,
+      htlcBalanceLuna: 0,
+      walletBalanceLuna: 0,
+      htlcCount: 0,
       staker: {
         activeLuna: 0,
         inactiveLuna: 0,
@@ -120,6 +129,9 @@ function retiringEnvelope(): StakingPositionEnvelope {
     data: {
       state: 'Retiring',
       accountBalanceLuna: 0,
+      htlcBalanceLuna: 0,
+      walletBalanceLuna: 0,
+      htlcCount: 0,
       staker: {
         activeLuna: 1_000_000,
         inactiveLuna: 0,

@@ -120,6 +120,7 @@ describe('P2-15 integration — indexer', () => {
 
     let fetchCalls = 0
     const firstIndexer = new PayoutIndexer({
+      backfillDays: 0,
       database: firstDb,
       pageSize: 2,
       maxPages: 10,
@@ -151,6 +152,7 @@ describe('P2-15 integration — indexer', () => {
     databases.push(secondDb)
     let resumeCalls = 0
     const secondIndexer = new PayoutIndexer({
+      backfillDays: 0,
       database: secondDb,
       pageSize: 2,
       maxPages: 10,
@@ -184,6 +186,7 @@ describe('P2-15 integration — indexer', () => {
     const page = [tx('f'.repeat(64), 50), tx('g'.repeat(64), 49)]
     let attempts = 0
     const indexer = new PayoutIndexer({
+      backfillDays: 0,
       database,
       pageSize: 2,
       maxPages: 1,
@@ -222,6 +225,7 @@ describe('P2-15 integration — indexer', () => {
     insertValidator(database, 'NQ00 0000 0000 0000 0000 0000 0000 0000 0099', fixtureAddress)
 
     const indexer = new PayoutIndexer({
+      backfillDays: 0,
       database,
       rpcUrl: 'https://rpc.example.test',
       pageSize: 3,
@@ -275,6 +279,7 @@ describe('P2-15 integration — observations contract + evidence links', () => {
     ]
 
     const indexer = new PayoutIndexer({
+      backfillDays: 0,
       database,
       pageSize: 10,
       maxPages: 1,

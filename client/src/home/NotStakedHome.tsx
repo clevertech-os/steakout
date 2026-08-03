@@ -2,12 +2,12 @@
  * Home — connected, not staked (SPEC §6.1).
  */
 
-import Amount from '../components/Amount'
 import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
-import FreshnessTag from '../components/FreshnessTag'
 import type { StakingPositionEnvelope } from '../api/position'
 import OpenInNimiqPayQr from '../components/OpenInNimiqPayQr'
+import DisconnectButton from './DisconnectButton'
 import TestnetFaucetButton from './TestnetFaucetButton'
+import WalletBalance from './WalletBalance'
 
 export interface NotStakedHomeProps {
   address: string
@@ -29,13 +29,16 @@ export default function NotStakedHome({
   onRetry,
   onDisconnect,
 }: NotStakedHomeProps) {
-  const balance = envelope?.data.accountBalanceLuna ?? null
+  const data = envelope?.data
   const shortAddress = shortenAddress(address)
 
   return (
     <>
       <header className="shell-header page-header">
-        <h1 className="page-title">Not staked yet</h1>
+        <div className="home-title-row home-title-row--spread">
+          <h1 className="page-title">Not staked yet</h1>
+          <DisconnectButton onDisconnect={onDisconnect} />
+        </div>
         <p className="page-lede home-address" title={address}>
           {shortAddress}
         </p>
@@ -46,17 +49,6 @@ export default function NotStakedHome({
       ) : null}
 
       <section className="nq-card nq-card-lg shell-card home-card" aria-labelledby="home-balance-title">
-        <p className="card-kicker">Available balance</p>
-        <h2 id="home-balance-title" className="visually-hidden">
-          Account balance
-        </h2>
-
-        {loading && !envelope ? (
-          <p className="home-status" role="status">
-            Loading balance…
-          </p>
-        ) : null}
-
         {errorMessage ? (
           <div className="home-error-block">
             <p className="home-error" role="alert">
@@ -69,22 +61,15 @@ export default function NotStakedHome({
         ) : null}
 
         {!errorMessage ? (
-          <>
-            <p className="home-amount-row">
-              <Amount luna={balance} size="lg" label="Available balance" />
-            </p>
-            {balance == null && envelope ? (
-              <p className="nq-subline home-copy">
-                Balance unavailable from the read layer right now.
-              </p>
-            ) : null}
-            {envelope ? (
-              <FreshnessTag
-                updatedAt={envelope.updatedAt}
-                ageSeconds={envelope.dataFreshness.ageSeconds}
-              />
-            ) : null}
-          </>
+          <WalletBalance
+            accountBalanceLuna={data?.accountBalanceLuna ?? null}
+            htlcBalanceLuna={data?.htlcBalanceLuna ?? 0}
+            walletBalanceLuna={data?.walletBalanceLuna ?? null}
+            htlcCount={data?.htlcCount ?? 0}
+            loading={loading && !envelope}
+            updatedAt={envelope?.updatedAt}
+            ageSeconds={envelope?.dataFreshness.ageSeconds}
+          />
         ) : null}
 
         <div className="home-estimate">
@@ -106,9 +91,6 @@ export default function NotStakedHome({
           <a className="nq-pill-secondary home-cta" href="#/learn/staking">
             How staking works
           </a>
-          <button type="button" className="nq-ghost-btn home-cta" onClick={onDisconnect}>
-            Disconnect
-          </button>
         </div>
 
         {/* Stake-only QR on connected home — session already active here. */}

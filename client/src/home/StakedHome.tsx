@@ -17,7 +17,9 @@ import {
   RETIRE_PROGRESS_WITHDRAWABLE,
 } from '../staking/copy'
 import { maxRemoveLuna, maxRetireLuna } from '../staking/amounts'
+import DisconnectButton from './DisconnectButton'
 import TestnetFaucetButton from './TestnetFaucetButton'
+import WalletBalance from './WalletBalance'
 
 export interface StakedHomeProps {
   address: string
@@ -51,9 +53,12 @@ export default function StakedHome({
   return (
     <>
       <header className="shell-header page-header">
-        <div className="home-title-row">
-          <h1 className="page-title">Staked</h1>
-          <PositionStateBadge state={state} />
+        <div className="home-title-row home-title-row--spread">
+          <div className="home-title-row">
+            <h1 className="page-title">Staked</h1>
+            <PositionStateBadge state={state} />
+          </div>
+          <DisconnectButton onDisconnect={onDisconnect} />
         </div>
         <p className="page-lede home-address" title={address}>
           {shortAddress}
@@ -240,9 +245,20 @@ export default function StakedHome({
           )}
 
           <TestnetFaucetButton address={address} onFunded={onRetry} />
-          <button type="button" className="nq-ghost-btn home-cta" onClick={onDisconnect}>
-            Disconnect
-          </button>
+        </div>
+
+        <div className="home-liquid-wallet" aria-labelledby="home-liquid-title">
+          <h3 id="home-liquid-title" className="visually-hidden">
+            Unstaked wallet balance
+          </h3>
+          <WalletBalance
+            accountBalanceLuna={data.accountBalanceLuna}
+            htlcBalanceLuna={data.htlcBalanceLuna ?? 0}
+            walletBalanceLuna={data.walletBalanceLuna ?? data.accountBalanceLuna}
+            htlcCount={data.htlcCount ?? 0}
+            updatedAt={updatedAt}
+            ageSeconds={dataFreshness.ageSeconds}
+          />
         </div>
 
         {retirableLuna > 0 && state !== 'Withdrawable' && state !== 'Pending' ? (

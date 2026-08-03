@@ -307,6 +307,7 @@ describe('readStakingPosition', () => {
       address: TEST_ADDRESS,
       now: () => clock.now,
       bypassCache: true,
+      skipHtlcScan: true,
       getAccount: async () => ({
         address: spaced(TEST_ADDRESS),
         balance: 0,
@@ -327,6 +328,9 @@ describe('readStakingPosition', () => {
       data: {
         state: 'NotStaked',
         accountBalanceLuna: 0,
+        htlcBalanceLuna: 0,
+        walletBalanceLuna: 0,
+        htlcCount: 0,
         staker: {
           activeLuna: 0,
           inactiveLuna: 0,
@@ -357,6 +361,7 @@ describe('readStakingPosition', () => {
       database,
       address: TEST_ADDRESS,
       bypassCache: true,
+      skipHtlcScan: true,
       hasPendingTx: false,
       getAccount: async () => ({
         address: spaced(TEST_ADDRESS),
@@ -377,6 +382,57 @@ describe('readStakingPosition', () => {
     expect(envelope.data.staker.validatorName).toBe('Listed Pool')
     expect(envelope.data.staker.activeLuna).toBe(9_000_000)
     expect(envelope.data.accountBalanceLuna).toBe(50_000)
+    expect(envelope.data.walletBalanceLuna).toBe(50_000)
+    expect(envelope.data.htlcBalanceLuna).toBe(0)
+  })
+
+  it('walletBalanceLuna includes open HTLC as sender (Pay-aligned total)', async () => {
+    const htlcAddr = 'NQ26 J7L5 8FX6 T8RT T58G 5DE1 U0MF VGLR P0T1'
+    const envelope = await readStakingPosition({
+      database,
+      address: TEST_ADDRESS,
+      bypassCache: true,
+      skipHtlcScan: false,
+      getAccount: async (addr) => {
+        const compact = addr.replace(/\s+/g, '')
+        if (compact === htlcAddr.replace(/\s+/g, '')) {
+          return {
+            address: htlcAddr,
+            balance: 33_000_000_000,
+            type: 'htlc',
+            sender: spaced(TEST_ADDRESS),
+            recipient: 'NQ54 FTGY F6VJ EJPU NSMN RA5Q 0K21 8EQT Q05P',
+          }
+        }
+        return {
+          address: spaced(TEST_ADDRESS),
+          balance: 0,
+          type: 'basic',
+        }
+      },
+      getTransactions: async () => [
+        {
+          hash: 'bb'.repeat(32),
+          from: spaced(TEST_ADDRESS),
+          to: htlcAddr,
+          value: 33_000_000_000,
+          fee: 0,
+          executionResult: true,
+        },
+      ],
+      getStaker: async () => {
+        throw new Error(
+          'RPC getStakerByAddress returned an error: Internal error: No staker with address: NQ00',
+        )
+      },
+      getBlock: async () => 1,
+    })
+
+    expect(envelope.data.state).toBe('NotStaked')
+    expect(envelope.data.accountBalanceLuna).toBe(0)
+    expect(envelope.data.htlcBalanceLuna).toBe(33_000_000_000)
+    expect(envelope.data.walletBalanceLuna).toBe(33_000_000_000)
+    expect(envelope.data.htlcCount).toBe(1)
   })
 
   it('null validator name when registry empty but position still returned', async () => {
@@ -384,6 +440,7 @@ describe('readStakingPosition', () => {
       database,
       address: TEST_ADDRESS,
       bypassCache: true,
+      skipHtlcScan: true,
       getAccount: async () => ({
         address: spaced(TEST_ADDRESS),
         balance: 1,
@@ -406,6 +463,7 @@ describe('readStakingPosition', () => {
       database,
       address: TEST_ADDRESS,
       bypassCache: true,
+      skipHtlcScan: true,
       getAccount: async () => {
         throw new Error('account down')
       },
@@ -427,6 +485,7 @@ describe('readStakingPosition', () => {
       database,
       address: TEST_ADDRESS,
       bypassCache: true,
+      skipHtlcScan: true,
       getAccount: async () => ({ address: TEST_ADDRESS, balance: 0, type: 'basic' }),
       getStaker: async () =>
         makeStakerFixture({ balance: 0, inactiveBalance: 0, retiredBalance: 7 }),
@@ -438,6 +497,7 @@ describe('readStakingPosition', () => {
       database,
       address: 'NQ1111111111111111111111111111111111',
       bypassCache: true,
+      skipHtlcScan: true,
       getAccount: async () => ({
         address: 'NQ1111111111111111111111111111111111',
         balance: 0,
@@ -464,6 +524,7 @@ describe('readStakingPosition', () => {
       address: TEST_ADDRESS,
       now: () => nowMs,
       bypassCache: true,
+      skipHtlcScan: true,
       getAccount: async () => ({ address: TEST_ADDRESS, balance: 0, type: 'basic' }),
       getStaker: async () => {
         throw new Error('No staker with address: ' + TEST_ADDRESS)
@@ -510,6 +571,7 @@ describe('readStakingPosition', () => {
         database,
         address: TEST_ADDRESS,
         bypassCache: true,
+      skipHtlcScan: true,
         getAccount: async () => ({ address: TEST_ADDRESS, balance: 0, type: 'basic' }),
         getStaker: async () => {
           throw new Error('RPC getStakerByAddress timed out after 10000ms')
@@ -524,6 +586,7 @@ describe('readStakingPosition', () => {
       database,
       address: TEST_ADDRESS,
       bypassCache: true,
+      skipHtlcScan: true,
       getAccount: async () => ({ address: TEST_ADDRESS, balance: 99, type: 'basic' }),
       getStaker: async () =>
         ({
@@ -564,6 +627,7 @@ describe('readStakingPosition', () => {
         database,
         address: 'NQ00 0000 0000 0000 0000 0000 0000 0000 0000',
         bypassCache: true,
+      skipHtlcScan: true,
         hasPendingTx: false,
       })
       expect(envelope.data.state).toBe('NotStaked')

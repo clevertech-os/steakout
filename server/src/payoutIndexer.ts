@@ -4,8 +4,13 @@ import { fetchTransactionsByAddress, type NimiqTransaction } from './nimiq-rpc.j
 
 const MAX_RPC_PAGE_SIZE = 500
 const DEFAULT_PAGE_SIZE = 500
-/** Deep first-pass backfill. History older than the cursor is never re-fetched on later cycles. */
-const DEFAULT_MAX_PAGES = 100
+/**
+ * Safety cap on pages per address (newest→oldest). Real stop for history is
+ * usually INDEXER_BACKFILL_DAYS; pages prevent runaway walks on busy addresses.
+ */
+const DEFAULT_MAX_PAGES = 300
+/** Prefer ~30 days of reward-address history (SPEC / schedule grading). */
+const DEFAULT_BACKFILL_DAYS = 30
 const DEFAULT_MAX_ATTEMPTS = 5
 const DEFAULT_RETRY_BASE_MS = 2_000
 const DEFAULT_RETRY_MAX_MS = 5 * 60_000
@@ -38,7 +43,15 @@ export interface PayoutIndexerOptions {
   maxPages?: number
   /** Concurrent addresses per cycle (public RPC rate limits favor 1). */
   addressConcurrency?: number
+  /** Hard block floor (optional). Prefer backfillDays for time-based depth. */
   backfillFloorBlock?: number
+  /**
+   * How far back to walk on a deep pass (no cursor, or after rebackfill).
+   * 0 = disabled (page budget only). Default 30.
+   */
+  backfillDays?: number
+  /** Clock for backfillDays (tests). */
+  nowMs?: () => number
   maxAttempts?: number
   retryBaseMs?: number
   retryMaxMs?: number
@@ -73,6 +86,17 @@ export interface IndexerLastCycleStats {
   durationMs: number
 }
 
+export interface IndexerCycleProgress {
+  /** True while a runCycle is in flight. */
+  running: boolean
+  startedAt: string | null
+  addressesTotal: number
+  addressesDone: number
+  fetched: number
+  inserted: number
+  errorCount: number
+}
+
 export interface IndexerHealth {
   lastRunAt: string | null
   addressesIndexed: number
@@ -80,6 +104,8 @@ export interface IndexerHealth {
   /** Total successful runCycle invocations since process start. */
   cycleCount: number
   lastCycle: IndexerLastCycleStats | null
+  /** Live progress for the cycle currently running (null when idle). */
+  currentCycle: IndexerCycleProgress | null
 }
 
 interface CursorRow {
@@ -173,6 +199,8 @@ export class PayoutIndexer {
   private readonly maxPages: number
   private readonly addressConcurrency: number
   private readonly backfillFloorBlock: number
+  private readonly backfillDays: number
+  private readonly nowMs: () => number
   private readonly fetchTransactions: NonNullable<PayoutIndexerOptions['fetchTransactions']>
   private readonly logger: (line: string) => void
   private readonly getCurrentBlock: (() => Promise<number>) | undefined
@@ -183,6 +211,7 @@ export class PayoutIndexer {
     lagBlocks: null,
     cycleCount: 0,
     lastCycle: null,
+    currentCycle: null,
   }
 
   public constructor(options: PayoutIndexerOptions) {
@@ -196,19 +225,45 @@ export class PayoutIndexer {
       Math.max(1, options.addressConcurrency ?? DEFAULT_ADDRESS_CONCURRENCY),
     )
     this.backfillFloorBlock = Math.max(0, options.backfillFloorBlock ?? 0)
+    this.backfillDays = Math.max(0, options.backfillDays ?? DEFAULT_BACKFILL_DAYS)
+    this.nowMs = options.nowMs ?? Date.now
     this.fetchTransactions = options.fetchTransactions ?? fetchTransactionsByAddress
     this.getCurrentBlock = options.getCurrentBlock
     this.logger = options.logger ?? ((line) => console.log(line))
     this.retryOptions = options
   }
 
+  /** ISO cut-off for deep walks: txs older than this are not ingested. */
+  private backfillFloorIso(): string | null {
+    if (this.backfillDays <= 0) return null
+    const floorMs = this.nowMs() - this.backfillDays * 24 * 60 * 60 * 1000
+    return new Date(floorMs).toISOString()
+  }
+
   public getHealth(): IndexerHealth {
-    return { ...this.health }
+    return {
+      ...this.health,
+      currentCycle: this.health.currentCycle ? { ...this.health.currentCycle } : null,
+      lastCycle: this.health.lastCycle ? { ...this.health.lastCycle } : null,
+    }
   }
 
   public async runCycle(addresses: readonly string[]): Promise<AddressIndexResult[]> {
     const cycleStarted = performance.now()
     const uniqueAddresses = [...new Set(addresses.map((address) => address.trim()).filter(Boolean))]
+    const startedAt = new Date().toISOString()
+    this.health = {
+      ...this.health,
+      currentCycle: {
+        running: true,
+        startedAt,
+        addressesTotal: uniqueAddresses.length,
+        addressesDone: 0,
+        fetched: 0,
+        inserted: 0,
+        errorCount: 0,
+      },
+    }
     this.logger(
       JSON.stringify({
         indexer: 'cycle-start',
@@ -216,11 +271,26 @@ export class PayoutIndexer {
         maxPages: this.maxPages,
         pageSize: this.pageSize,
         addressConcurrency: this.addressConcurrency,
+        backfillDays: this.backfillDays,
       }),
     )
-    const results = await mapWithConcurrency(uniqueAddresses, this.addressConcurrency, (address) =>
-      this.runAddress(address),
-    )
+    const results = await mapWithConcurrency(uniqueAddresses, this.addressConcurrency, async (address) => {
+      const result = await this.runAddress(address)
+      const cur = this.health.currentCycle
+      if (cur) {
+        this.health = {
+          ...this.health,
+          currentCycle: {
+            ...cur,
+            addressesDone: cur.addressesDone + 1,
+            fetched: cur.fetched + result.fetched,
+            inserted: cur.inserted + result.inserted,
+            errorCount: cur.errorCount + result.errors.length,
+          },
+        }
+      }
+      return result
+    })
     const inserted = results.reduce((sum, row) => sum + row.inserted, 0)
     const fetched = results.reduce((sum, row) => sum + row.fetched, 0)
     const errorCount = results.flatMap((row) => row.errors).length
@@ -237,6 +307,7 @@ export class PayoutIndexer {
         errorCount,
         durationMs,
       },
+      currentCycle: null,
     }
     this.logger(
       JSON.stringify({
@@ -272,6 +343,8 @@ export class PayoutIndexer {
       let startAt: string | null = null
       let nextCursor: IndexCursor | null = null
       const seenPageCursors = new Set<string>()
+      // Time floor only on deep walks (no cursor). Incremental cycles stop at cursor.
+      const timeFloorIso = cursor == null ? this.backfillFloorIso() : null
 
       for (let pageNumber = 0; pageNumber < this.maxPages; pageNumber += 1) {
         const rawPage = await retry(
@@ -289,6 +362,14 @@ export class PayoutIndexer {
 
         for (const transaction of normalizedPage) {
           if (transaction.blockNumber < this.backfillFloorBlock) {
+            floorReached = true
+            break
+          }
+          if (
+            timeFloorIso != null &&
+            transaction.timestamp < timeFloorIso
+          ) {
+            // Newest-first: older than target window → stop this address.
             floorReached = true
             break
           }
@@ -313,11 +394,20 @@ export class PayoutIndexer {
 
         if (floorReached) break
         if (cursor && boundaryReached) break
+        // Full page of txs all older than floor → already broke; empty pageTransactions
+        // after floor on first row still needs to stop pagination.
+        if (pageTransactions.length === 0 && floorReached) break
         const lastRaw = normalizedPage[normalizedPage.length - 1]
         const nextStartAt = lastRaw.hash
         if (seenPageCursors.has(nextStartAt)) break
         seenPageCursors.add(nextStartAt)
         startAt = nextStartAt
+        // If every kept tx filled the page but we hit floor mid-page, we already broke.
+        // If page was fully older than floor, pageTransactions empty and floorReached.
+        if (pageTransactions.length === 0 && !boundaryReached) {
+          // Empty of new txs without cursor boundary usually means all filtered by floor.
+          if (floorReached || timeFloorIso != null) break
+        }
       }
 
       const commit = this.database.transaction(() => {
@@ -520,17 +610,20 @@ export function indexerOptionsFromEnv(): {
   pageSize: number
   maxPages: number
   addressConcurrency: number
+  backfillDays: number
 } {
   const pageSize = Number(process.env.INDEXER_PAGE_SIZE ?? DEFAULT_PAGE_SIZE)
   const maxPages = Number(process.env.INDEXER_MAX_PAGES ?? DEFAULT_MAX_PAGES)
   const addressConcurrency = Number(
     process.env.INDEXER_ADDRESS_CONCURRENCY ?? DEFAULT_ADDRESS_CONCURRENCY,
   )
+  const backfillDays = Number(process.env.INDEXER_BACKFILL_DAYS ?? DEFAULT_BACKFILL_DAYS)
   return {
     pageSize: Number.isFinite(pageSize) ? pageSize : DEFAULT_PAGE_SIZE,
     maxPages: Number.isFinite(maxPages) ? maxPages : DEFAULT_MAX_PAGES,
     addressConcurrency: Number.isFinite(addressConcurrency)
       ? addressConcurrency
       : DEFAULT_ADDRESS_CONCURRENCY,
+    backfillDays: Number.isFinite(backfillDays) ? Math.max(0, backfillDays) : DEFAULT_BACKFILL_DAYS,
   }
 }

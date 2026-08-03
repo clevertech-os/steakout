@@ -108,11 +108,20 @@ export function createApp(options: AppOptions) {
       return
     }
     try {
+      // ?fresh=1 skips the short in-process cache (faucet / post-tx balance checks).
+      const fresh =
+        request.query.fresh === '1' ||
+        request.query.fresh === 'true' ||
+        request.query.fresh === 'yes'
       const envelope = await readStakingPosition({
         database: options.database,
         address,
+        bypassCache: fresh,
       })
-      response.setHeader('Cache-Control', positionCacheControlHeader())
+      response.setHeader(
+        'Cache-Control',
+        fresh ? 'private, no-store' : positionCacheControlHeader(),
+      )
       response.json(envelope)
     } catch (error) {
       if (error instanceof PositionReadError) {

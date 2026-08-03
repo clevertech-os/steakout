@@ -1,6 +1,6 @@
 /**
- * Desktop: single Pay deeplink QR.
- * Optionally runs desktop↔phone session pairing (login on desktop after Pay login).
+ * Desktop: Pay QR for opening Steakout in Nimiq Pay.
+ * Optionally pairs phone login → desktop session (no Hub popup).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -21,6 +21,10 @@ import {
 } from '../nimiq'
 import './OpenInNimiqPayQr.css'
 
+const IS_TESTNET =
+  (import.meta.env.VITE_NIMIQ_NETWORK ?? 'mainnet').trim().toLowerCase() === 'testnet' ||
+  (import.meta.env.VITE_NIMIQ_NETWORK ?? 'mainnet').trim().toLowerCase() === 'test'
+
 export interface OpenInNimiqPayQrProps {
   appUrl?: string
   compact?: boolean
@@ -32,6 +36,36 @@ export interface OpenInNimiqPayQrProps {
   linkDesktopSession?: boolean
   /** Called after desktop successfully claims the phone session. */
   onDesktopLinked?: (address: string) => void
+}
+
+function AppStoreIcon() {
+  return (
+    <svg
+      className="open-in-pay-qr-store-icon"
+      width={18}
+      height={18}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+    </svg>
+  )
+}
+
+function PlayStoreIcon() {
+  return (
+    <svg
+      className="open-in-pay-qr-store-icon"
+      width={18}
+      height={18}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M3.61 1.81 13.79 12 3.61 22.19a.99.99 0 0 1-.61-.92V2.73c0-.4.24-.75.61-.92zm10.89 10.89 2.3 2.3-10.93 6.33 8.63-8.63zm3.2-3.2 2.81 1.63a1 1 0 0 1 0 1.73l-2.81 1.63L15.21 12l2.49-2.5zM5.86 2.66 16.8 8.99l-2.3 2.3-8.64-8.63z" />
+    </svg>
+  )
 }
 
 export default function OpenInNimiqPayQr({
@@ -155,6 +189,20 @@ export default function OpenInNimiqPayQr({
     .filter(Boolean)
     .join(' ')
 
+  const pairStatusText = pairError
+    ? pairError
+    : linking
+      ? 'Approved. Signing you in…'
+      : pairStatus === 'waiting'
+        ? 'Waiting for connection…'
+        : pairStatus === 'claimed'
+          ? 'Signed in.'
+          : pairStatus === 'expired'
+            ? 'Link expired. Refresh for a new QR.'
+            : pairId
+              ? 'Preparing…'
+              : 'Preparing QR…'
+
   return (
     <section className={rootClass} aria-labelledby="open-in-pay-qr-title">
       <h2 id="open-in-pay-qr-title" className="open-in-pay-qr-title">
@@ -162,8 +210,8 @@ export default function OpenInNimiqPayQr({
       </h2>
       <p className="open-in-pay-qr-lede">
         {linkDesktopSession
-          ? 'Scan with your phone to open Steakout inside Nimiq Pay. After you connect there, approve linking — this desktop browser will sign in as the same wallet (no Hub popup).'
-          : 'Scan to open Steakout inside Nimiq Pay for staking. Use testnet in Pay when testing.'}
+          ? 'Scan with your phone. Connect in Pay, then approve to sign in here.'
+          : 'Scan to open Steakout inside Nimiq Pay.'}
       </p>
 
       {loopback ? (
@@ -190,51 +238,51 @@ export default function OpenInNimiqPayQr({
             src={qrSrc}
             width={compact ? 180 : 220}
             height={compact ? 180 : 220}
-            alt="QR code: open Steakout in Nimiq Pay"
+            alt="QR code to open Steakout in Nimiq Pay"
           />
-          <figcaption className="open-in-pay-qr-caption">Nimiq Pay deeplink</figcaption>
         </figure>
       </div>
 
-      <p className="open-in-pay-qr-url mono" title={payDeepLink}>
-        {payDeepLink}
-      </p>
-
       <div className="open-in-pay-qr-actions">
         <button type="button" className="nq-pill-secondary open-in-pay-qr-btn" onClick={() => void copy()}>
-          {copied ? 'Copied Pay link' : 'Copy Pay link'}
+          {copied ? 'Copied' : 'Copy link'}
         </button>
       </div>
 
       {linkDesktopSession ? (
         <p className="open-in-pay-qr-pair-status" role="status">
-          {pairError
-            ? pairError
-            : linking
-              ? 'Phone approved — signing this browser in…'
-              : pairStatus === 'waiting'
-                ? 'Waiting for you to connect in Pay and approve desktop link…'
-                : pairStatus === 'claimed'
-                  ? 'Desktop signed in.'
-                  : pairStatus === 'expired'
-                    ? 'Link expired — refresh the page for a new QR.'
-                    : pairId
-                      ? 'Preparing secure link…'
-                      : 'Preparing QR…'}
+          {pairStatusText}
         </p>
       ) : null}
 
-      <p className="open-in-pay-qr-hint nq-subline">
-        Install Pay:{' '}
-        <a href={NIMIQ_PAY_IOS_URL} target="_blank" rel="noreferrer">
-          iOS
-        </a>
-        {' · '}
-        <a href={NIMIQ_PAY_ANDROID_URL} target="_blank" rel="noreferrer">
-          Android
-        </a>
-        . Use <strong>testnet</strong> when testing with faucet NIM.
-      </p>
+      <div className="open-in-pay-qr-stores">
+        <p className="open-in-pay-qr-stores-label nq-label">Get Nimiq Pay</p>
+        <div className="open-in-pay-qr-store-row">
+          <a
+            className="open-in-pay-qr-store"
+            href={NIMIQ_PAY_IOS_URL}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Download Nimiq Pay on the App Store"
+          >
+            <AppStoreIcon />
+            <span>App Store</span>
+          </a>
+          <a
+            className="open-in-pay-qr-store"
+            href={NIMIQ_PAY_ANDROID_URL}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Download Nimiq Pay on Google Play"
+          >
+            <PlayStoreIcon />
+            <span>Google Play</span>
+          </a>
+        </div>
+        {IS_TESTNET ? (
+          <p className="open-in-pay-qr-hint nq-subline">Use testnet in Pay when testing with faucet NIM.</p>
+        ) : null}
+      </div>
     </section>
   )
 }

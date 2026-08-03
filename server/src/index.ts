@@ -43,6 +43,7 @@ const payoutIndexer = new PayoutIndexer({
   pageSize: indexerEnv.pageSize,
   maxPages: indexerEnv.maxPages,
   addressConcurrency: indexerEnv.addressConcurrency,
+  backfillDays: indexerEnv.backfillDays,
 })
 const app = createApp({
   database,
@@ -64,6 +65,7 @@ if (process.env.INDEXER_ENABLED === 'true') {
       maxPages: indexerEnv.maxPages,
       pageSize: indexerEnv.pageSize,
       addressConcurrency: indexerEnv.addressConcurrency,
+      backfillDays: indexerEnv.backfillDays,
       intervalMinutes,
     }),
   )

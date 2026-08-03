@@ -28,15 +28,18 @@
 import type Database from 'better-sqlite3'
 import { normalizeAddress } from './addresses.js'
 import {
+  fetchTransactionsByAddress,
   getAccountByAddress,
   getBlockNumber,
   getStakerByAddress,
   isStakerNotFoundError,
   type NimiqAccount,
   type NimiqStaker,
+  type NimiqTransaction,
   RpcError,
   toRpcApiError,
 } from './nimiq-rpc.js'
+import { readWalletBalanceBreakdown } from './walletBalance.js'
 
 /** Client-visible position enum (API.md §5 / ARCHITECTURE.md §8). */
 export type PositionState =
@@ -67,7 +70,23 @@ export interface StakerBalances {
 
 export interface StakingPositionData {
   state: PositionState
+  /**
+   * Free basic-account balance (on the session address).
+   * Stake amount presets use this; HTLC-held NIM may not be stakeable until Pay settles it.
+   */
   accountBalanceLuna: number | null
+  /**
+   * Open HTLC balances where this address is the contract sender (Pay payment contracts).
+   * Verified observation from RPC account type + sender.
+   */
+  htlcBalanceLuna: number
+  /**
+   * Free + open HTLC as sender — aligned with what Nimiq Pay typically shows as wallet total.
+   * Null only when the free-balance read failed.
+   */
+  walletBalanceLuna: number | null
+  /** Distinct open HTLC contracts included in htlcBalanceLuna. */
+  htlcCount: number
   staker: StakerBalances & { validatorName: string | null }
   retire: { withdrawableAt: string | null }
   lastRewardObservation: {
@@ -172,6 +191,30 @@ export interface ReadPositionOptions {
   getAccount?: (address: string) => Promise<NimiqAccount>
   getStaker?: (address: string) => Promise<NimiqStaker>
   getBlock?: () => Promise<number>
+  getTransactions?: (
+    address: string,
+    max: number,
+  ) => Promise<NimiqTransaction[]>
+  /** Skip HTLC wallet scan (default false). */
+  skipHtlcScan?: boolean
+}
+
+function balanceFields(
+  accountBalanceLuna: number | null,
+  htlc: { htlcBalanceLuna: number; htlcCount: number },
+): Pick<
+  StakingPositionData,
+  'accountBalanceLuna' | 'htlcBalanceLuna' | 'walletBalanceLuna' | 'htlcCount'
+> {
+  return {
+    accountBalanceLuna,
+    htlcBalanceLuna: htlc.htlcBalanceLuna,
+    walletBalanceLuna:
+      accountBalanceLuna == null
+        ? null
+        : accountBalanceLuna + htlc.htlcBalanceLuna,
+    htlcCount: htlc.htlcCount,
+  }
 }
 
 interface CacheEntry {
@@ -317,22 +360,27 @@ export async function readStakingPosition(
   const getAccount = options.getAccount ?? ((addr: string) => getAccountByAddress(addr, options.rpcUrl))
   const getStaker = options.getStaker ?? ((addr: string) => getStakerByAddress(addr, options.rpcUrl))
   const getBlock = options.getBlock ?? (() => getBlockNumber(options.rpcUrl))
+  const getTransactions =
+    options.getTransactions ??
+    ((addr: string, max: number) =>
+      fetchTransactionsByAddress(addr, max, null, options.rpcUrl))
 
   const pending =
     options.hasPendingTx ??
     hasPendingStakingIntent(options.database, address, nowMs)
 
-  let accountBalanceLuna: number | null = null
-  let accountOk = false
-  try {
-    const account = await getAccount(address)
-    if (typeof account.balance === 'number' && Number.isFinite(account.balance)) {
-      accountBalanceLuna = nonNegInt(account.balance)
-      accountOk = true
-    }
-  } catch {
-    accountOk = false
-    accountBalanceLuna = null
+  // Free basic + open HTLCs as sender (Pay-aligned wallet total).
+  const wallet = await readWalletBalanceBreakdown({
+    address,
+    getAccount,
+    getTransactions,
+    skipHtlcScan: options.skipHtlcScan,
+  })
+  const accountBalanceLuna = wallet.accountBalanceLuna
+  const accountOk = accountBalanceLuna != null
+  const htlcFields = {
+    htlcBalanceLuna: wallet.htlcBalanceLuna,
+    htlcCount: wallet.htlcCount,
   }
 
   let staker: NimiqStaker | null = null
@@ -370,7 +418,7 @@ export async function readStakingPosition(
       dataFreshness: { ageSeconds: 0 },
       data: {
         state: 'NotStaked',
-        accountBalanceLuna,
+        ...balanceFields(accountBalanceLuna, htlcFields),
         staker: {
           activeLuna: 0,
           inactiveLuna: 0,
@@ -399,7 +447,7 @@ export async function readStakingPosition(
       dataFreshness: { ageSeconds: 0 },
       data: {
         state: 'NotStaked',
-        accountBalanceLuna,
+        ...balanceFields(accountBalanceLuna, htlcFields),
         staker: { ...balances, validatorName: null },
         retire: { withdrawableAt: null },
         lastRewardObservation: null,
@@ -418,7 +466,7 @@ export async function readStakingPosition(
     dataFreshness: { ageSeconds: 0 },
     data: {
       state,
-      accountBalanceLuna,
+      ...balanceFields(accountBalanceLuna, htlcFields),
       staker: {
         ...balances,
         validatorName,

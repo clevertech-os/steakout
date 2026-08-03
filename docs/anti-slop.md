@@ -69,6 +69,9 @@ Components consume **`--so-*` only** outside `tokens.css`. No raw palette vars i
 ### Patterns that already work
 
 - **One primary action** per screen; secondary stays secondary
+- **Less is more** — clean display beats info overload (`STYLING.md` §8)
+- **Minimum jargon** on primary surfaces; technical detail secondary or in Learn
+- **Assist, don't decorate with data** — hide strictly informational fields that do not help the user act or understand their position
 - **Status chips + definitions** (StatusChip + one-sentence affordance)
 - **Honest empty / insufficient data** — never invent 0%, never “missed payment”
 - **Mono for amounts, hashes, blocks, timestamps**
@@ -156,6 +159,8 @@ Run before marking UI work done. Prefer scoped iterations if something fails.
 ### Hierarchy & layout
 
 - [ ] One clear primary CTA; secondary actions look secondary
+- [ ] Less is more: no strictly-informational clutter; clean display over info overload
+- [ ] Jargon minimized on primary surfaces (technical detail progressive-disclosed or Learn)
 - [ ] Bottom nav destinations intact (no fifth mystery tab)
 - [ ] Official Trust Score visually distinct from Steakout observation
 - [ ] Spacing has rhythm (not equal 16px soup and not random gaps)

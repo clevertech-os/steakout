@@ -104,7 +104,6 @@ export default function Home() {
           error={wallet.error}
           mobilePayConnect={wallet.mobilePayConnect}
           inNimiqPay={wallet.inNimiqPay}
-          showOpenInPay={wallet.showOpenInPay}
           onConnect={handleConnect}
           onConnectPay={wallet.mobilePayConnect ? handleConnectPay : undefined}
           onDesktopLinked={handleDesktopLinked}
@@ -177,7 +176,11 @@ export default function Home() {
                 Connect again
               </button>
             ) : (
-              <button type="button" className="nq-pill-blue nq-pill-lg home-cta" onClick={position.refresh}>
+              <button
+                type="button"
+                className="nq-pill-blue nq-pill-lg home-cta"
+                onClick={() => position.refresh({ fresh: true })}
+              >
                 Try again
               </button>
             )}

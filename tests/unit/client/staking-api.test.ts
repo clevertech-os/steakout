@@ -130,6 +130,9 @@ describe('confirmStakingIntent', () => {
           position: {
             state: 'Active',
             accountBalanceLuna: 0,
+            htlcBalanceLuna: 0,
+            walletBalanceLuna: 0,
+            htlcCount: 0,
             staker: {
               activeLuna: 100_000,
               inactiveLuna: 0,
@@ -188,6 +191,9 @@ describe('pollConfirmStakingIntent', () => {
           position: {
             state: 'Active',
             accountBalanceLuna: null,
+            htlcBalanceLuna: 0,
+            walletBalanceLuna: null,
+            htlcCount: 0,
             staker: {
               activeLuna: 1,
               inactiveLuna: 0,

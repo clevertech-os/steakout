@@ -99,7 +99,7 @@ export interface UseWalletResult {
 
 const PAY_DEEPLINK_FALLBACK_MS = 1800
 const PAY_INSTALL_HINT =
-  'Nimiq Pay was not detected on this phone. Install the app, or continue with Nimiq Hub.'
+  'Nimiq Pay was not detected on this phone. Install the app, then try again.'
 const PAY_HANDOFF_HINT =
   'Continue in Nimiq Pay to finish login. This browser tab stays separate and will not show that session.'
 
@@ -474,11 +474,8 @@ export function useWallet(options: UseWalletOptions = {}): UseWalletResult {
             }
             setShowOpenInPay(true)
             setWalletStatus(null)
-            setError(
-              isMobileDevice()
-                ? PAY_INSTALL_HINT
-                : 'Sign in with Nimiq Pay using the QR below. Desktop Hub login is disabled so staking uses the same Pay address on phone and desktop.',
-            )
+            // Desktop: QR on the home card is the path — do not surface a noisy error.
+            setError(isMobileDevice() ? PAY_INSTALL_HINT : null)
             return
           }
 

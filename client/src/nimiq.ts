@@ -829,7 +829,7 @@ export function getPhoneReachablePayDeepLink(appUrl?: string): string {
 
 /**
  * QR image URL for a payload (no extra npm dependency).
- * Uses a public QR API; the encoded string is still shown as plain text for offline fallback.
+ * Uses a public QR API. UI copies the payload via “Copy link” rather than showing the raw URL.
  */
 export function buildQrImageUrl(payload: string, size = 220): string {
   const dim = Math.max(120, Math.min(400, Math.floor(size)))

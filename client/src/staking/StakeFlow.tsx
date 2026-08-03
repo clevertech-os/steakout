@@ -941,7 +941,11 @@ export default function StakeFlow(props: StakeFlowProps) {
 
             <div className="stake-flow-balance">
               <p className="nq-label">
-                {isRetire ? 'Retirable (active + inactive)' : isRemove ? 'Removable (retired)' : 'Available'}
+                {isRetire
+                  ? 'Retirable (active + inactive)'
+                  : isRemove
+                    ? 'Removable (retired)'
+                    : 'Free on address'}
               </p>
               <Amount
                 luna={isLifecycle ? poolLuna : (availableLuna ?? null)}
@@ -950,7 +954,7 @@ export default function StakeFlow(props: StakeFlowProps) {
                     ? 'Retirable stake'
                     : isRemove
                       ? 'Removable stake'
-                      : 'Available balance'
+                      : 'Free on address'
                 }
               />
               <p className="stake-flow-muted">
@@ -961,7 +965,13 @@ export default function StakeFlow(props: StakeFlowProps) {
                 <p className="stake-flow-muted">
                   {isRetire ? RETIRE_POOL_NOTE : REMOVE_POOL_NOTE}
                 </p>
-              ) : null}
+              ) : (
+                <p className="stake-flow-muted">
+                  Stake amounts use free on-address balance (not Pay payment
+                  contracts). Wallet total in Pay may be higher when NIM is in
+                  HTLCs for fast transfers.
+                </p>
+              )}
             </div>
 
             {otherValidator ? (

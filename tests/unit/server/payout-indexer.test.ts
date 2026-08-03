@@ -9,11 +9,15 @@ import { createMockRpc } from '../../helpers/mockRpc.js'
 
 const address = 'NQ00 0000 0000 0000 0000 0000 0000 0000 0001'
 
-function transaction(hash: string, blockNumber: number): NimiqTransaction {
+function transaction(
+  hash: string,
+  blockNumber: number,
+  timestampMs = 1_700_000_000_000 + blockNumber,
+): NimiqTransaction {
   return {
     hash,
     blockNumber,
-    timestamp: 1_700_000_000_000 + blockNumber,
+    timestamp: timestampMs,
     from: address,
     to: address,
     value: 100,
@@ -40,6 +44,7 @@ describe('payout indexer', () => {
     })
     vi.stubGlobal('fetch', rpc.fetch)
     const indexer = new PayoutIndexer({
+      backfillDays: 0,
       database,
       rpcUrl: 'https://rpc.example.test',
       pageSize: 3,
@@ -61,6 +66,7 @@ describe('payout indexer', () => {
     `).run('rpc:main', address, 10, 'z'.repeat(64))
     const firstPage = [transaction('c'.repeat(64), 20), transaction('d'.repeat(64), 19)]
     const indexer = new PayoutIndexer({
+      backfillDays: 0,
       database,
       pageSize: 2,
       maxPages: 2,
@@ -87,6 +93,7 @@ describe('payout indexer', () => {
     const database = openDatabase(':memory:')
     databases.push(database)
     const indexer = new PayoutIndexer({
+      backfillDays: 0,
       database,
       pageSize: 2,
       maxPages: 2,
@@ -113,6 +120,7 @@ describe('payout indexer', () => {
       VALUES (?, ?, ?, ?)
     `).run('rpc:main', address, 42, 'a'.repeat(64))
     const indexer = new PayoutIndexer({
+      backfillDays: 0,
       database,
       pageSize: 2,
       maxPages: 1,
@@ -142,6 +150,8 @@ describe('payout indexer', () => {
       database,
       pageSize: 2,
       maxPages: 1,
+      // Disable day floor so synthetic 2023-era timestamps still insert.
+      backfillDays: 0,
       fetchTransactions: async () => page,
     })
 
@@ -156,6 +166,35 @@ describe('payout indexer', () => {
     })
   })
 
+  it('stops a deep walk at INDEXER_BACKFILL_DAYS (keeps only ~30d window)', async () => {
+    const database = openDatabase(':memory:')
+    databases.push(database)
+    const now = Date.parse('2026-08-03T12:00:00.000Z')
+    const day = 24 * 60 * 60 * 1000
+    const page = [
+      transaction('n'.repeat(64), 300, now - 1 * day), // 1 day ago — keep
+      transaction('m'.repeat(64), 200, now - 10 * day), // 10 days — keep
+      transaction('o'.repeat(64), 100, now - 40 * day), // 40 days — stop, exclude
+    ]
+    const indexer = new PayoutIndexer({
+      database,
+      pageSize: 10,
+      maxPages: 5,
+      backfillDays: 30,
+      nowMs: () => now,
+      fetchTransactions: async () => page,
+    })
+
+    const [result] = await indexer.runCycle([address])
+
+    expect(result?.errors).toEqual([])
+    expect(result?.inserted).toBe(2)
+    const hashes = database
+      .prepare('SELECT hash FROM transactions ORDER BY block_number DESC')
+      .all() as Array<{ hash: string }>
+    expect(hashes.map((r) => r.hash)).toEqual(['n'.repeat(64), 'm'.repeat(64)])
+  })
+
   it('recovers the cursor and advances it to the newest transaction after reopening', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'steakout-indexer-'))
     temporaryDirectories.push(directory)
@@ -166,6 +205,7 @@ describe('payout indexer', () => {
     const firstDatabase = openDatabase(filename)
     databases.push(firstDatabase)
     const firstIndexer = new PayoutIndexer({
+      backfillDays: 0,
       database: firstDatabase,
       pageSize: 2,
       maxPages: 1,
@@ -178,6 +218,7 @@ describe('payout indexer', () => {
     const secondDatabase = openDatabase(filename)
     databases.push(secondDatabase)
     const secondIndexer = new PayoutIndexer({
+      backfillDays: 0,
       database: secondDatabase,
       pageSize: 2,
       maxPages: 1,

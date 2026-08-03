@@ -155,10 +155,21 @@ Session check → `{ address, sessionExpiresAt }` or `WALLET_NOT_CONNECTED`.
 
 ### `GET /api/me/staking-position`
 
+Authenticated live account + staker read for the session address. Query: optional `fresh=1` skips the short in-process cache (use after faucet or external funding so available balance is not stale for up to ~10s).
+
+Balance fields are Pay-aligned:
+
+- `accountBalanceLuna` — free basic balance on the session address (stake sizing baseline).
+- `htlcBalanceLuna` / `htlcCount` — open HTLCs where this address is the **sender** (Pay payment contracts). Verified observation via RPC account type + sender.
+- `walletBalanceLuna` — free + open HTLC as sender (matches what Nimiq Pay typically shows as wallet total). Null only when the free-balance read failed.
+
 ```jsonc
 {
   "state": "NotStaked" | "Pending" | "Active" | "Inactive" | "Retiring" | "Withdrawable",
-  "accountBalanceLuna": 0,            // nullable if account read fails
+  "accountBalanceLuna": 0,            // free basic; nullable if account read fails
+  "htlcBalanceLuna": 0,               // open HTLCs as sender (Pay contracts)
+  "walletBalanceLuna": 0,             // free + htlc; nullable if free read fails
+  "htlcCount": 0,
   "staker": {
     "activeLuna": 0, "inactiveLuna": 0, "retiredLuna": 0, "totalLuna": 0,
     "delegation": "NQ.. | null",

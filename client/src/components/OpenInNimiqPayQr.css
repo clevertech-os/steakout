@@ -1,10 +1,10 @@
-/* Open in Nimiq Pay — desktop QR handoff */
+/* Open in Nimiq Pay — desktop QR handoff (sparse: QR first, no raw deeplink) */
 
 .open-in-pay-qr {
   display: flex;
   flex-direction: column;
   gap: var(--so-space-3);
-  margin-top: var(--so-space-4);
+  margin-top: 0;
   padding: var(--so-space-4);
   border-radius: var(--so-radius-md, 12px);
   border: 1px solid color-mix(in srgb, var(--so-border, #d0d4e0) 80%, transparent);
@@ -20,17 +20,20 @@
   margin: 0;
   font-size: var(--so-text-lg, 1.05rem);
   letter-spacing: -0.02em;
+  text-align: center;
 }
 
 .open-in-pay-qr-lede,
 .open-in-pay-qr-hint {
   margin: 0;
   line-height: 1.45;
-  color: var(--so-ink, #1f2348);
+  color: var(--so-muted, #5c637a);
+  text-align: center;
 }
 
 .open-in-pay-qr-lede {
   font-size: var(--so-text-md, 0.95rem);
+  color: var(--so-ink, #1f2348);
 }
 
 .open-in-pay-qr-warn {
@@ -55,31 +58,14 @@
   word-break: break-all;
 }
 
-.open-in-pay-qr-steps {
-  margin: 0;
-  padding-left: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.open-in-pay-qr-warn-note {
-  opacity: 0.9;
-  font-size: 0.92em;
-}
-
-.open-in-pay-qr-url--muted {
-  opacity: 0.75;
-  font-size: 0.75rem;
-}
-
 .open-in-pay-qr-pair-status {
   margin: 0;
   text-align: center;
   font-size: var(--so-text-sm, 0.85rem);
-  color: var(--so-ink, #1f2348);
-  font-weight: 600;
+  color: var(--so-muted, #5c637a);
+  font-weight: 500;
 }
+
 .open-in-pay-qr-grid {
   display: flex;
   flex-wrap: wrap;
@@ -104,24 +90,6 @@
   box-shadow: 0 1px 3px rgb(31 35 72 / 12%);
 }
 
-.open-in-pay-qr-img--secondary {
-  opacity: 0.95;
-}
-
-.open-in-pay-qr-caption {
-  font-size: var(--so-text-sm, 0.8rem);
-  color: var(--so-muted, #5c637a);
-  text-align: center;
-}
-
-.open-in-pay-qr-url {
-  margin: 0;
-  font-size: var(--so-text-sm, 0.8rem);
-  word-break: break-all;
-  color: var(--so-muted, #5c637a);
-  text-align: center;
-}
-
 .open-in-pay-qr-actions {
   display: flex;
   flex-wrap: wrap;
@@ -133,8 +101,60 @@
   min-height: 44px;
 }
 
-/* Inherits global text-link color; keep standing underline in dense hint copy. */
-.open-in-pay-qr-hint a {
-  text-decoration: underline;
-  text-underline-offset: 0.15em;
+/* App Store / Google Play install row */
+.open-in-pay-qr-stores {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--so-space-2);
+  margin-top: var(--so-space-1);
+  padding-top: var(--so-space-3);
+  border-top: 1px solid color-mix(in srgb, var(--so-rule, #d0d4e0) 80%, transparent);
+}
+
+.open-in-pay-qr-stores-label {
+  margin: 0;
+  color: var(--so-muted, #5c637a);
+  text-align: center;
+}
+
+.open-in-pay-qr-store-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--so-space-2);
+  justify-content: center;
+  width: 100%;
+}
+
+.open-in-pay-qr-store {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  min-width: 8.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--so-border, #d0d4e0) 90%, transparent);
+  background: var(--so-card, #fff);
+  color: var(--so-ink, #1f2348);
+  font-size: var(--so-text-sm, 0.85rem);
+  font-weight: 600;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.open-in-pay-qr-store:hover,
+.open-in-pay-qr-store:focus-visible {
+  border-color: var(--so-ink, #1f2348);
+  outline: none;
+}
+
+.open-in-pay-qr-store-icon {
+  flex-shrink: 0;
+  display: block;
+}
+
+.open-in-pay-qr-hint {
+  font-size: var(--so-text-sm, 0.8rem);
 }

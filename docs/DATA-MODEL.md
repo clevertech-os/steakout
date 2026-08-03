@@ -132,7 +132,7 @@ The indexer is the most time-sensitive asset — history only accumulates with w
 
 - **v1 scope:** the ~24 listed validators' reward addresses; expand to all observable validators once stable (decision gate P0-09).
 - **Poll cadence:** every 30–60 min per address.
-- **Backfill:** ≥ 7 days minimum, 14–30 days preferred; every profile displays its actual `historyDepthDays`.
+- **Backfill:** target **30 days** via `INDEXER_BACKFILL_DAYS` (deep walk newest→oldest until that age or `INDEXER_MAX_PAGES`). Then only forward from the cursor. Every profile displays its actual `historyDepthDays` (grade bands still need ≥7 / ≥14 days).
 
 ### Algorithm (per address, per cycle)
 

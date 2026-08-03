@@ -940,6 +940,9 @@ export async function confirmStakingIntent(
       data: {
         state: 'NotStaked',
         accountBalanceLuna: null,
+        htlcBalanceLuna: 0,
+        walletBalanceLuna: null,
+        htlcCount: 0,
         staker: {
           activeLuna: 0,
           inactiveLuna: 0,

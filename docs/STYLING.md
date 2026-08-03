@@ -166,6 +166,19 @@ These don't exist in nimiq-css; build them in `client/src/components/` with co-l
 
 **Don't:** neon crypto gradients, dense exchange tables on mobile, fake precision (`99.83% trust`), guarantee-implying badges, dark-glass-everywhere, aggressive red alarms for ordinary uncertainty.
 
+### Information density (binding)
+
+**Less is more. Clean display beats info overload.**
+
+| Rule | Meaning |
+|---|---|
+| **Less is more** | Prefer a calm, sparse instrument over a dense dashboard. One primary fact and one primary action per view when possible. |
+| **Minimum jargon** | Plain language on primary surfaces. Technical terms (Luna, window IDs, raw hashes, indexer status) stay secondary, progressive-disclosed, or in Learn — never the default headline. |
+| **Assist, don't decorate with data** | Do not display information that is strictly informational and does not help the user act or understand their position. If a field does not change a decision or answer “what do I do next?”, it does not belong on the default surface. |
+| **Clean display > info overload** | When choosing between showing more detail and a quieter layout, choose the quieter layout. Prefer progressive disclosure, “Learn more”, or expandable detail over always-on secondary metadata. |
+
+**Still required (not “noise”):** honest-metric discipline from the product invariants — status definition, source, freshness, and data-status labels when a metric is shown. Those labels exist so the user can trust what they see; they are not filler. What this section bans is *extra* chrome and telemetry that does not aid the staker (debug-ish fields, redundant restatements, dense secondary stats stacks, always-visible technical IDs).
+
 ## 9. Anti-slop (agents — mandatory for UI work)
 
 Before restyling or adding chrome, load **[`anti-slop.md`](anti-slop.md)** (ported from VeriLock `journey-anti-slop.md`).
