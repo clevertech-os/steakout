@@ -34,7 +34,7 @@ Board: [README.md](README.md#phase-0--de-risk-spike-aug-29)
 **Verification:** clean clone → `npm install && npm run build && npm test && npm run dev` (manual boot check).
 
 **Notes:**
--
+- Implementation complete. Mainnet block probe and guarded `/spike` route verified. Device verification remains blocked: no Nimiq Pay testnet session, provider injection, account listing, signing result, or signature fixture yet. The configured testnet RPC hostname currently fails DNS resolution.
 
 ---
 
@@ -64,7 +64,7 @@ Board: [README.md](README.md#phase-0--de-risk-spike-aug-29)
 **Verification:** human runs the route inside Nimiq Pay testnet and confirms the report matches the screen; `npm test` green.
 
 **Notes:**
--
+- Implementation complete. Mainnet block probe and guarded `/spike` route verified. Device verification remains blocked: no Nimiq Pay testnet session, provider injection, account listing, signing result, or signature fixture yet. The configured testnet RPC hostname currently fails DNS resolution.
 
 ---
 
@@ -128,7 +128,7 @@ Board: [README.md](README.md#phase-0--de-risk-spike-aug-29)
 **Verification:** probe reruns green against testnet; fixtures load in a vitest sanity test.
 
 **Notes:**
--
+- Implementation complete with sanitized mainnet fixtures and probe tests. Testnet staker/account fixtures, rate-limit behavior, and lifecycle-state verification remain blocked pending a working testnet RPC/address.
 
 ---
 

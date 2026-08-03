@@ -1,0 +1,103 @@
+{
+  "capture": "P0-04 RPC read-layer probe",
+  "endpoint": "https://rpc.nimiqwatch.com/",
+  "network": "mainnet",
+  "capturedAt": "2026-08-03T05:19:16.215Z",
+  "timeoutMs": 10000,
+  "transactionPageSize": 3,
+  "redaction": {
+    "userAddressInputs": "replaced with deterministic NQ00 test addresses",
+    "validatorAddresses": "retained as public chain data",
+    "secrets": "probe refuses fields named seed, mnemonic, privateKey, passphrase, or secret"
+  },
+  "captures": [
+    {
+      "file": "p0-04-get-block-number-mainnet.json",
+      "method": "getBlockNumber",
+      "params": [],
+      "httpStatus": 200,
+      "latencyMs": 564,
+      "retryAfter": null,
+      "outcome": "result"
+    },
+    {
+      "file": "p0-04-validator-by-address-mainnet.json",
+      "method": "getValidatorByAddress",
+      "params": [
+        "NQ26 0000 0000 02A5 YAK7 4QNF 9MH0 TE2B GVRU"
+      ],
+      "httpStatus": 200,
+      "latencyMs": 168,
+      "retryAfter": null,
+      "outcome": "result"
+    },
+    {
+      "file": "p0-04-active-validators-mainnet.json",
+      "method": "getActiveValidators",
+      "params": [],
+      "httpStatus": 200,
+      "latencyMs": 333,
+      "retryAfter": null,
+      "outcome": "result"
+    },
+    {
+      "file": "p0-04-account-by-address-mainnet.json",
+      "method": "getAccountByAddress",
+      "params": [
+        "NQ00 0000 0000 0000 0000 0000 0000 0000 0000"
+      ],
+      "httpStatus": 200,
+      "latencyMs": 164,
+      "retryAfter": null,
+      "outcome": "result"
+    },
+    {
+      "file": "p0-04-staker-by-address-mainnet.json",
+      "method": "getStakerByAddress",
+      "params": [
+        "NQ00 0000 0000 0000 0000 0000 0000 0000 0000"
+      ],
+      "httpStatus": 200,
+      "latencyMs": 206,
+      "retryAfter": null,
+      "outcome": "error"
+    },
+    {
+      "file": "p0-04-transactions-by-address-page-1-mainnet.json",
+      "method": "getTransactionsByAddress",
+      "params": [
+        "NQ26 0000 0000 02A5 YAK7 4QNF 9MH0 TE2B GVRU",
+        3,
+        null
+      ],
+      "httpStatus": 200,
+      "latencyMs": 159,
+      "retryAfter": null,
+      "outcome": "result"
+    },
+    {
+      "file": "p0-04-transactions-by-address-page-2-mainnet.json",
+      "method": "getTransactionsByAddress",
+      "params": [
+        "NQ26 0000 0000 02A5 YAK7 4QNF 9MH0 TE2B GVRU",
+        3,
+        "07f7a5e236aad83e3631c0544ab4756cba091ebf5ced6593669b750c8afa8a73"
+      ],
+      "httpStatus": 200,
+      "latencyMs": 165,
+      "retryAfter": null,
+      "outcome": "result"
+    },
+    {
+      "file": "p0-04-transaction-by-hash-mainnet.json",
+      "method": "getTransactionByHash",
+      "params": [
+        "07f7a5e236aad83e3631c0544ab4756cba091ebf5ced6593669b750c8afa8a73"
+      ],
+      "httpStatus": 200,
+      "latencyMs": 202,
+      "retryAfter": null,
+      "outcome": "result"
+    }
+  ]
+}

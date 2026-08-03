@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node --import tsx src/index.ts",
-    "build": "tsc --noEmit"
+    "build": "tsc --noEmit",
+    "probe:rpc": "tsx scripts/probe-rpc.ts"
   },
   "engines": {
     "node": ">=22"

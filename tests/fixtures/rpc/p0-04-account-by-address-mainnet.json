@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "data": {
+      "address": "NQ00 0000 0000 0000 0000 0000 0000 0000 0000",
+      "balance": 0,
+      "type": "basic"
+    },
+    "metadata": {
+      "blockNumber": 57873410,
+      "blockHash": "d1f9105a8ec5693c2c5c5091e2a60e0d5c8a560eacbfcb8d62e9678bce64b17a"
+    }
+  },
+  "id": 1
+}

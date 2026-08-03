@@ -1,0 +1,76 @@
+.spike-shell {
+  padding-top: 2rem;
+}
+
+.spike-card {
+  padding: clamp(1.25rem, 5vw, 2.5rem);
+}
+
+.spike-intro {
+  max-width: 48ch;
+}
+
+.spike-results {
+  display: grid;
+  gap: 0.75rem;
+  margin: 2rem 0;
+}
+
+.spike-results div {
+  display: grid;
+  gap: 0.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--so-rule);
+}
+
+.spike-results dt,
+.spike-challenge span,
+.spike-signature span,
+.spike-status {
+  color: var(--so-muted);
+  font-size: 0.8rem;
+}
+
+.spike-results dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: 'Fira Mono', monospace;
+  font-size: 0.9rem;
+}
+
+.spike-challenge,
+.spike-signature {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+.spike-challenge code,
+.spike-signature code {
+  overflow-wrap: anywhere;
+  color: var(--so-ink);
+  font-family: 'Fira Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.spike-error {
+  padding: 0.75rem;
+  border: 1px solid var(--so-accent);
+  color: var(--so-accent) !important;
+}
+
+.spike-status {
+  margin: 1rem 0 0;
+}
+
+@media (min-width: 600px) {
+  .spike-shell {
+    padding-top: 7rem;
+  }
+
+  .spike-results div {
+    grid-template-columns: 12rem 1fr;
+    align-items: baseline;
+  }
+}

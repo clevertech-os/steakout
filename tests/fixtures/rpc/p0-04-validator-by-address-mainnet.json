@@ -1,0 +1,22 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "data": {
+      "address": "NQ26 0000 0000 02A5 YAK7 4QNF 9MH0 TE2B GVRU",
+      "signingKey": "dd408f4bfa675278ea65f19f8df194860ede92d25c89b58659e9fa2781c48bb4",
+      "votingKey": "8fd5fde6ab3f3f7fa606053ad69cb219be3c60bc33416567c0d9c883fa8e633ab5174fa58519ec7d843239e4d5fe57c82c1c1f1e8c290d2ec9c163b556e698acc0d24e44d6a153abbd092519c1d52fd09dcf95e0a152dfb7f029df026e6800bc80bbfd5b27e17ef6794b16bf2c907669f6b3061529fa594ae261c2a04b31c16e3712e459e0e7ca15794ef65e157e1536c895a441272fe3515416770da1548fb4b7d687a063492584b1680374f554008eb5d6199a13196a395112d3977f000feab2281aa8c31858bb78fae547bc74711278aff9d13e3def2600dca4f1a2ee1d649f88d9e843f40c4f293b5ad9907d10318913c4eee16a22f23688930876a022cec50f47574843466bc812b65bbf821ad3f331460cabc76baaaa0a540d81",
+      "rewardAddress": "NQ26 0000 0000 02A5 YAK7 4QNF 9MH0 TE2B GVRU",
+      "signalData": null,
+      "balance": 16686193528398,
+      "numStakers": 9,
+      "inactivityFlag": null,
+      "retired": false,
+      "jailedFrom": null
+    },
+    "metadata": {
+      "blockNumber": 57873409,
+      "blockHash": "527fef12932471b60b6ee4d712d2e6933e5cd6b1d305bdebbe17c7e10e006285"
+    }
+  },
+  "id": 1
+}

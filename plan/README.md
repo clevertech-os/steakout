@@ -45,10 +45,10 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 
 | ID | Task | Team | Depends on | Status |
 |---|---|---|---|---|
-| P0-01 | App scaffold & engineering baseline | Implementation | — | backlog |
-| P0-02 | Mini App SDK smoke screen | Implementation | P0-01 | backlog |
+| P0-01 | App scaffold & engineering baseline | Implementation | — | done |
+| P0-02 | Mini App SDK smoke screen | Implementation | P0-01 | blocked: device verification |
 | P0-03 | Testnet staking-method spike | Implementation | P0-02 | backlog (human-assisted) |
-| P0-04 | RPC read-layer probe + fixtures | Implementation | P0-01 | backlog |
+| P0-04 | RPC read-layer probe + fixtures | Implementation | P0-01 | blocked: testnet fixtures |
 | P0-05 | Validators API ingestion probe | Implementation | P0-01 | backlog |
 | P0-06 | Schema + payout indexer live | Implementation | P0-04, P0-05 | backlog |
 | P0-07 | Direct-payout classification spike | Implementation | P0-06 | backlog |

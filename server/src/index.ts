@@ -12,6 +12,9 @@ const app = createApp()
 
 const clientDist = new URL('../../client/dist/', import.meta.url)
 app.use(express.static(clientDist.pathname))
+app.get(['/spike', '/spike/'], (_request, response) => {
+  response.sendFile(new URL('../../client/dist/index.html', import.meta.url).pathname)
+})
 
 const server = app.listen(port, () => {
   console.log(`Steakout server listening on http://localhost:${port}`)
