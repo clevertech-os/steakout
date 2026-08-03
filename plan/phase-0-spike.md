@@ -98,7 +98,7 @@ Board: [README.md](README.md#phase-0--de-risk-spike-aug-29)
 **Verification:** report reviewed by owner; tx hashes independently resolvable via RPC/explorer.
 
 **Notes:**
--
+- The guarded six-method harness is implemented at `/spike/staking-methods`. It requires explicit testnet acknowledgement and per-method clicks, refuses non-testnet providers, and records raw result/error data. All device-dependent observations, transaction hashes, and staking fixtures remain unresolved until a Nimiq Pay testnet session is available.
 
 ---
 
@@ -191,7 +191,7 @@ Board: [README.md](README.md#phase-0--de-risk-spike-aug-29)
 **Verification:** `tests/integration` cursor/restart test (with P0-08 harness); deploy logs pasted in Notes.
 
 **Notes:**
--
+- Local schema, incremental indexer, retry/cursor logic, scheduler entry, health fields, and regression tests are complete. Cursor advancement was corrected for existing cursors. Deployment continuity (24 hours) and live testnet reward-address indexing remain blocked; see `docs/spikes/indexer.md`.
 
 ---
 

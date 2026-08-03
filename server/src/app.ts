@@ -2,8 +2,13 @@ import cors from 'cors'
 import express from 'express'
 import helmet from 'helmet'
 import { getBlockNumber } from './nimiq-rpc.js'
+import type { IndexerHealth } from './payoutIndexer.js'
 
-export function createApp() {
+export interface AppOptions {
+  getIndexerHealth?: () => IndexerHealth
+}
+
+export function createApp(options: AppOptions = {}) {
   const app = express()
   const configuredOrigins = process.env.CORS_ORIGIN?.split(',').map((origin) => origin.trim())
 
@@ -17,7 +22,8 @@ export function createApp() {
   app.use(express.json())
 
   app.get('/api/health', (_request, response) => {
-    response.json({ ok: true })
+    const indexer = options.getIndexerHealth?.()
+    response.json(indexer ? { ok: true, indexer } : { ok: true })
   })
 
   app.get('/api/spike/block-number', async (_request, response) => {

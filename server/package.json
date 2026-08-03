@@ -7,6 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "start": "node --import tsx src/index.ts",
     "build": "tsc --noEmit",
+    "index:payouts": "tsx scripts/index-payouts.ts",
     "probe:rpc": "tsx scripts/probe-rpc.ts"
   },
   "engines": {

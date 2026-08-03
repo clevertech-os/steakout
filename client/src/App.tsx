@@ -1,4 +1,5 @@
 import SdkSmoke from './spike/SdkSmoke'
+import StakingMethods from './spike/StakingMethods'
 
 function App() {
   const path = window.location.pathname.replace(/\/+$/, '') || '/'
@@ -21,6 +22,26 @@ function App() {
     }
 
     return <SdkSmoke />
+  }
+
+  if (path === '/spike/staking-methods') {
+    if (!import.meta.env.DEV && import.meta.env.VITE_ENABLE_STAKING_SPIKE !== 'true') {
+      return (
+        <main className="shell">
+          <header className="shell-header">
+            <p className="eyebrow">Steakout</p>
+            <h1>Unavailable</h1>
+          </header>
+          <section className="nq-card nq-card-lg shell-card" aria-labelledby="staking-spike-disabled-title">
+            <p className="card-kicker">P0-03 staking-method spike</p>
+            <h2 id="staking-spike-disabled-title">This route is disabled.</h2>
+            <p>The staking-method harness is not enabled in this build.</p>
+          </section>
+        </main>
+      )
+    }
+
+    return <StakingMethods />
   }
 
   return (

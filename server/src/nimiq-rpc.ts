@@ -14,6 +14,18 @@ export interface NimiqValidator {
   [key: string]: unknown
 }
 
+export interface NimiqTransaction {
+  hash: string
+  blockNumber?: number
+  timestamp?: number
+  from: string
+  to: string
+  value: number
+  fee: number
+  executionResult: boolean
+  [key: string]: unknown
+}
+
 async function requestRpcData<T>(
   method: string,
   params: unknown[],
@@ -88,4 +100,36 @@ export async function getValidatorByAddress(
   }
 
   return validator as NimiqValidator
+}
+
+export async function fetchTransactionsByAddress(
+  address: string,
+  max = 500,
+  startAt: string | null = null,
+  rpcUrl = process.env.NIMIQ_RPC_URL,
+): Promise<NimiqTransaction[]> {
+  const transactions = await requestRpcData<unknown>(
+    'getTransactionsByAddress',
+    [address, max, startAt],
+    rpcUrl,
+  )
+  if (!Array.isArray(transactions)) {
+    throw new Error('RPC transactions response is malformed')
+  }
+
+  return transactions.map((transaction) => {
+    if (
+      typeof transaction !== 'object' ||
+      transaction === null ||
+      typeof transaction.hash !== 'string' ||
+      typeof transaction.from !== 'string' ||
+      typeof transaction.to !== 'string' ||
+      typeof transaction.value !== 'number' ||
+      typeof transaction.fee !== 'number' ||
+      typeof transaction.executionResult !== 'boolean'
+    ) {
+      throw new Error('RPC transaction response is malformed')
+    }
+    return transaction as NimiqTransaction
+  })
 }
