@@ -39,6 +39,8 @@ RUN npm ci --omit=dev
 
 COPY --from=build /app/client/dist ./client/dist
 COPY --from=build /app/server/src ./server/src
+# Public canary probe roster (addresses only — no private keys)
+COPY --from=build /app/server/config ./server/config
 
 RUN mkdir -p /data
 
