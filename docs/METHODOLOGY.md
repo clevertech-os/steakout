@@ -46,8 +46,8 @@ Group outbound transactions into runs: txs within a **60-minute sliding window**
 
 ### 4.2 Schedule adherence
 
-- Normalize declared schedules only for unambiguous forms: `hourly`, `every N hours`, `daily`, `twice daily` (case-insensitive, trivial punctuation tolerated).
-- Anything else → `normalizable: false`, show the raw declaration and the raw observed runs. **Never grade a free-text schedule.**
+- Normalize declared schedules only for unambiguous forms: `hourly`, `every N hours` / `hrs` / `hr` / `h`, `daily`, `twice daily`, and hour-level cron `0 * * * *`, `0 */N * * *`, `0 0 * * *` (case-insensitive, trivial punctuation tolerated; calc_version 2).
+- Anything else → `normalizable: false`, show the raw declaration and the raw observed runs. **Never grade a free-text schedule.** Minute-level cron and free-text policies stay non-normalizable.
 - Adherence = observed windows ÷ expected windows over the analysis window, mapped to §3 labels.
 
 ### 4.3 Recipient coverage

@@ -292,25 +292,69 @@ export function mergeSnapshots(
   return [...byCompact.values()]
 }
 
+/** Permanent RPC / chain misses — do not thrash retries within the same cycle. */
+function isPermanentRewardResolveError(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : ''
+  if (/no validator with address/i.test(message)) return true
+  if (
+    error !== null
+    && typeof error === 'object'
+    && 'retriable' in error
+    && (error as { retriable: unknown }).retriable === false
+    && /validator/i.test(message)
+  ) {
+    return true
+  }
+  return false
+}
+
 async function resolveMissingRewards(
   validators: NormalizedValidator[],
   existing: Map<string, string | null>,
   resolver: RewardAddressResolver,
+  logger: (message: string) => void = defaultLogger,
 ): Promise<number> {
   let resolved = 0
+  let permanentFailures = 0
+  const permanentKeys = new Set<string>()
   for (const validator of validators) {
     const key = compactKey(validator.address)
     if (validator.rewardAddress) continue
     if (existing.get(key)) continue
+    // Skip addresses that already hard-failed this cycle (no spam retries).
+    if (permanentKeys.has(key)) continue
     try {
       const reward = await resolver(validator.address)
       if (reward) {
         validator.rewardAddress = reward
         resolved += 1
       }
-    } catch {
-      // Leave null; next sync can backfill. Do not fail the whole cycle.
+    } catch (error) {
+      // Leave null; next sync can backfill retriable errors. Do not fail the cycle.
+      if (isPermanentRewardResolveError(error)) {
+        permanentKeys.add(key)
+        permanentFailures += 1
+        // One line per address per cycle — not per transport attempt.
+        logger(JSON.stringify({
+          validatorSync: 'reward-resolve-permanent',
+          address: validator.address,
+          name: validator.name,
+          message: error instanceof Error ? error.message.slice(0, 200) : 'permanent resolve failure',
+        }))
+      }
     }
+  }
+  if (permanentFailures > 0) {
+    logger(JSON.stringify({
+      validatorSync: 'reward-resolve-summary',
+      permanentFailures,
+      resolved,
+    }))
   }
   return resolved
 }
@@ -339,7 +383,12 @@ export async function syncValidators(options: ValidatorSyncOptions): Promise<Syn
     // Prefer injected resolver; when none, only resolve if fetchOptions would have
     // (tests inject; production wires resolveRewardAddress via start options).
     if (options.fetchOptions?.resolveRewardAddress) {
-      rewardAddressesResolved = await resolveMissingRewards(merged, existing, resolver)
+      rewardAddressesResolved = await resolveMissingRewards(
+        merged,
+        existing,
+        resolver,
+        logger,
+      )
     } else {
       // Live path: use validators-api default RPC resolver via a one-off fetch helper.
       const { getValidatorByAddress } = await import('./nimiq-rpc.js')
@@ -350,6 +399,7 @@ export async function syncValidators(options: ValidatorSyncOptions): Promise<Syn
           const validator = await getValidatorByAddress(address, options.fetchOptions?.rpcUrl)
           return validator.rewardAddress
         },
+        logger,
       )
     }
   }

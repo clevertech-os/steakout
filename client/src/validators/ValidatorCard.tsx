@@ -165,7 +165,15 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
             Steakout observation
           </span>
           {/* Live status from list API (schedule-adherence when indexed; else insufficient-data). */}
-          <StatusChip status={validator.observation.status} />
+          <StatusChip
+            status={validator.observation.status}
+            definition={
+              validator.observation.status === 'insufficient-data' &&
+              validator.observation.historyDepthDays >= 7
+                ? 'Declared schedule cannot be normalized for adherence grading, or not enough expected windows; raw observations may still be available.'
+                : undefined
+            }
+          />
           {validator.observation.historyDepthDays > 0 ? (
             <span className="validator-card-depth">
               {Math.floor(validator.observation.historyDepthDays)}d history

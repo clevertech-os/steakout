@@ -57,3 +57,14 @@ Priority: accumulate as much payout history as the public RPC will serve.
 Live boot log confirmed: `rewardAddresses: 21`, `maxPages: 100`, `cycle-start` with 21 addresses. Public RPC 429s are normal; backoff continues until pages empty or the page budget is exhausted.
 
 3 listed validators still lack a reward address (RPC `getValidatorByAddress` returns “No validator…” for some registry rows) — they cannot be indexed until resolve succeeds.
+
+## Self-hosted / historical RPC
+
+A private full or archive node helps when:
+
+- Public RPC history retention is shallower than the analysis window you want
+- Public rate limits (429s) slow multi-address backfill
+
+Point `NIMIQ_RPC_URL` at that node (methods in [rpc-reads.md](rpc-reads.md), especially `getTransactionsByAddress` + `startAt`). Optionally set `NIMIQ_RPC_URL_FALLBACK` to a public endpoint. After switching RPC, one-shot `INDEXER_REBACKFILL=true` re-walks from the tip if cursors already stop short of the new node’s history.
+
+A historical node does **not** fix schedule normalization: free-text and minute-level declarations stay non-normalizable regardless of depth (METHODOLOGY §4.2). Use `npm run audit:rewards --prefix server` to list listed validators missing `reward_address` or outbound txs.

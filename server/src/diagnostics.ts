@@ -84,6 +84,91 @@ interface CursorSummaryRow {
   updated_at: string
 }
 
+/**
+ * Compact listed-validator gaps for operators: missing reward address and/or
+ * zero indexed outbound txs. Fingerprints only — no full addresses.
+ * Shared shape with the audit script summary counts.
+ */
+export function summarizeRewardAddressGaps(database: Database.Database): {
+  listedTotal: number
+  missingRewardAddress: number
+  zeroIndexedTxs: number
+  /** Fingerprinted samples (max 12) for correlation with the audit script. */
+  samples: Array<{
+    id: string
+    missingReward: boolean
+    outboundTxCount: number
+    hasCursor: boolean
+  }>
+} {
+  const rows = database.prepare(`
+    SELECT
+      v.address AS address,
+      v.reward_address AS reward_address,
+      (
+        SELECT COUNT(*) FROM transactions t
+        WHERE v.reward_address IS NOT NULL
+          AND (
+            t.from_address = v.reward_address
+            OR replace(upper(t.from_address), ' ', '') =
+               replace(upper(v.reward_address), ' ', '')
+          )
+      ) AS outbound_tx_count,
+      (
+        SELECT COUNT(*) FROM index_cursors c
+        WHERE v.reward_address IS NOT NULL
+          AND (
+            c.address = v.reward_address
+            OR replace(upper(c.address), ' ', '') =
+               replace(upper(v.reward_address), ' ', '')
+          )
+      ) AS cursor_count
+    FROM validators v
+    WHERE v.is_listed = 1
+    ORDER BY v.name ASC, v.address ASC
+  `).all() as Array<{
+    address: string
+    reward_address: string | null
+    outbound_tx_count: number
+    cursor_count: number
+  }>
+
+  let missingRewardAddress = 0
+  let zeroIndexedTxs = 0
+  const samples: Array<{
+    id: string
+    missingReward: boolean
+    outboundTxCount: number
+    hasCursor: boolean
+  }> = []
+
+  for (const row of rows) {
+    const missingReward =
+      row.reward_address == null || row.reward_address.trim() === ''
+    const outboundTxCount = Number(row.outbound_tx_count) || 0
+    if (missingReward) missingRewardAddress += 1
+    else if (outboundTxCount === 0) zeroIndexedTxs += 1
+
+    if (missingReward || outboundTxCount === 0) {
+      if (samples.length < 12) {
+        samples.push({
+          id: addressFingerprint(row.address),
+          missingReward,
+          outboundTxCount,
+          hasCursor: (Number(row.cursor_count) || 0) > 0,
+        })
+      }
+    }
+  }
+
+  return {
+    listedTotal: rows.length,
+    missingRewardAddress,
+    zeroIndexedTxs,
+    samples,
+  }
+}
+
 export function buildDiagnosticsPayload(
   database: Database.Database,
   options: {
@@ -103,6 +188,13 @@ export function buildDiagnosticsPayload(
     configuredAddressCount = configuredRewardAddresses(database).length
   } catch {
     configuredAddressCount = 0
+  }
+
+  let rewardAddressGaps: ReturnType<typeof summarizeRewardAddressGaps> | null = null
+  try {
+    rewardAddressGaps = summarizeRewardAddressGaps(database)
+  } catch {
+    rewardAddressGaps = null
   }
 
   const indexer = options.getIndexerHealth?.() ?? null
@@ -165,6 +257,8 @@ export function buildDiagnosticsPayload(
         })),
       },
     },
+    /** Listed validators with null reward_address and/or zero indexed txs. */
+    rewardAddressGaps,
     rpc: rpcSummary,
     database: {
       tables: tableRowCounts(database),

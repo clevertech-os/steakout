@@ -52,7 +52,7 @@ rg -ni 'gradient|backdrop-filter' client/src | rg -v 'spike/|staking/|\.md'
 rg -n 'style=\{\{' client/src --glob '*.tsx' | rg -v 'spike/'
 # Em dash in product TS/TSX — expect only empty-value placeholders ('—' as a value)
 rg -n --pcre2 '\x{2014}' client/src --glob '*.ts' --glob '*.tsx' | rg -v 'spike/'
-# Side-stripe borders — expect only Profile observation card
+# Side-stripe borders — expect zero in product CSS (status is StatusChip)
 rg -n 'border-left' client/src --glob '*.css' | rg -v 'spike/'
 ```
 

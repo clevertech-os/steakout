@@ -68,10 +68,10 @@ describe('validators API normalization', () => {
     expect(normalizedObservable.some((validator) => validator.officialScore === null)).toBe(true)
     expect(normalizedObservable.some((validator) => validator.fee === null)).toBe(true)
 
-    // scheduleEveryHours populated only for METHODOLOGY.md §4.2 forms (P2-02).
+    // scheduleEveryHours populated only for METHODOLOGY.md §4.2 forms (calc_version 2).
     const withSchedule = normalizedKnown.filter((v) => v.payoutSchedule !== null)
     const normalizableKnown = withSchedule.filter((v) => v.scheduleEveryHours !== null)
-    expect(normalizableKnown.length).toBe(10)
+    expect(normalizableKnown.length).toBe(12)
     expect(normalizedKnown.every((v) =>
       v.payoutSchedule === null
         ? v.scheduleEveryHours === null
@@ -82,7 +82,10 @@ describe('validators API normalization', () => {
     ).toBe(12)
     expect(
       normalizedKnown.find((v) => v.payoutSchedule === '0 * * * *')?.scheduleEveryHours,
-    ).toBeNull()
+    ).toBe(1)
+    expect(
+      normalizedKnown.find((v) => v.payoutSchedule === '0 */6 * * *')?.scheduleEveryHours,
+    ).toBe(6)
   })
 
   it('maps unsupported payout types and sentinel values to null or unknown', () => {

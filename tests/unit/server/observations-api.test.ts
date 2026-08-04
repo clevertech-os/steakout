@@ -195,7 +195,7 @@ describe('buildObservationsForValidator', () => {
     const { database, path } = openTempDb()
     try {
       insertValidator(database, {
-        payout_schedule_declared: '0 * * * *',
+        payout_schedule_declared: 'Every 1 minute',
         schedule_every_hours: null,
       })
       const row = database.prepare('SELECT * FROM validators WHERE address = ?').get(VALIDATOR) as ValidatorRow

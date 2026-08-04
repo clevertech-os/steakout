@@ -18,7 +18,7 @@ Scoped visual cleanup (2026-08-03, Polishing). Loaded `anti-slop.md` + STYLING �
 ### Fixed this pass
 
 1. **Eyebrow / card-kicker scaffold** — global styles no longer ember mono uppercase on every section. Muted UI weight; optional `.eyebrow--brand` only on disconnected home identity.
-2. **Side-stripes** — removed declared-card left bar and Learn callout stripe; observation profile accent kept thin (2px) for official-vs-observation separation only.
+2. **Side-stripes** — removed declared-card left bar, Learn callout stripe, and observation profile left accent (status is StatusChip only; side bars read as AI scaffold).
 3. **Nested card chrome** — home position stat tiles flattened (no mini-cards inside the main card).
 4. **Mono scope** — kickers/def-status/meta prose use UI sans; mono reserved for amounts, hashes, timestamps, version ids (global `.mono` utility).
 5. **Em dashes** — user-facing product copy (Home, Activity, Directory, Evidence, Profile share, Learn) rewritten with commas/periods/colons. Empty-value `—` placeholders kept.
@@ -111,7 +111,7 @@ Legend: **OK** = meets AC for shipped scope · **Partial** = residual · **N/A**
 
 | Check | Result |
 |---|---|
-| Do/don't | **OK** — official score card distinct; observation left border by tone |
+| Do/don't | **OK** — official score card info-tinted; observation status via StatusChip only (no side stripe) |
 | Score mono compact | **OK** — mono score value; no fake precision |
 | Title stress | **OK** — 3-line clamp at narrow widths |
 | Evidence rows | **OK** — no dense tables; mono windows; tx links 44px |

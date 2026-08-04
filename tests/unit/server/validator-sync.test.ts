@@ -123,14 +123,18 @@ describe('validatorSync upsert', () => {
       expect(listed).toHaveLength(24)
 
       const withSchedule = rows.filter((row) => row.schedule_every_hours !== null)
-      // Known-only fixture: 10 normalizable schedules (METHODOLOGY §4.2 / P2-02).
-      expect(withSchedule.length).toBe(10)
+      // Known-only fixture: 12 normalizable schedules (METHODOLOGY §4.2 calc_version 2:
+      // hour-level cron + every N hours/daily forms).
+      expect(withSchedule.length).toBe(12)
       expect(
         rows.find((row) => row.payout_schedule_declared === 'Every 12 hours')?.schedule_every_hours,
       ).toBe(12)
       expect(
         rows.find((row) => row.payout_schedule_declared === '0 * * * *')?.schedule_every_hours,
-      ).toBeNull()
+      ).toBe(1)
+      expect(
+        rows.find((row) => row.payout_schedule_declared === '0 */6 * * *')?.schedule_every_hours,
+      ).toBe(6)
 
       // Score -1/missing already null at normalize; no numeric -1 in DB.
       expect(rows.every((row) => row.official_score === null || row.official_score >= 0)).toBe(true)

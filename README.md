@@ -107,8 +107,8 @@ Copy [`.env.example`](.env.example). Important variables:
 | Variable | Role |
 |---|---|
 | `SESSION_SECRET` | Required for auth cookies |
-| `NIMIQ_NETWORK` / `NIMIQ_RPC_URL` | Chain network + RPC |
-| `NIMIQ_RPC_URL_FALLBACK` | Optional secondary RPC |
+| `NIMIQ_NETWORK` / `NIMIQ_RPC_URL` | Chain network + RPC (prefer self-hosted full/archive for historical `getTransactionsByAddress` indexing; see `.env.example`) |
+| `NIMIQ_RPC_URL_FALLBACK` | Optional secondary RPC (e.g. public after private primary) |
 | `VALIDATORS_API_URL` | Official validators registry (main vs test workers; auto-picked from `NIMIQ_NETWORK` if unset) |
 | `INDEXER_ENABLED` | Enable reward-address payout indexing (off by default in example) |
 | `DATA_DIR` | SQLite location |

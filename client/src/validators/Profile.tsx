@@ -596,6 +596,14 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
     OBSERVATION_STATUS_LABELS['insufficient-data']
   const obsHistoryDays =
     evidenceMeta?.historyDepthDays ?? profile.observation.historyDepthDays
+  // Hero chip: deep history + insufficient-data is rarely "wait for more history"
+  // (often non-normalizable schedule or too few expected windows).
+  const heroStatusDefinition =
+    obsStatus === 'insufficient-data'
+      ? obsHistoryDays >= 7
+        ? 'Declared schedule cannot be normalized for adherence grading, or not enough expected windows; raw observations may still be available.'
+        : undefined
+      : undefined
   const profileWindowsLabel = windowsCaption(
     profile.observation.observedWindows,
     profile.observation.expectedWindows,
@@ -690,7 +698,11 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
             Payout observation
           </h2>
           <div className="profile-observation-chip">
-            <StatusChip status={obsStatus} alwaysShowDefinition />
+            <StatusChip
+              status={obsStatus}
+              alwaysShowDefinition
+              definition={heroStatusDefinition}
+            />
           </div>
           {observationFacts ? (
             <p className="profile-hero-caption mono">{observationFacts}</p>

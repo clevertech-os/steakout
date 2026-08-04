@@ -262,7 +262,10 @@ function MethodologyArticle() {
         <li className="learn-def-item">
           <span className="learn-def-term">Not enough observed data</span>
           <p className="learn-def-body">
-            Fewer than 7 days of indexed history, or too few windows to judge.
+            Covers both short indexed history and declared schedules that cannot be
+            normalized. Adherence grades require a normalizable schedule and at least 14
+            days of history; fewer than 7 days (or too few windows) also yields this
+            status.
           </p>
         </li>
         <li className="learn-def-item">
@@ -287,8 +290,12 @@ function MethodologyArticle() {
         </li>
         <li>
           <strong>Schedule adherence</strong>: only unambiguous declared forms are
-          normalized (for example hourly, every N hours, daily, twice daily). Free-text
-          schedules are shown raw; we never grade a schedule we cannot normalize.
+          normalized (for example hourly, every N hours/hrs, daily, twice daily, and
+          hour-level cron such as <code>0 */6 * * *</code>). Free-text and minute-level
+          schedules are shown raw; we never grade a schedule we cannot normalize.{' '}
+          <span className="learn-term">insufficient data</span> can mean short history
+          or a non-normalizable schedule — grades need a normalizable schedule and ≥14
+          days of history.
         </li>
         <li>
           <strong>Observed recipient coverage</strong>: distinct recipients per run, and

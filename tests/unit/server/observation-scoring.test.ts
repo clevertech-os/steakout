@@ -233,7 +233,7 @@ describe('computeScheduleAdherence (window math)', () => {
   it('never grades non-normalizable schedules but still reports runs', () => {
     const result = computeScheduleAdherence({
       everyHours: null,
-      declaredSchedule: '0 * * * *',
+      declaredSchedule: 'Every 1 minute',
       runStarts: [ANCHOR, hoursAfter(12), hoursAfter(24)],
       analysisEnd: daysAfter(20),
     })

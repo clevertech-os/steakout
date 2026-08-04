@@ -8,7 +8,7 @@ export const DEFAULT_RUN_WINDOW_MINUTES = 60
  * Classifier calc version. Bump when grouping or observation semantics change
  * (METHODOLOGY.md §9). Keep in sync with client `learn/calcVersion.ts`.
  */
-export const CALC_VERSION = 1
+export const CALC_VERSION = 2
 
 export const PAYOUT_RUN_OBSERVATION_TYPE = 'payout-run' as const
 
@@ -492,9 +492,11 @@ export function listPayoutRunObservations(
 /**
  * Result of mapping a registry-declared payout schedule string to an expected
  * cadence. Only the unambiguous forms in METHODOLOGY.md §4.2 are accepted:
- * `hourly`, `every N hours`, `daily`, `twice daily` (case/punctuation tolerant).
- * Everything else is `normalizable: false` with the raw declaration preserved.
- * Never force free-text or cron-like strings into a number.
+ * `hourly`, `every N hours` / `hrs` / `hr` / `h`, `daily`, `twice daily`,
+ * and hour-level cron `0 * * * *`, `0 star/N * * *`, `0 0 * * *`
+ * (case/punctuation tolerant). Everything else is `normalizable: false` with
+ * the raw declaration preserved. Never force free-text or minute-level cron
+ * into a number.
  */
 export interface NormalizedSchedule {
   normalizable: boolean
@@ -506,7 +508,7 @@ export interface NormalizedSchedule {
 
 /**
  * Collapse trivial punctuation/spacing so documented schedule forms match
- * without accepting cron, minute-level, approximate, or free-text policies.
+ * without accepting minute-level, approximate, or free-text policies.
  */
 function canonicalizeScheduleText(raw: string): string {
   return raw
@@ -521,16 +523,44 @@ function canonicalizeScheduleText(raw: string): string {
     .trim()
 }
 
+/**
+ * Unambiguous 5-field cron with minute fixed to `0` only (METHODOLOGY §4.2):
+ * - `0 * * * *` → 1 hour
+ * - `0 star/N * * *` (N positive integer) → N hours
+ * - `0 0 * * *` → 24 hours
+ * Rejects minute steps, non-star day/month/dow, fixed non-zero hour, lists/ranges.
+ */
+function parseCronEveryHours(canonical: string): number | null {
+  const parts = canonical.split(' ')
+  if (parts.length !== 5) return null
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = parts
+  if (dayOfMonth !== '*' || month !== '*' || dayOfWeek !== '*') return null
+  if (minute !== '0') return null
+
+  if (hour === '*') return 1
+  if (hour === '0') return 24
+
+  const step = /^\*\/(\d+)$/.exec(hour)
+  if (!step) return null
+  const n = Number(step[1])
+  if (!Number.isInteger(n) || n <= 0) return null
+  return n
+}
+
 function parseEveryHours(canonical: string): number | null {
   if (canonical === 'hourly') return 1
   if (canonical === 'daily') return 24
   if (canonical === 'twice daily') return 12
 
-  const every = /^every (\d+(?:\.\d+)?) hours?$/.exec(canonical)
-  if (!every) return null
-  const hours = Number(every[1])
-  if (!Number.isFinite(hours) || hours <= 0) return null
-  return hours
+  // hour / hours / hr / hrs / h (unambiguous hour-unit synonyms only).
+  const every = /^every (\d+(?:\.\d+)?) (?:hours?|hrs?|h)$/.exec(canonical)
+  if (every) {
+    const hours = Number(every[1])
+    if (!Number.isFinite(hours) || hours <= 0) return null
+    return hours
+  }
+
+  return parseCronEveryHours(canonical)
 }
 
 /**

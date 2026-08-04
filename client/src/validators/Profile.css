@@ -314,29 +314,8 @@
   background: color-mix(in srgb, var(--so-info-soft) 55%, var(--so-card));
 }
 
-/* Observation only: thin status accent (intentional official vs observation separation). */
-.profile-card--observation {
-  border-left: 2px solid var(--so-disabled);
-}
-
-.profile-card--observation[data-observation-status='on-schedule'],
-.profile-hero[data-observation-status='on-schedule'] .profile-card--observation {
-  border-left-color: var(--so-verified);
-}
-
-.profile-card--observation[data-observation-status='mostly-on-schedule'],
-.profile-card--observation[data-observation-status='irregular'],
-.profile-hero[data-observation-status='mostly-on-schedule'] .profile-card--observation,
-.profile-hero[data-observation-status='irregular'] .profile-card--observation {
-  border-left-color: var(--so-warn);
-}
-
-.profile-card--observation[data-observation-status='insufficient-data'],
-.profile-card--observation[data-observation-status='unavailable'],
-.profile-hero[data-observation-status='insufficient-data'] .profile-card--observation,
-.profile-hero[data-observation-status='unavailable'] .profile-card--observation {
-  border-left-color: var(--so-disabled);
-}
+/* Observation cards share shell chrome only — status lives on StatusChip, not a side stripe
+   (anti-slop: colored left bars on cards read as AI scaffold). */
 
 .profile-section-title {
   margin: 0 0 var(--so-space-2);

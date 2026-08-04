@@ -204,6 +204,10 @@ describe('normalizeSchedule', () => {
     ['Every 4 hours', 4],
     ['every 0.5 hours', 0.5],
     ['every-12-hours', 12],
+    ['every 12 hrs', 12],
+    ['every 12 hr', 12],
+    ['every 6 h', 6],
+    ['Every 3 hrs.', 3],
     ['daily', 24],
     ['Daily', 24],
     ['daily.', 24],
@@ -211,6 +215,11 @@ describe('normalizeSchedule', () => {
     ['Twice  Daily', 12],
     ['twice-daily', 12],
     ['TWICE DAILY!', 12],
+    // Hour-level cron (calc_version 2)
+    ['0 * * * *', 1],
+    ['0 */6 * * *', 6],
+    ['0 */12 * * *', 12],
+    ['0 0 * * *', 24],
   ])('normalizes %j to everyHours=%s', (raw, hours) => {
     const result = normalizeSchedule(raw)
     expect(result).toEqual({ normalizable: true, everyHours: hours, raw })
@@ -218,19 +227,23 @@ describe('normalizeSchedule', () => {
   })
 
   it.each([
-    // P0-05 wild inventory — non-normalizable declarations
-    '0 * * * *',
-    '0 */6 * * *',
+    // Minute-level and free-text — non-normalizable
     'Approx. every ~6hrs',
     'Every 1 minute',
     'Every minute',
     'Payouts over 10 NIM are instant when NimiqPocket is elected .',
+    // Ambiguous / rejected cron
+    '* * * * *',
+    '*/5 * * * *',
+    '0 12 * * *',
+    '0 */6 * * 1',
+    '15 * * * *',
+    '0 0 1 * *',
     // Other rejection cases
     '',
     '   ',
     'weekly',
     'every day',
-    'every 12 hrs',
     'every twelve hours',
     'every 0 hours',
     'every -3 hours',
@@ -259,10 +272,10 @@ describe('normalizeSchedule', () => {
   })
 
   it('classifies every distinct P0-05 wild-observed schedule string', () => {
-    // From docs/spikes/validators-api.md § Raw Schedule Inventory
+    // From docs/spikes/validators-api.md § Raw Schedule Inventory (calc_version 2)
     const inventory: Array<{ raw: string; everyHours: number | null }> = [
-      { raw: '0 * * * *', everyHours: null },
-      { raw: '0 */6 * * *', everyHours: null },
+      { raw: '0 * * * *', everyHours: 1 },
+      { raw: '0 */6 * * *', everyHours: 6 },
       { raw: 'Approx. every ~6hrs', everyHours: null },
       { raw: 'Every 1 minute', everyHours: null },
       { raw: 'Every 12 hours', everyHours: 12 },

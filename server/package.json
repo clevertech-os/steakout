@@ -9,7 +9,8 @@
     "build": "tsc --noEmit",
     "index:payouts": "tsx scripts/index-payouts.ts",
     "classify": "tsx scripts/classify.ts",
-    "probe:rpc": "tsx scripts/probe-rpc.ts"
+    "probe:rpc": "tsx scripts/probe-rpc.ts",
+    "audit:rewards": "tsx scripts/audit-reward-addresses.ts"
   },
   "engines": {
     "node": ">=22"

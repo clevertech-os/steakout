@@ -8,7 +8,10 @@ import DataStatusTag from '../components/DataStatusTag'
 import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
 import FreshnessTag from '../components/FreshnessTag'
 import { humanizeFetchError } from '../components/humanizeError'
-import StatusChip, { type ObservationStatus } from '../components/StatusChip'
+import StatusChip, {
+  OBSERVATION_STATUS_DEFINITIONS,
+  type ObservationStatus,
+} from '../components/StatusChip'
 import { buildNimiqExplorerUrl } from '../explorer'
 import {
   fetchValidatorObservations,
@@ -486,6 +489,17 @@ function EvidenceOkBody({
   }, [onSummaryMeta, status, windowsLabel, historyDepthDays])
 
   const windowsDisplay = windowsLabel ?? 'Insufficient data'
+  const scheduleNormalizable = data.schedule.normalizable === true
+  const hasInsufficientHistoryLimitation = data.limitations.includes('insufficient-history')
+  // Distinguish schedule-policy gaps from shallow history (observation bottlenecks).
+  const statusDefinition = !scheduleNormalizable
+    ? LIMITATION_COPY['schedule-cannot-be-normalized']
+    : status === 'insufficient-data' &&
+        (historyDepthDays < 7 || hasInsufficientHistoryLimitation)
+      ? OBSERVATION_STATUS_DEFINITIONS['insufficient-data']
+      : showGrade
+        ? 'Observation status compares the declared payout schedule against indexed payout runs. Insufficient history is a valid result, not a negative score.'
+        : undefined
 
   const body = (
     <>
@@ -508,19 +522,7 @@ function EvidenceOkBody({
       ) : null}
 
       <div className="evidence-status-block">
-        {showGrade ? (
-          <StatusChip
-            status={status}
-            definition="Observation status compares the declared payout schedule against indexed payout runs. Insufficient history is a valid result, not a negative score."
-          />
-        ) : (
-          <span
-            className="status-chip status-chip--disabled"
-            title="Declared schedule is free-text or ambiguous; Steakout does not grade it."
-          >
-            Schedule cannot be normalized
-          </span>
-        )}
+        <StatusChip status={status} definition={statusDefinition} />
         {/* One section-level freshness (not per metric / per run). */}
         <FreshnessTag
           ageSeconds={ageSeconds}
@@ -528,6 +530,12 @@ function EvidenceOkBody({
           historyDepthDays={historyDepthDays}
         />
       </div>
+
+      {!scheduleNormalizable && !empty ? (
+        <p className="nq-subline profile-section-note evidence-status-secondary">
+          {LIMITATION_COPY['schedule-cannot-be-normalized']}
+        </p>
+      ) : null}
 
       <p className="nq-subline profile-section-note">
         {showGrade

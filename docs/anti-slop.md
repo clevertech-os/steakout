@@ -119,7 +119,7 @@ If a change would make someone say “AI made this SaaS / crypto site,” reject
 
 - Soft card shadow on `nq-card` — depth, not glow
 - Ember on **active nav** and rare brand kickers only
-- Left-border tone on profile observation section (status separation, not every list card)
+- Info-tint on official Trust Score card only (never status-colored side stripes; observation status is StatusChip)
 - nimiq-css hover utilities on directory cards — enhancement, never the only affordance
 
 ### Copy bans
