@@ -1,5 +1,11 @@
 /* Validator directory (P1-10). Mobile-first; readable at 320px. */
 
+.directory-refreshing {
+  margin: 0 0 var(--so-space-3);
+  color: var(--so-muted);
+  font-size: var(--so-text-sm);
+}
+
 .directory-controls {
   display: flex;
   flex-direction: column;

@@ -9,11 +9,45 @@ import { peekHubRedirectInUrl } from './hubRedirectParse'
 import { HOME_PATH, hashToPath, matchRoute, type RouteId } from './routes'
 import './App.css'
 
-const Home = lazy(() => import('./home/Home'))
-const Validators = lazy(() => import('./validators/Validators'))
-const Profile = lazy(() => import('./validators/Profile'))
-const Activity = lazy(() => import('./activity/Activity'))
-const Learn = lazy(() => import('./learn/Learn'))
+const loadHome = () => import('./home/Home')
+const loadValidators = () => import('./validators/Validators')
+const loadProfile = () => import('./validators/Profile')
+const loadActivity = () => import('./activity/Activity')
+const loadLearn = () => import('./learn/Learn')
+
+const Home = lazy(loadHome)
+const Validators = lazy(loadValidators)
+const Profile = lazy(loadProfile)
+const Activity = lazy(loadActivity)
+const Learn = lazy(loadLearn)
+
+/** Warm route chunks so tab switches paint chrome immediately. */
+function preloadRouteChunks() {
+  void loadHome()
+  void loadValidators()
+  void loadProfile()
+  void loadActivity()
+  void loadLearn()
+}
+
+function RouteFallback() {
+  return (
+    <div className="route-shell" aria-busy="true">
+      <header className="shell-header page-header">
+        <span className="so-skeleton-line route-shell-title" aria-hidden="true" />
+        <span className="so-skeleton-line route-shell-lede" aria-hidden="true" />
+      </header>
+      <p className="app-loading" role="status">
+        Loading…
+      </p>
+      <div className="route-shell-body" aria-hidden="true">
+        <span className="so-skeleton-line route-shell-card" />
+        <span className="so-skeleton-line route-shell-card route-shell-card--short" />
+        <span className="so-skeleton-line route-shell-card" />
+      </div>
+    </div>
+  )
+}
 
 function screenFor(id: RouteId, param?: string) {
   switch (id) {
@@ -68,6 +102,17 @@ function RoutedShell() {
     }
   }, [path])
 
+  // Prefetch other destinations after first paint so nav feels instant.
+  useEffect(() => {
+    const ric = window.requestIdleCallback?.bind(window)
+    if (ric) {
+      const id = ric(() => preloadRouteChunks(), { timeout: 2500 })
+      return () => window.cancelIdleCallback?.(id)
+    }
+    const t = window.setTimeout(preloadRouteChunks, 400)
+    return () => window.clearTimeout(t)
+  }, [])
+
   if (!match) {
     return null
   }
@@ -77,13 +122,7 @@ function RoutedShell() {
       <main className="app-main">
         <NetworkBadge />
         <OfflineBanner />
-        <Suspense
-          fallback={
-            <p className="app-loading" role="status">
-              Loading…
-            </p>
-          }
-        >
+        <Suspense fallback={<RouteFallback />}>
           {screenFor(match.id, match.param)}
         </Suspense>
       </main>

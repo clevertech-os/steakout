@@ -1,4 +1,5 @@
-/* Validator profile summary layer (P1-11). Mobile-first; 320px safe. */
+/* Validator profile summary layer (P1-11). Mobile-first; 320px safe.
+   Progressive disclosure default surface (2026-08-04 declutter). */
 
 .profile {
   display: flex;
@@ -16,6 +17,20 @@
   color: var(--so-info);
   text-decoration: none;
   font-size: var(--so-text-md);
+}
+
+.profile-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--so-space-2) var(--so-space-3);
+}
+
+.profile-title-row .page-title--profile {
+  flex: 1 1 12rem;
+  min-width: 0;
+  margin-bottom: 0;
 }
 
 .profile-address {
@@ -36,16 +51,11 @@
   color: var(--so-info);
 }
 
-.profile-description {
-  margin: var(--so-space-3) 0 0;
+.profile-description-inline {
+  font-weight: 400;
   color: var(--so-muted);
-  font-size: var(--so-text-md);
   line-height: 1.45;
   max-width: 40rem;
-}
-
-.profile-website {
-  margin: var(--so-space-2) 0 0;
 }
 
 .profile-share {
@@ -53,7 +63,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--so-space-2) var(--so-space-3);
-  margin-top: 0.85rem;
+  flex-shrink: 0;
 }
 
 .profile-share-btn {
@@ -68,6 +78,160 @@
 .profile-status {
   margin: 0;
   color: var(--so-muted);
+}
+
+/* —— Dual hero —— */
+
+.profile-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--so-space-3);
+  min-width: 0;
+}
+
+.profile-hero-panel {
+  margin: 0;
+  min-width: 0;
+}
+
+.profile-hero-label {
+  margin: 0 0 var(--so-space-2);
+  font-size: var(--so-text-sm);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--so-ink);
+}
+
+.profile-hero-caption {
+  margin: 0;
+  color: var(--so-muted);
+  font-size: var(--so-text-xs);
+  line-height: 1.35;
+}
+
+.profile-hero-freshness {
+  margin: calc(var(--so-space-2) * -1) 0 0;
+  font-family: var(--so-mono);
+  font-size: var(--so-text-2xs);
+  color: var(--so-muted);
+  line-height: 1.35;
+}
+
+.profile-hero-freshness-sep {
+  opacity: 0.7;
+}
+
+/* —— Policy strip —— */
+
+.profile-policy-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--so-space-2) var(--so-space-4);
+  margin: 0;
+  padding: var(--so-space-3) var(--so-space-4);
+  list-style: none;
+  border: 1px solid var(--so-rule);
+  border-radius: var(--so-radius-card);
+  background: var(--so-card);
+  min-width: 0;
+}
+
+.profile-policy-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.profile-policy-label {
+  font-size: var(--so-text-2xs);
+  font-weight: 600;
+  color: var(--so-muted);
+  letter-spacing: 0.01em;
+}
+
+.profile-policy-value {
+  font-size: var(--so-text-sm);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--so-ink);
+  overflow-wrap: anywhere;
+}
+
+/* —— Progressive disclosure —— */
+
+.profile-disclosure {
+  padding: 0;
+  min-width: 0;
+}
+
+.profile-disclosure-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem var(--so-space-3);
+  min-height: var(--so-touch);
+  padding: 0.85rem var(--so-space-5);
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--so-text-md);
+  line-height: 1.3;
+}
+
+.profile-disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.profile-disclosure-summary::before {
+  content: '';
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-right: 0.15rem;
+  border-right: 2px solid var(--so-muted);
+  border-bottom: 2px solid var(--so-muted);
+  transform: rotate(-45deg);
+  flex-shrink: 0;
+  transition: transform 0.12s ease;
+}
+
+.profile-disclosure[open] > .profile-disclosure-summary::before {
+  transform: rotate(45deg);
+  margin-top: -0.15rem;
+}
+
+.profile-disclosure-summary:focus-visible {
+  outline: 2px solid var(--so-info);
+  outline-offset: 2px;
+  border-radius: 0.35rem;
+}
+
+.profile-disclosure-title {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--so-ink);
+}
+
+.profile-disclosure-meta {
+  color: var(--so-muted);
+  font-size: var(--so-text-sm);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.profile-disclosure-body {
+  padding: 0 var(--so-space-5) 1.15rem;
+  border-top: 1px solid var(--so-rule);
+  min-width: 0;
+}
+
+.profile-subheading {
+  margin: var(--so-space-4) 0 var(--so-space-2);
+  font-size: var(--so-text-md);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 
 .profile-card--canary {
@@ -131,6 +295,11 @@
   min-width: 0;
 }
 
+/* Disclosure cards own padding via summary/body (must beat .profile-card). */
+.profile-card.profile-disclosure {
+  padding: 0;
+}
+
 /* Official score surface: subtle info tint so it never looks like an observation chip. */
 .profile-card--official {
   border-color: var(--so-info);
@@ -142,17 +311,22 @@
   border-left: 2px solid var(--so-disabled);
 }
 
-.profile-card--observation[data-observation-status='on-schedule'] {
+.profile-card--observation[data-observation-status='on-schedule'],
+.profile-hero[data-observation-status='on-schedule'] .profile-card--observation {
   border-left-color: var(--so-verified);
 }
 
 .profile-card--observation[data-observation-status='mostly-on-schedule'],
-.profile-card--observation[data-observation-status='irregular'] {
+.profile-card--observation[data-observation-status='irregular'],
+.profile-hero[data-observation-status='mostly-on-schedule'] .profile-card--observation,
+.profile-hero[data-observation-status='irregular'] .profile-card--observation {
   border-left-color: var(--so-warn);
 }
 
 .profile-card--observation[data-observation-status='insufficient-data'],
-.profile-card--observation[data-observation-status='unavailable'] {
+.profile-card--observation[data-observation-status='unavailable'],
+.profile-hero[data-observation-status='insufficient-data'] .profile-card--observation,
+.profile-hero[data-observation-status='unavailable'] .profile-card--observation {
   border-left-color: var(--so-disabled);
 }
 
@@ -172,7 +346,7 @@
 }
 
 .profile-score-value {
-  margin: var(--so-space-1) 0 var(--so-space-3);
+  margin: var(--so-space-1) 0 var(--so-space-2);
   font-family: var(--so-mono);
   /* Score display — outside --so-text-* UI scale. */
   font-size: clamp(1.75rem, 8vw, 2.75rem);
@@ -184,7 +358,7 @@
 }
 
 .profile-observation-chip {
-  margin: 0 0 var(--so-space-3);
+  margin: 0 0 var(--so-space-2);
 }
 
 .profile-metrics {
@@ -296,6 +470,13 @@
   line-height: 1.4;
 }
 
+@media (min-width: 520px) {
+  .profile-hero {
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+  }
+}
+
 @media (min-width: 600px) {
   .profile {
     row-gap: var(--so-space-6);
@@ -303,5 +484,13 @@
 
   .profile-card {
     padding: 1.35rem var(--so-space-6);
+  }
+
+  .profile-disclosure-summary {
+    padding: 0.95rem var(--so-space-6);
+  }
+
+  .profile-disclosure-body {
+    padding: 0 var(--so-space-6) 1.35rem;
   }
 }

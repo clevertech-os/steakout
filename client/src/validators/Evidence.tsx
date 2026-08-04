@@ -1,7 +1,7 @@
 /**
  * Validator profile evidence layer (P2-08 / SPEC §6.3 / STYLING §5).
  * Payout-run list, history depth, methodology limitations.
- * Legible without charts; neutral METHODOLOGY language only.
+ * Quieter when embedded under Profile progressive disclosure.
  */
 import { useCallback, useEffect, useState } from 'react'
 import DataStatusTag from '../components/DataStatusTag'
@@ -82,16 +82,13 @@ const COVERAGE_DEFINITION =
 
 export interface EvidenceRowProps {
   run: ObservationRunItem
-  /** Shared collection freshness for METHODOLOGY §8. */
-  ageSeconds: number
-  updatedAt: string
 }
 
 /**
  * One payout run: window, recipients, coverage when known, explorer tx links.
- * Stacked layout — no tables (works at 320px).
+ * Stacked layout — no tables (works at 320px). Quieter: no per-run def/freshness.
  */
-export function EvidenceRow({ run, ageSeconds, updatedAt }: EvidenceRowProps) {
+export function EvidenceRow({ run }: EvidenceRowProps) {
   const hasCoverage =
     run.knownStakersCovered != null &&
     run.knownStakersTotal != null &&
@@ -104,13 +101,6 @@ export function EvidenceRow({ run, ageSeconds, updatedAt }: EvidenceRowProps) {
 
   return (
     <article className="evidence-row" aria-label={`Payout run ${formatIsoShort(run.windowStart) ?? ''}`}>
-      <div className="evidence-row-head">
-        <h3 className="nq-label evidence-row-label" title={RUN_DEFINITION}>
-          Observed payout run
-        </h3>
-        <DataStatusTag status="verified" />
-      </div>
-
       <p className="evidence-row-window mono" title={RUN_DEFINITION}>
         {formatWindowRange(run.windowStart, run.windowEnd)}
       </p>
@@ -177,18 +167,25 @@ export function EvidenceRow({ run, ageSeconds, updatedAt }: EvidenceRowProps) {
       ) : (
         <p className="evidence-row-no-tx nq-subline">No transaction hashes for this run.</p>
       )}
-
-      <p className="evidence-row-meta">
-        <span className="evidence-row-def">{RUN_DEFINITION}</span>
-        <FreshnessTag ageSeconds={ageSeconds} updatedAt={updatedAt} />
-      </p>
     </article>
   )
+}
+
+/** Summary facts for a parent Profile `<details>` closed line. */
+export interface EvidenceSummaryMeta {
+  status: ObservationStatus
+  windowsLabel: string | null
+  historyDepthDays: number
 }
 
 export interface EvidenceProps {
   /** Validator address (spaced or compact). */
   address: string
+  /**
+   * When true, omit outer card chrome/title (Profile wraps in `<details>`).
+   * Still fetches on mount so the parent summary can show windows.
+   */
+  embedded?: boolean
   /**
    * Profile-level observation status from GET /api/validators/:address.
    * Used as fallback while evidence loads; evidence envelope may refine it.
@@ -196,6 +193,8 @@ export interface EvidenceProps {
   profileStatus?: ObservationStatus
   profileHistoryDepthDays?: number
   profileLastObservedAt?: string | null
+  /** Report status/windows for closed disclosure summary (optional). */
+  onSummaryMeta?: (meta: EvidenceSummaryMeta) => void
 }
 
 type LoadState =
@@ -209,9 +208,11 @@ type LoadState =
  */
 export default function Evidence({
   address,
+  embedded = false,
   profileStatus = 'insufficient-data',
   profileHistoryDepthDays = 0,
   profileLastObservedAt = null,
+  onSummaryMeta,
 }: EvidenceProps) {
   const [state, setState] = useState<LoadState>({ kind: 'loading' })
   const [loadingMore, setLoadingMore] = useState(false)
@@ -253,6 +254,17 @@ export default function Evidence({
     return () => controller.abort()
   }, [address, reloadToken])
 
+  // While loading / on error, still report profile-level summary to parent.
+  useEffect(() => {
+    if (!onSummaryMeta) return
+    if (state.kind === 'ok') return
+    onSummaryMeta({
+      status: profileStatus,
+      windowsLabel: null,
+      historyDepthDays: profileHistoryDepthDays,
+    })
+  }, [onSummaryMeta, profileHistoryDepthDays, profileStatus, state.kind])
+
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMore || state.kind !== 'ok') return
     setLoadingMore(true)
@@ -284,23 +296,22 @@ export default function Evidence({
   }, [address, loadingMore, nextCursor, state])
 
   if (state.kind === 'loading') {
-    return (
-      <section
-        className="nq-card shell-card profile-card profile-card--observation evidence"
-        aria-labelledby="evidence-title"
-        aria-busy="true"
-        data-observation-status={profileStatus}
-      >
-        <p className="card-kicker">Steakout observation</p>
-        <h2 id="evidence-title" className="profile-section-title">
-          Payout evidence
-        </h2>
-        <div className="evidence-status-block">
-          <StatusChip status={profileStatus} />
-          {profileHistoryDepthDays > 0 ? (
-            <FreshnessTag historyDepthDays={profileHistoryDepthDays} />
-          ) : null}
-        </div>
+    const body = (
+      <>
+        {!embedded ? (
+          <>
+            <p className="card-kicker">Steakout observation</p>
+            <h2 id="evidence-title" className="profile-section-title">
+              Payout evidence
+            </h2>
+            <div className="evidence-status-block">
+              <StatusChip status={profileStatus} />
+              {profileHistoryDepthDays > 0 ? (
+                <FreshnessTag historyDepthDays={profileHistoryDepthDays} />
+              ) : null}
+            </div>
+          </>
+        ) : null}
         <p className="evidence-status" role="status">
           Loading observed payout runs…
         </p>
@@ -309,20 +320,40 @@ export default function Evidence({
           <span className="so-skeleton-line evidence-skeleton-line" />
           <span className="so-skeleton-line evidence-skeleton-line evidence-skeleton-line--mid" />
         </div>
+      </>
+    )
+
+    if (embedded) {
+      return (
+        <div className="evidence evidence--embedded" aria-busy="true">
+          {body}
+        </div>
+      )
+    }
+
+    return (
+      <section
+        className="nq-card shell-card profile-card profile-card--observation evidence"
+        aria-labelledby="evidence-title"
+        aria-busy="true"
+        data-observation-status={profileStatus}
+      >
+        {body}
       </section>
     )
   }
 
   if (state.kind === 'error') {
-    return (
-      <section
-        className="nq-card shell-card profile-card profile-card--observation evidence"
-        aria-labelledby="evidence-title"
-      >
-        <p className="card-kicker">Steakout observation</p>
-        <h2 id="evidence-title" className="profile-section-title">
-          Payout evidence
-        </h2>
+    const body = (
+      <>
+        {!embedded ? (
+          <>
+            <p className="card-kicker">Steakout observation</p>
+            <h2 id="evidence-title" className="profile-section-title">
+              Payout evidence
+            </h2>
+          </>
+        ) : null}
         <p className="nq-subline profile-section-note">{state.message}</p>
         <div className="evidence-empty so-notice--info">
           <DataStatusTag status="unavailable" />
@@ -339,6 +370,19 @@ export default function Evidence({
             Limitations
           </a>
         </p>
+      </>
+    )
+
+    if (embedded) {
+      return <div className="evidence evidence--embedded">{body}</div>
+    }
+
+    return (
+      <section
+        className="nq-card shell-card profile-card profile-card--observation evidence"
+        aria-labelledby="evidence-title"
+      >
+        {body}
       </section>
     )
   }
@@ -363,7 +407,7 @@ export default function Evidence({
       ? `${data.window.observedWindows.toLocaleString()} / ${data.window.expectedWindows.toLocaleString()} windows`
       : data.window.observedWindows > 0
         ? `${data.window.observedWindows.toLocaleString()} observed window${data.window.observedWindows === 1 ? '' : 's'}`
-        : 'Insufficient data'
+        : null
 
   const analysisRange =
     data.window.from && data.window.to
@@ -371,23 +415,97 @@ export default function Evidence({
       : null
 
   return (
-    <section
-      className="nq-card shell-card profile-card profile-card--observation evidence"
-      aria-labelledby="evidence-title"
-    >
+    <EvidenceOkBody
+      embedded={embedded}
+      envelope={envelope}
+      runs={runs}
+      showGrade={showGrade}
+      status={status}
+      windowsLabel={windowsLabel}
+      historyDepthDays={historyDepthDays}
+      ageSeconds={ageSeconds}
+      empty={empty}
+      analysisRange={analysisRange}
+      updatedAt={updatedAt}
+      data={data}
+      profileLastObservedAt={profileLastObservedAt}
+      nextCursor={nextCursor}
+      loadingMore={loadingMore}
+      onLoadMore={() => void loadMore()}
+      onRetry={retry}
+      onSummaryMeta={onSummaryMeta}
+    />
+  )
+}
+
+function EvidenceOkBody({
+  embedded,
+  envelope,
+  runs,
+  showGrade,
+  status,
+  windowsLabel,
+  historyDepthDays,
+  ageSeconds,
+  empty,
+  analysisRange,
+  updatedAt,
+  data,
+  profileLastObservedAt,
+  nextCursor,
+  loadingMore,
+  onLoadMore,
+  onRetry,
+  onSummaryMeta,
+}: {
+  embedded: boolean
+  envelope: ObservationsEnvelope
+  runs: ObservationRunItem[]
+  showGrade: boolean
+  status: ObservationStatus
+  windowsLabel: string | null
+  historyDepthDays: number
+  ageSeconds: number
+  empty: boolean
+  analysisRange: string | null
+  updatedAt: string
+  data: ObservationsEnvelope['data']
+  profileLastObservedAt: string | null
+  nextCursor: string | null
+  loadingMore: boolean
+  onLoadMore: () => void
+  onRetry: () => void
+  onSummaryMeta?: (meta: EvidenceSummaryMeta) => void
+}) {
+  useEffect(() => {
+    onSummaryMeta?.({
+      status,
+      windowsLabel,
+      historyDepthDays,
+    })
+  }, [onSummaryMeta, status, windowsLabel, historyDepthDays])
+
+  const windowsDisplay = windowsLabel ?? 'Insufficient data'
+
+  const body = (
+    <>
       <EnvelopeStatusBanner
         status={envelope.status}
-        onRetry={retry}
+        onRetry={onRetry}
         message={
           envelope.status === 'stale'
             ? 'Observation data may be outdated. Showing the last indexed payout runs.'
             : undefined
         }
       />
-      <p className="card-kicker">Steakout observation</p>
-      <h2 id="evidence-title" className="profile-section-title">
-        Payout evidence
-      </h2>
+      {!embedded ? (
+        <>
+          <p className="card-kicker">Steakout observation</p>
+          <h2 id="evidence-title" className="profile-section-title">
+            Payout evidence
+          </h2>
+        </>
+      ) : null}
 
       <div className="evidence-status-block">
         {showGrade ? (
@@ -403,6 +521,7 @@ export default function Evidence({
             Schedule cannot be normalized
           </span>
         )}
+        {/* One section-level freshness (not per metric / per run). */}
         <FreshnessTag
           ageSeconds={ageSeconds}
           updatedAt={updatedAt}
@@ -427,12 +546,6 @@ export default function Evidence({
             />
           </div>
           <dd className="evidence-summary-value">{formatDepthDays(historyDepthDays)}</dd>
-          <p className="evidence-summary-meta">
-            <span className="evidence-row-def">
-              How many days of indexed history support this observation view.
-            </span>
-            <FreshnessTag ageSeconds={ageSeconds} updatedAt={updatedAt} />
-          </p>
         </div>
 
         <div className="evidence-summary-item">
@@ -453,15 +566,7 @@ export default function Evidence({
               }
             />
           </div>
-          <dd className="evidence-summary-value mono">{windowsLabel}</dd>
-          <p className="evidence-summary-meta">
-            <span className="evidence-row-def">
-              {showGrade
-                ? 'Observed payout windows versus expected windows from the normalized declared schedule.'
-                : 'Count of observed payout runs in the indexed history (no expected schedule).'}
-            </span>
-            <FreshnessTag ageSeconds={ageSeconds} updatedAt={updatedAt} />
-          </p>
+          <dd className="evidence-summary-value mono">{windowsDisplay}</dd>
         </div>
 
         <div className="evidence-summary-item">
@@ -477,14 +582,6 @@ export default function Evidence({
                 ? `Every ${data.schedule.normalized.everyHours} hours`
                 : 'Not declared')}
           </dd>
-          <p className="evidence-summary-meta">
-            <span className="evidence-row-def">
-              {normalizable
-                ? `Normalized to every ${data.schedule.normalized?.everyHours ?? '—'} hours for adherence comparison.`
-                : 'Shown as declared; not used for grading when it cannot be normalized.'}
-            </span>
-            <FreshnessTag ageSeconds={ageSeconds} updatedAt={updatedAt} />
-          </p>
         </div>
 
         {analysisRange ? (
@@ -498,12 +595,6 @@ export default function Evidence({
             <dd className="evidence-summary-value mono evidence-summary-value--sm">
               {analysisRange}
             </dd>
-            <p className="evidence-summary-meta">
-              <span className="evidence-row-def">
-                Time span of indexed payout activity included in this analysis.
-              </span>
-              <FreshnessTag ageSeconds={ageSeconds} updatedAt={updatedAt} />
-            </p>
           </div>
         ) : null}
 
@@ -525,12 +616,6 @@ export default function Evidence({
             {formatIsoShort(profileLastObservedAt ?? data.window.to) ??
               'Not observed yet'}
           </dd>
-          <p className="evidence-summary-meta">
-            <span className="evidence-row-def">
-              Most recent payout-related activity Steakout has indexed for this validator.
-            </span>
-            <FreshnessTag ageSeconds={ageSeconds} updatedAt={updatedAt} />
-          </p>
         </div>
       </dl>
 
@@ -563,11 +648,7 @@ export default function Evidence({
         >
           {runs.map((run, index) => (
             <div role="listitem" key={`${run.windowStart}-${run.txHashes[0] ?? index}`}>
-              <EvidenceRow
-                run={run}
-                ageSeconds={ageSeconds}
-                updatedAt={updatedAt}
-              />
+              <EvidenceRow run={run} />
             </div>
           ))}
         </div>
@@ -577,7 +658,7 @@ export default function Evidence({
         <button
           type="button"
           className="nq-pill-secondary evidence-load-more"
-          onClick={() => void loadMore()}
+          onClick={onLoadMore}
           disabled={loadingMore}
         >
           {loadingMore ? 'Loading…' : 'Load more runs'}
@@ -609,6 +690,19 @@ export default function Evidence({
           </a>
         </p>
       </div>
+    </>
+  )
+
+  if (embedded) {
+    return <div className="evidence evidence--embedded">{body}</div>
+  }
+
+  return (
+    <section
+      className="nq-card shell-card profile-card profile-card--observation evidence"
+      aria-labelledby="evidence-title"
+    >
+      {body}
     </section>
   )
 }

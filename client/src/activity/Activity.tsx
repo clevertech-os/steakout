@@ -216,7 +216,7 @@ export default function Activity() {
     }
   }, [wallet.bootReady, connected, tab])
 
-  // Personal fetch (auth cookie session).
+  // Personal fetch (auth cookie session). Keep prior items while refreshing.
   useEffect(() => {
     if (!connected || tab !== 'personal') {
       if (!connected) {
@@ -228,7 +228,7 @@ export default function Activity() {
     }
 
     let cancelled = false
-    setPersonalStatus('loading')
+    setPersonalStatus((prev) => (prev === 'success' ? 'success' : 'loading'))
     setPersonalError(null)
 
     void fetchPersonalActivity()
@@ -239,9 +239,9 @@ export default function Activity() {
       })
       .catch((err: unknown) => {
         if (cancelled) return
-        setPersonal(null)
         setPersonalError(err instanceof Error ? err : new Error(String(err)))
-        setPersonalStatus('error')
+        // Keep prior timeline when a refresh fails; error only on first load.
+        setPersonalStatus((status) => (status === 'success' ? 'success' : 'error'))
       })
 
     return () => {
@@ -249,12 +249,12 @@ export default function Activity() {
     }
   }, [connected, tab, tick])
 
-  // Network feed (public).
+  // Network feed (public). Keep prior items while refreshing.
   useEffect(() => {
     if (tab !== 'network') return
 
     let cancelled = false
-    setNetworkStatus('loading')
+    setNetworkStatus((prev) => (prev === 'success' ? 'success' : 'loading'))
     setNetworkError(null)
 
     void fetchNetworkActivity()
@@ -265,9 +265,8 @@ export default function Activity() {
       })
       .catch((err: unknown) => {
         if (cancelled) return
-        setNetwork(null)
         setNetworkError(err instanceof Error ? err : new Error(String(err)))
-        setNetworkStatus('error')
+        setNetworkStatus((status) => (status === 'success' ? 'success' : 'error'))
       })
 
     return () => {
@@ -371,14 +370,24 @@ export default function Activity() {
               ) : null}
             </section>
           ) : personalStatus === 'loading' || personalStatus === 'idle' ? (
-            <div role="status" aria-busy="true" aria-label="Loading personal timeline">
-              <p className="activity-status">Loading your timeline…</p>
-              <div className="shell-card activity-skeleton" aria-hidden="true">
-                <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--wide" />
-                <span className="so-skeleton-line activity-skeleton-line" />
-                <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--mid" />
+            personal ? (
+              <TimelineList
+                items={personal.data.items}
+                envelopeStatus={personal.status}
+                onRetry={refresh}
+                emptyTitle="No personal activity observed yet"
+                emptyBody="Steakout has not indexed direct payouts, observed position growth, or staking actions for this address yet. That is insufficient data, not a claim that rewards were missed or withheld. History may still be accumulating."
+              />
+            ) : (
+              <div role="status" aria-busy="true" aria-label="Loading personal timeline">
+                <p className="activity-status">Loading your timeline…</p>
+                <div className="shell-card activity-skeleton" aria-hidden="true">
+                  <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--wide" />
+                  <span className="so-skeleton-line activity-skeleton-line" />
+                  <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--mid" />
+                </div>
               </div>
-            </div>
+            )
           ) : personalStatus === 'error' ? (
             <section className="shell-card activity-card" aria-labelledby="activity-err-title">
               <h2 id="activity-err-title">Could not load timeline</h2>
@@ -442,14 +451,24 @@ export default function Activity() {
             />
           )
         ) : networkStatus === 'loading' || networkStatus === 'idle' ? (
-          <div role="status" aria-busy="true" aria-label="Loading network observations">
-            <p className="activity-status">Loading network observations…</p>
-            <div className="shell-card activity-skeleton" aria-hidden="true">
-              <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--wide" />
-              <span className="so-skeleton-line activity-skeleton-line" />
-              <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--mid" />
+          network ? (
+            <TimelineList
+              items={network.data.items}
+              envelopeStatus={network.status}
+              onRetry={refresh}
+              emptyTitle="No network observations yet"
+              emptyBody="Observed payout runs will appear here once the indexer has classified activity for listed validators. Insufficient data is a valid result, not an error and not a judgment of any validator."
+            />
+          ) : (
+            <div role="status" aria-busy="true" aria-label="Loading network observations">
+              <p className="activity-status">Loading network observations…</p>
+              <div className="shell-card activity-skeleton" aria-hidden="true">
+                <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--wide" />
+                <span className="so-skeleton-line activity-skeleton-line" />
+                <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--mid" />
+              </div>
             </div>
-          </div>
+          )
         ) : networkStatus === 'error' ? (
           <section className="shell-card activity-card" aria-labelledby="activity-net-err">
             <h2 id="activity-net-err">Could not load network feed</h2>

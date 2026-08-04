@@ -22,6 +22,8 @@ type LoadState =
       validators: ValidatorListItem[]
       status: string
       updatedAt: string
+      /** True while a sort/filter refetch is in flight (keep previous list). */
+      refreshing?: boolean
     }
 
 const RECOMMENDED_EXPLAINER =
@@ -61,7 +63,12 @@ export default function Directory() {
 
   useEffect(() => {
     const controller = new AbortController()
-    setState({ kind: 'loading' })
+    // Keep previous results visible while filters change (page shell stays put).
+    setState((prev) =>
+      prev.kind === 'ready'
+        ? { ...prev, refreshing: true }
+        : { kind: 'loading' },
+    )
 
     void (async () => {
       try {
@@ -76,13 +83,20 @@ export default function Directory() {
           validators: envelope.data.validators,
           status: envelope.status,
           updatedAt: envelope.updatedAt,
+          refreshing: false,
         })
       } catch (err) {
         if (controller.signal.aborted) return
         if (err instanceof DOMException && err.name === 'AbortError') return
-        setState({
-          kind: 'error',
-          message: humanizeFetchError(err, 'Could not load validators.'),
+        setState((prev) => {
+          // Prefer keeping stale list over blanking the page on a soft refresh fail.
+          if (prev.kind === 'ready') {
+            return { ...prev, refreshing: false }
+          }
+          return {
+            kind: 'error',
+            message: humanizeFetchError(err, 'Could not load validators.'),
+          }
         })
       }
     })()
@@ -146,6 +160,12 @@ export default function Directory() {
           <SkeletonCard />
           <SkeletonCard />
         </div>
+      ) : null}
+
+      {state.kind === 'ready' && state.refreshing ? (
+        <p className="directory-refreshing" role="status">
+          Updating list…
+        </p>
       ) : null}
 
       {state.kind === 'error' ? (

@@ -1,6 +1,6 @@
 /**
- * Validator profile — summary + evidence layers (P1-11 / P2-08 / P2-16 / SPEC §6.3).
- * Public, no wallet required. Stake CTA opens P1-12 StakeFlow when connected.
+ * Validator profile — summary + progressive disclosure (SPEC §6.3 declutter).
+ * Public, no wallet required. Stake CTA opens StakeFlow when connected.
  *
  * Official Nimiq Trust Score is always shown as the official score,
  * never blended with Steakout observation status (invariant #6).
@@ -16,7 +16,10 @@ import type { PositionState } from '../api/position'
 import DataStatusTag from '../components/DataStatusTag'
 import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
 import { humanizeFetchError } from '../components/humanizeError'
-import type { ObservationStatus } from '../components/StatusChip'
+import StatusChip, {
+  OBSERVATION_STATUS_LABELS,
+  type ObservationStatus,
+} from '../components/StatusChip'
 import { buildNimiqAddressExplorerUrl } from '../explorer'
 import { hashWantsChange, hashWantsStake } from '../routes'
 import StakeFlow, {
@@ -25,7 +28,13 @@ import StakeFlow, {
 } from '../staking/StakeFlow'
 import { STAKE_CONNECT_FIRST } from '../staking/copy'
 import { useWallet } from '../wallet/useWallet'
-import Evidence from './Evidence'
+import Evidence, { type EvidenceSummaryMeta } from './Evidence'
+import {
+  formatDeclaredFee,
+  formatDominance,
+  formatPayoutType,
+  INSUFFICIENT_DATA,
+} from './format'
 import {
   applyDocumentMeta,
   buildProfilePageMeta,
@@ -112,26 +121,13 @@ type LoadState =
   | { kind: 'error'; message: string }
   | { kind: 'ok'; envelope: ApiOk }
 
-const PAYOUT_TYPE_LABEL: Record<DeclaredPayoutType, string> = {
-  direct: 'Direct payout',
-  restake: 'Restake',
-  unknown: 'Not declared',
-}
-
 function formatNimFromLuna(luna: number | null): string {
   if (luna == null || !Number.isFinite(luna)) return 'Unavailable'
   const nim = luna / LUNA_PER_NIM
   return `${nim.toLocaleString(undefined, { maximumFractionDigits: 2 })} NIM`
 }
 
-function formatDominance(ratio: number | null): string {
-  if (ratio == null || !Number.isFinite(ratio)) return 'Unavailable'
-  // Compact; no fake precision (STYLING §6).
-  const pct = ratio * 100
-  if (pct < 0.01 && pct > 0) return '< 0.01%'
-  return `${pct.toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
-}
-
+/** Profile hero score: keep honest null handling; display as numeric score. */
 function formatOfficialScore(score: number | null): string {
   if (score == null || !Number.isFinite(score)) return 'Insufficient data'
   return score.toLocaleString(undefined, {
@@ -186,6 +182,19 @@ function formatFreshness(ageSeconds: number, updatedAt: string): string {
   return `Updated ${days} d ago`
 }
 
+function historyDepthCaption(days: number): string {
+  if (!Number.isFinite(days) || days <= 0) return 'Insufficient history'
+  const n = Math.floor(days)
+  if (n < 1) return '< 1 day indexed'
+  return n === 1 ? '1 day indexed' : `${n} days indexed`
+}
+
+function dominanceStripLabel(ratio: number | null): string {
+  const formatted = formatDominance(ratio)
+  if (formatted === INSUFFICIENT_DATA) return formatted
+  return `${formatted} of network`
+}
+
 function MetricRow({
   label,
   definition,
@@ -237,6 +246,9 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
     positionState: null,
     currentDelegation: null,
   })
+  const [evidenceMeta, setEvidenceMeta] = useState<EvidenceSummaryMeta | null>(
+    null,
+  )
 
   const wallet = useWallet({ auth: walletAuthApi })
 
@@ -247,6 +259,10 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
   const openStakeFlow = useCallback((mode: StakeFlowMode = 'stake') => {
     setStakeFlowMode(mode)
     setStakeOpen(true)
+  }, [])
+
+  const onEvidenceMeta = useCallback((meta: EvidenceSummaryMeta) => {
+    setEvidenceMeta(meta)
   }, [])
 
   // Deep-link `#/validators/:address?stake=1` or `?change=1` once profile is ok.
@@ -290,6 +306,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
     }
 
     setState({ kind: 'loading' })
+    setEvidenceMeta(null)
 
     const path = `/api/validators/${encodeURIComponent(rawAddress.trim())}`
 
@@ -409,21 +426,48 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           <a className="profile-back nq-arrow-back" href="#/validators">
             Validators
           </a>
-          <h1 className="page-title page-title--profile">Loading…</h1>
-        </header>
-        <section
-          className="nq-card shell-card profile-card"
-          aria-busy="true"
-          aria-labelledby="profile-loading-status"
-        >
-          <p className="profile-status" id="profile-loading-status" role="status">
-            Loading validator profile…
-          </p>
-          <div className="profile-skeleton" aria-hidden="true">
-            <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--wide" />
-            <span className="so-skeleton-line profile-skeleton-line" />
+          <h1 className="page-title page-title--profile">Validator</h1>
+          <p className="profile-address mono" aria-hidden="true">
             <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--mid" />
+          </p>
+        </header>
+        <p className="profile-status" id="profile-loading-status" role="status">
+          Loading validator profile…
+        </p>
+        <div className="profile-hero" aria-busy="true" aria-labelledby="profile-loading-status">
+          <section className="nq-card shell-card profile-card profile-card--official profile-hero-panel">
+            <p className="profile-hero-label">Official Trust Score</p>
+            <div className="profile-skeleton" aria-hidden="true">
+              <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--narrow" />
+              <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--mid" />
+            </div>
+          </section>
+          <section className="nq-card shell-card profile-card profile-card--observation profile-hero-panel">
+            <p className="profile-hero-label">Payout observation</p>
+            <div className="profile-skeleton" aria-hidden="true">
+              <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--mid" />
+              <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--narrow" />
+            </div>
+          </section>
+        </div>
+        <ul className="profile-policy-strip" aria-hidden="true">
+          <li className="profile-policy-item">
             <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--narrow" />
+          </li>
+          <li className="profile-policy-item">
+            <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--narrow" />
+          </li>
+          <li className="profile-policy-item">
+            <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--narrow" />
+          </li>
+          <li className="profile-policy-item">
+            <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--narrow" />
+          </li>
+        </ul>
+        <section className="nq-card shell-card profile-card profile-card--cta" aria-hidden="true">
+          <div className="profile-skeleton">
+            <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--wide" />
+            <span className="so-skeleton-line profile-skeleton-line profile-skeleton-line--mid" />
           </div>
         </section>
       </div>
@@ -519,8 +563,24 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
       ? buildNimiqAddressExplorerUrl(profile.rewardAddress)
       : null)
 
-  const scoreIsPresent =
-    profile.officialScore != null && Number.isFinite(profile.officialScore)
+  const scheduleDisplay =
+    profile.declared.payoutSchedule ??
+    (profile.declared.scheduleNormalized
+      ? `Every ${profile.declared.scheduleNormalized.everyHours} hours`
+      : 'Not declared')
+
+  const obsStatus = evidenceMeta?.status ?? profile.observation.status
+  const obsStatusLabel =
+    OBSERVATION_STATUS_LABELS[obsStatus] ??
+    OBSERVATION_STATUS_LABELS['insufficient-data']
+  const obsHistoryDays =
+    evidenceMeta?.historyDepthDays ?? profile.observation.historyDepthDays
+  const evidenceSummaryParts = [
+    'Payout evidence',
+    obsStatusLabel,
+    evidenceMeta?.windowsLabel,
+    historyDepthCaption(obsHistoryDays),
+  ].filter(Boolean)
 
   return (
     <div className="profile">
@@ -540,7 +600,23 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
         <p className="eyebrow">
           {profile.isListed ? 'Listed validator' : 'Observable validator'}
         </p>
-        <h1 className="page-title page-title--profile">{displayName}</h1>
+        <div className="profile-title-row">
+          <h1 className="page-title page-title--profile">{displayName}</h1>
+          <div className="profile-share">
+            <button
+              type="button"
+              className="nq-pill-secondary profile-share-btn"
+              onClick={() => void handleShare(profile.address, displayName)}
+            >
+              Share
+            </button>
+            {shareFeedback ? (
+              <span className="profile-share-feedback" role="status">
+                {shareFeedback}
+              </span>
+            ) : null}
+          </div>
+        </div>
         <p className="profile-address mono">
           <a
             className="profile-external"
@@ -548,326 +624,80 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
             target="_blank"
             rel="noopener noreferrer"
           >
-            {formatDisplayAddress(profile.address)}
+            {shortAddress(profile.address)}
           </a>
         </p>
-        {profile.description ? (
-          <p className="profile-description">{profile.description}</p>
-        ) : null}
-        {profile.website ? (
-          <p className="profile-website">
-            <a
-              className="nq-arrow"
-              href={profile.website}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Website
-            </a>
-          </p>
-        ) : null}
-        <div className="profile-share">
-          <button
-            type="button"
-            className="nq-pill-secondary profile-share-btn"
-            onClick={() => void handleShare(profile.address, displayName)}
-          >
-            Share profile
-          </button>
-          {shareFeedback ? (
-            <span className="profile-share-feedback" role="status">
-              {shareFeedback}
-            </span>
-          ) : null}
-        </div>
       </header>
 
-      {/* Official score — always distinct from Steakout observations (P2-09). */}
-      <section
-        className="nq-card shell-card profile-card profile-card--official"
-        aria-labelledby="profile-official-score"
+      {/* Dual hero: official score | payout observation (never blended). */}
+      <div
+        className="profile-hero"
+        data-observation-status={obsStatus}
       >
-        <p className="card-kicker">Official score</p>
-        <h2 id="profile-official-score" className="profile-section-title">
-          Nimiq Validator Trust Score
-        </h2>
-        <p className="profile-score-value mono" data-testid="official-score">
-          {formatOfficialScore(profile.officialScore)}
-        </p>
-        <p className="nq-subline profile-section-note">
-          Official block-production score from the public Nimiq validators
-          registry. Steakout never replaces or blends it with payout observation
-          status.
-        </p>
-        <div className="profile-metric-foot">
-          <DataStatusTag status={scoreIsPresent ? 'registry' : 'insufficient'} />
-          <span className="profile-freshness">{registryFreshness}</span>
-        </div>
-        <p className="profile-limitations-link">
-          <a className="nq-arrow" href="#/learn/limitations">
-            Limitations
-          </a>
-        </p>
-      </section>
-
-      {/* Registry declarations — visually separated from observations */}
-      <section
-        className="nq-card shell-card profile-card profile-card--declared"
-        aria-labelledby="profile-declared"
-      >
-        <p className="card-kicker">Registry declarations</p>
-        <h2 id="profile-declared" className="profile-section-title">
-          Declared policy
-        </h2>
-        <p className="nq-subline profile-section-note">
-          Supplied by the validators registry. Not independently verified on
-          chain by Steakout.
-        </p>
-        <dl className="profile-metrics">
-          <MetricRow
-            label="Declared fee"
-            definition="Fee string published in the registry for this validator; not an effective on-chain fee."
-            value={profile.declared.fee ?? 'Not declared'}
-            status="registry"
-            freshness={registryFreshness}
-          />
-          <MetricRow
-            label="Payout type"
-            definition="How the registry says this validator distributes rewards (direct payout or restake)."
-            value={PAYOUT_TYPE_LABEL[profile.declared.payoutType] ?? 'Not declared'}
-            status="registry"
-            freshness={registryFreshness}
-          />
-          <MetricRow
-            label="Payout schedule"
-            definition="Declared cadence for reward distribution. Free-text schedules are shown raw and not graded."
-            value={
-              profile.declared.payoutSchedule ??
-              (profile.declared.scheduleNormalized
-                ? `Every ${profile.declared.scheduleNormalized.everyHours} hours`
-                : 'Not declared')
-            }
-            status="registry"
-            freshness={registryFreshness}
-          />
-          <MetricRow
-            label="Stake dominance"
-            definition="Share of network stake delegated to this validator, as reported by the registry."
-            value={formatDominance(profile.dominanceRatio)}
-            status={
-              profile.dominanceRatio == null ? 'unavailable' : 'registry'
-            }
-            freshness={registryFreshness}
-          />
-          <MetricRow
-            label="Total stake"
-            definition="Stake amount attributed to this validator in the registry snapshot."
-            value={formatNimFromLuna(profile.stakeLuna)}
-            status={profile.stakeLuna == null ? 'unavailable' : 'registry'}
-            freshness={registryFreshness}
-          />
-          <MetricRow
-            label="Stakers"
-            definition="Number of stakers reported for this validator when the registry provides it."
-            value={
-              profile.stakersCount == null
-                ? 'Unavailable'
-                : profile.stakersCount.toLocaleString()
-            }
-            status={profile.stakersCount == null ? 'unavailable' : 'registry'}
-            freshness={registryFreshness}
-          />
-        </dl>
-      </section>
-
-      {/* Steakout observation + payout-run evidence (P2-08); captioned apart from official score (P2-09). */}
-      <Evidence
-        address={profile.address}
-        profileStatus={profile.observation.status}
-        profileHistoryDepthDays={profile.observation.historyDepthDays}
-        profileLastObservedAt={profile.observation.lastObservedAt}
-      />
-
-      {/* Canary probe monitoring — wired now; observation fields fill as history accumulates. */}
-      {profile.canaryProbe?.configured ? (
         <section
-          className="nq-card shell-card profile-card profile-card--canary"
-          aria-labelledby="profile-canary"
-          data-testid="canary-probe"
+          className="nq-card shell-card profile-card profile-card--official profile-hero-panel"
+          aria-labelledby="profile-official-score"
         >
-          <p className="card-kicker">Steakout canary</p>
-          <h2 id="profile-canary" className="profile-section-title">
-            Probe monitoring
+          <h2 id="profile-official-score" className="profile-hero-label">
+            Official Trust Score
           </h2>
-          <p className="nq-subline profile-section-note">
-            Steakout stakes a small canary position to this validator and watches
-            what reaches that address. This is not a fee rating and not proof of
-            how every staker is treated.
+          <p className="profile-score-value mono" data-testid="official-score">
+            {formatOfficialScore(profile.officialScore)}
           </p>
-          <p className="profile-canary-status" data-testid="canary-status">
-            <strong>{profile.canaryProbe.statusLabel}</strong>
-            {profile.canaryProbe.note ? (
-              <span className="profile-canary-note">
-                {' '}
-                — {profile.canaryProbe.note}
-              </span>
-            ) : null}
-          </p>
-          <dl className="profile-metrics">
-            <MetricRow
-              label="Probe address"
-              definition="Steakout-controlled canary address delegated to this validator. Public only; not a user wallet."
-              value={
-                profile.canaryProbe.probeAddress ? (
-                  profile.canaryProbe.probeExplorerUrl ? (
-                    <a
-                      className="profile-external mono"
-                      href={profile.canaryProbe.probeExplorerUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {formatDisplayAddress(profile.canaryProbe.probeAddress)}
-                    </a>
-                  ) : (
-                    <span className="mono">
-                      {formatDisplayAddress(profile.canaryProbe.probeAddress)}
-                    </span>
-                  )
-                ) : (
-                  'Unavailable'
-                )
-              }
-              status="registry"
-              freshness={
-                profile.canaryProbe.stakedAt
-                  ? `Staked ${formatIsoOrPending(profile.canaryProbe.stakedAt)}`
-                  : 'Configured'
-              }
-            />
-            <MetricRow
-              label="Canary stake"
-              definition="Amount staked on the canary address for observation. Protocol minimum is 100 NIM."
-              value={formatNimFromLuna(profile.canaryProbe.stakeAmountLuna)}
-              status={
-                profile.canaryProbe.stakeAmountLuna == null
-                  ? 'unavailable'
-                  : 'verified'
-              }
-              freshness={formatIsoOrPending(profile.canaryProbe.stakedAt)}
-            />
-            <MetricRow
-              label="Stake transaction"
-              definition="On-chain create-staker (or add-stake) transaction that opened the canary position."
-              value={formatTxLink(
-                profile.canaryProbe.stakeTxHash,
-                profile.canaryProbe.stakeExplorerUrl,
-              )}
-              status={
-                profile.canaryProbe.stakeTxHash ? 'verified' : 'insufficient'
-              }
-              freshness={formatIsoOrPending(profile.canaryProbe.stakedAt)}
-            />
-            <MetricRow
-              label="Last observed payment"
-              definition="Most recent successful transfer from this validator’s reward address to the canary probe. Pending until the indexer sees one."
-              value={
-                profile.canaryProbe.lastPaymentLuna != null
-                  ? formatNimFromLuna(profile.canaryProbe.lastPaymentLuna)
-                  : 'Pending'
-              }
-              status={profile.canaryProbe.dataStatus}
-              freshness={
-                profile.canaryProbe.lastPaymentAt
-                  ? formatIsoOrPending(profile.canaryProbe.lastPaymentAt)
-                  : 'No payment indexed yet'
-              }
-            />
-            <MetricRow
-              label="Last payment evidence"
-              definition="Transaction hash for the last observed canary payment, when available."
-              value={formatTxLink(
-                profile.canaryProbe.lastPaymentTxHash,
-                profile.canaryProbe.lastPaymentExplorerUrl,
-              )}
-              status={profile.canaryProbe.dataStatus}
-              freshness={
-                profile.canaryProbe.lastPaymentAt
-                  ? formatIsoOrPending(profile.canaryProbe.lastPaymentAt)
-                  : 'Pending'
-              }
-            />
-            <MetricRow
-              label="Observed staker balance"
-              definition="Last indexed staker-account total for the canary (useful for restake validators). Pending until snapshots exist."
-              value={
-                profile.canaryProbe.lastStakerBalanceLuna != null
-                  ? formatNimFromLuna(profile.canaryProbe.lastStakerBalanceLuna)
-                  : 'Pending'
-              }
-              status={
-                profile.canaryProbe.lastStakerBalanceLuna != null
-                  ? 'verified'
-                  : 'insufficient'
-              }
-              freshness={
-                profile.canaryProbe.lastStakerBalanceAt
-                  ? formatIsoOrPending(profile.canaryProbe.lastStakerBalanceAt)
-                  : 'No snapshot yet'
-              }
-            />
-          </dl>
-          <p className="profile-limitations-link">
-            <a className="nq-arrow" href="#/learn/methodology">
-              Methodology
-            </a>
-            {' · '}
-            <a className="nq-arrow" href="#/learn/limitations">
-              Limitations
-            </a>
+          <p className="profile-hero-caption">
+            Registry block-production score
           </p>
         </section>
-      ) : null}
 
-      {/* Reward address */}
-      <section
-        className="nq-card shell-card profile-card"
-        aria-labelledby="profile-reward"
-      >
-        <p className="card-kicker">On-chain</p>
-        <h2 id="profile-reward" className="profile-section-title">
-          Reward address
-        </h2>
-        {profile.rewardAddress ? (
-          <>
-            <p className="profile-reward mono">
-              {formatDisplayAddress(profile.rewardAddress)}
-            </p>
-            {rewardExplorer ? (
-              <p>
-                <a
-                  className="nq-arrow"
-                  href={rewardExplorer}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Open in explorer
-                </a>
-              </p>
-            ) : null}
-            <div className="profile-metric-foot">
-              <DataStatusTag status="registry" />
-              <span className="profile-freshness">{registryFreshness}</span>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="nq-subline">No reward address in the registry snapshot.</p>
-            <DataStatusTag status="unavailable" />
-          </>
-        )}
-      </section>
+        <section
+          className="nq-card shell-card profile-card profile-card--observation profile-hero-panel"
+          aria-labelledby="profile-observation"
+          data-observation-status={obsStatus}
+        >
+          <h2 id="profile-observation" className="profile-hero-label">
+            Payout observation
+          </h2>
+          <div className="profile-observation-chip">
+            <StatusChip status={obsStatus} />
+          </div>
+          <p className="profile-hero-caption">
+            {historyDepthCaption(obsHistoryDays)}
+          </p>
+        </section>
+      </div>
+      <p className="profile-hero-freshness" aria-label={registryFreshness}>
+        {registryFreshness}
+        <span className="profile-hero-freshness-sep"> · </span>
+        Registry snapshot
+      </p>
 
-      {/* Stake / change-validator CTA — ReviewSheet before provider (P1-12 / P2-11). */}
+      {/* Policy strip — values only for quick compare. */}
+      <ul className="profile-policy-strip" aria-label="Declared policy">
+        <li className="profile-policy-item">
+          <span className="profile-policy-label">Fee</span>
+          <span className="profile-policy-value mono">
+            {formatDeclaredFee(profile.declared.fee)}
+          </span>
+        </li>
+        <li className="profile-policy-item">
+          <span className="profile-policy-label">Type</span>
+          <span className="profile-policy-value">
+            {formatPayoutType(profile.declared.payoutType)}
+          </span>
+        </li>
+        <li className="profile-policy-item">
+          <span className="profile-policy-label">Schedule</span>
+          <span className="profile-policy-value">{scheduleDisplay}</span>
+        </li>
+        <li className="profile-policy-item">
+          <span className="profile-policy-label">Dominance</span>
+          <span className="profile-policy-value mono">
+            {dominanceStripLabel(profile.dominanceRatio)}
+          </span>
+        </li>
+      </ul>
+
+      {/* Stake CTA immediately under strip — same ProfileStakeCta behavior. */}
       <ProfileStakeCta
         profileAddress={profile.address}
         walletConnected={wallet.status === 'connected' && Boolean(wallet.address)}
@@ -881,6 +711,317 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           void wallet.connect().then(() => openStakeFlow('stake'))
         }}
       />
+
+      {/* Collapsed by default: evidence, canary, technical. */}
+      <details className="profile-disclosure nq-card shell-card profile-card profile-card--observation">
+        <summary className="profile-disclosure-summary">
+          <span className="profile-disclosure-title">Payout evidence</span>
+          <span className="profile-disclosure-meta">
+            {evidenceSummaryParts.slice(1).join(' · ')}
+          </span>
+        </summary>
+        <div className="profile-disclosure-body">
+          <Evidence
+            address={profile.address}
+            embedded
+            profileStatus={profile.observation.status}
+            profileHistoryDepthDays={profile.observation.historyDepthDays}
+            profileLastObservedAt={profile.observation.lastObservedAt}
+            onSummaryMeta={onEvidenceMeta}
+          />
+        </div>
+      </details>
+
+      {profile.canaryProbe?.configured ? (
+        <details
+          className="profile-disclosure nq-card shell-card profile-card profile-card--canary"
+          data-testid="canary-probe"
+        >
+          <summary className="profile-disclosure-summary">
+            <span className="profile-disclosure-title">Canary probe</span>
+            <span
+              className="profile-disclosure-meta"
+              data-testid="canary-status"
+            >
+              {profile.canaryProbe.statusLabel}
+            </span>
+          </summary>
+          <div className="profile-disclosure-body">
+            <p className="nq-subline profile-section-note">
+              Steakout stakes a small canary position to this validator and
+              watches what reaches that address. This is not a fee rating and not
+              proof of how every staker is treated.
+            </p>
+            {profile.canaryProbe.note ? (
+              <p className="profile-canary-status">
+                <span className="profile-canary-note">
+                  {profile.canaryProbe.note}
+                </span>
+              </p>
+            ) : null}
+            <dl className="profile-metrics">
+              <MetricRow
+                label="Probe address"
+                definition="Steakout-controlled canary address delegated to this validator. Public only; not a user wallet."
+                value={
+                  profile.canaryProbe.probeAddress ? (
+                    profile.canaryProbe.probeExplorerUrl ? (
+                      <a
+                        className="profile-external mono"
+                        href={profile.canaryProbe.probeExplorerUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {formatDisplayAddress(profile.canaryProbe.probeAddress)}
+                      </a>
+                    ) : (
+                      <span className="mono">
+                        {formatDisplayAddress(profile.canaryProbe.probeAddress)}
+                      </span>
+                    )
+                  ) : (
+                    'Unavailable'
+                  )
+                }
+                status="registry"
+                freshness={
+                  profile.canaryProbe.stakedAt
+                    ? `Staked ${formatIsoOrPending(profile.canaryProbe.stakedAt)}`
+                    : 'Configured'
+                }
+              />
+              <MetricRow
+                label="Canary stake"
+                definition="Amount staked on the canary address for observation. Protocol minimum is 100 NIM."
+                value={formatNimFromLuna(profile.canaryProbe.stakeAmountLuna)}
+                status={
+                  profile.canaryProbe.stakeAmountLuna == null
+                    ? 'unavailable'
+                    : 'verified'
+                }
+                freshness={formatIsoOrPending(profile.canaryProbe.stakedAt)}
+              />
+              <MetricRow
+                label="Stake transaction"
+                definition="On-chain create-staker (or add-stake) transaction that opened the canary position."
+                value={formatTxLink(
+                  profile.canaryProbe.stakeTxHash,
+                  profile.canaryProbe.stakeExplorerUrl,
+                )}
+                status={
+                  profile.canaryProbe.stakeTxHash ? 'verified' : 'insufficient'
+                }
+                freshness={formatIsoOrPending(profile.canaryProbe.stakedAt)}
+              />
+              <MetricRow
+                label="Last observed payment"
+                definition="Most recent successful transfer from this validator’s reward address to the canary probe. Pending until the indexer sees one."
+                value={
+                  profile.canaryProbe.lastPaymentLuna != null
+                    ? formatNimFromLuna(profile.canaryProbe.lastPaymentLuna)
+                    : 'Pending'
+                }
+                status={profile.canaryProbe.dataStatus}
+                freshness={
+                  profile.canaryProbe.lastPaymentAt
+                    ? formatIsoOrPending(profile.canaryProbe.lastPaymentAt)
+                    : 'No payment indexed yet'
+                }
+              />
+              <MetricRow
+                label="Last payment evidence"
+                definition="Transaction hash for the last observed canary payment, when available."
+                value={formatTxLink(
+                  profile.canaryProbe.lastPaymentTxHash,
+                  profile.canaryProbe.lastPaymentExplorerUrl,
+                )}
+                status={profile.canaryProbe.dataStatus}
+                freshness={
+                  profile.canaryProbe.lastPaymentAt
+                    ? formatIsoOrPending(profile.canaryProbe.lastPaymentAt)
+                    : 'Pending'
+                }
+              />
+              <MetricRow
+                label="Observed staker balance"
+                definition="Last indexed staker-account total for the canary (useful for restake validators). Pending until snapshots exist."
+                value={
+                  profile.canaryProbe.lastStakerBalanceLuna != null
+                    ? formatNimFromLuna(profile.canaryProbe.lastStakerBalanceLuna)
+                    : 'Pending'
+                }
+                status={
+                  profile.canaryProbe.lastStakerBalanceLuna != null
+                    ? 'verified'
+                    : 'insufficient'
+                }
+                freshness={
+                  profile.canaryProbe.lastStakerBalanceAt
+                    ? formatIsoOrPending(profile.canaryProbe.lastStakerBalanceAt)
+                    : 'No snapshot yet'
+                }
+              />
+            </dl>
+            <p className="profile-limitations-link">
+              <a className="nq-arrow" href="#/learn/methodology">
+                Methodology
+              </a>
+              {' · '}
+              <a className="nq-arrow" href="#/learn/limitations">
+                Limitations
+              </a>
+            </p>
+          </div>
+        </details>
+      ) : null}
+
+      <details className="profile-disclosure nq-card shell-card profile-card">
+        <summary className="profile-disclosure-summary">
+          <span className="profile-disclosure-title">Technical details</span>
+        </summary>
+        <div className="profile-disclosure-body">
+          <dl className="profile-metrics">
+            <div className="profile-metric">
+              <div className="profile-metric-head">
+                <dt className="nq-label profile-metric-label">Full address</dt>
+              </div>
+              <dd className="profile-metric-value mono">
+                <a
+                  className="profile-external"
+                  href={explorerForValidator}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {formatDisplayAddress(profile.address)}
+                </a>
+              </dd>
+            </div>
+            {profile.website ? (
+              <div className="profile-metric">
+                <div className="profile-metric-head">
+                  <dt className="nq-label profile-metric-label">Website</dt>
+                </div>
+                <dd className="profile-metric-value">
+                  <a
+                    className="nq-arrow"
+                    href={profile.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {profile.website}
+                  </a>
+                </dd>
+              </div>
+            ) : null}
+            {profile.description ? (
+              <div className="profile-metric">
+                <div className="profile-metric-head">
+                  <dt className="nq-label profile-metric-label">Description</dt>
+                </div>
+                <dd className="profile-metric-value profile-description-inline">
+                  {profile.description}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+
+          <h3 className="profile-subheading">Registry declarations</h3>
+          <p className="nq-subline profile-section-note">
+            Supplied by the validators registry. Not independently verified on
+            chain by Steakout.
+          </p>
+          <dl className="profile-metrics">
+            <MetricRow
+              label="Declared fee"
+              definition="Fee string published in the registry for this validator; not an effective on-chain fee."
+              value={formatDeclaredFee(profile.declared.fee)}
+              status="registry"
+              freshness={registryFreshness}
+            />
+            <MetricRow
+              label="Payout type"
+              definition="How the registry says this validator distributes rewards (direct payout or restake)."
+              value={formatPayoutType(profile.declared.payoutType)}
+              status="registry"
+              freshness={registryFreshness}
+            />
+            <MetricRow
+              label="Payout schedule"
+              definition="Declared cadence for reward distribution. Free-text schedules are shown raw and not graded."
+              value={scheduleDisplay}
+              status="registry"
+              freshness={registryFreshness}
+            />
+            <MetricRow
+              label="Stake dominance"
+              definition="Share of network stake delegated to this validator, as reported by the registry."
+              value={dominanceStripLabel(profile.dominanceRatio)}
+              status={
+                profile.dominanceRatio == null ? 'unavailable' : 'registry'
+              }
+              freshness={registryFreshness}
+            />
+            <MetricRow
+              label="Total stake"
+              definition="Stake amount attributed to this validator in the registry snapshot."
+              value={formatNimFromLuna(profile.stakeLuna)}
+              status={profile.stakeLuna == null ? 'unavailable' : 'registry'}
+              freshness={registryFreshness}
+            />
+            <MetricRow
+              label="Stakers"
+              definition="Number of stakers reported for this validator when the registry provides it."
+              value={
+                profile.stakersCount == null
+                  ? 'Unavailable'
+                  : profile.stakersCount.toLocaleString()
+              }
+              status={profile.stakersCount == null ? 'unavailable' : 'registry'}
+              freshness={registryFreshness}
+            />
+          </dl>
+
+          <h3 className="profile-subheading">Reward address</h3>
+          {profile.rewardAddress ? (
+            <>
+              <p className="profile-reward mono">
+                {formatDisplayAddress(profile.rewardAddress)}
+              </p>
+              {rewardExplorer ? (
+                <p>
+                  <a
+                    className="nq-arrow"
+                    href={rewardExplorer}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open in explorer
+                  </a>
+                </p>
+              ) : null}
+              <div className="profile-metric-foot">
+                <DataStatusTag status="registry" />
+                <span className="profile-freshness">{registryFreshness}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="nq-subline">No reward address in the registry snapshot.</p>
+              <DataStatusTag status="unavailable" />
+            </>
+          )}
+
+          <p className="profile-limitations-link">
+            <a className="nq-arrow" href="#/learn/methodology">
+              Methodology
+            </a>
+            {' · '}
+            <a className="nq-arrow" href="#/learn/limitations">
+              Limitations
+            </a>
+          </p>
+        </div>
+      </details>
 
       {stakeOpen ? (
         <StakeFlow

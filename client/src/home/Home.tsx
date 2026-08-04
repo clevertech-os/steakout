@@ -73,7 +73,8 @@ export default function Home() {
     return (
       <div className="home">
         <header className="shell-header page-header">
-          <h1 className="page-title">Loading…</h1>
+          <h1 className="page-title">Home</h1>
+          <p className="page-lede">Your staking position and wallet status.</p>
         </header>
         <section className="nq-card nq-card-lg shell-card home-card" aria-busy="true">
           <p className="home-status" role="status">
@@ -114,12 +115,14 @@ export default function Home() {
 
   const positionErrorMessage = formatPositionError(position.error)
 
-  // Connected + position loading (first paint)
+  // Connected + position loading (first paint) — page chrome first, data fills in.
   if (position.status === 'loading' && !position.envelope) {
     return (
       <div className="home">
+        {pairBanner}
         <header className="shell-header page-header">
-          <h1 className="page-title">Loading position…</h1>
+          <h1 className="page-title">Home</h1>
+          <p className="page-lede">Your staking position and wallet status.</p>
         </header>
         <section className="nq-card nq-card-lg shell-card home-card" aria-busy="true">
           <p className="home-status" role="status">

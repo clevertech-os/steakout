@@ -76,10 +76,16 @@
 .bottom-nav-link.is-active::before {
   position: absolute;
   top: 0;
+  /* Center under the active tab (mobile flex items omit static-position
+     centering without an explicit horizontal anchor). */
+  left: 50%;
+  display: block;
   width: 2rem;
   height: 3px;
   border-radius: 0 0 3px 3px;
   background: var(--so-accent);
+  transform: translateX(-50%);
+  pointer-events: none;
   content: '';
 }
 
