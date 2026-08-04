@@ -40,6 +40,9 @@ export interface ValidatorListItem {
     status: ObservationStatus
     lastObservedAt: string | null
     historyDepthDays: number
+    /** Present when schedule is graded from indexed runs. */
+    observedWindows?: number | null
+    expectedWindows?: number | null
   }
   registryUpdatedAt?: string
   /** True when Steakout runs a canary probe stake on this validator. */

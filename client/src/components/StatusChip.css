@@ -1,5 +1,14 @@
 /* Observation status chip — token-only (STYLING §5 / P3-05 contrast). */
 
+.status-chip-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .status-chip {
   display: inline-flex;
   align-items: center;
@@ -24,15 +33,40 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--so-space-4);
-  height: var(--so-space-4);
+  width: 1.35rem;
+  height: 1.35rem;
+  min-width: 1.35rem;
+  min-height: 1.35rem;
+  margin: 0;
+  padding: 0;
   border-radius: 50%;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
   font-family: var(--so-mono);
   font-size: var(--so-text-2xs);
   font-weight: 700;
   line-height: 1;
-  opacity: 0.85;
-  border: 1px solid currentColor;
+  opacity: 0.9;
+  cursor: pointer;
+  /* Larger than visual circle for touch without bloating chip chrome. */
+  touch-action: manipulation;
+}
+
+.status-chip-info:hover,
+.status-chip-info:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--so-focus, var(--so-info));
+  outline-offset: 2px;
+}
+
+.status-chip-definition {
+  display: block;
+  max-width: 22rem;
+  color: var(--so-muted);
+  font-size: var(--so-text-xs);
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 /* Green — on-schedule / verified positives only (STYLING §3). */

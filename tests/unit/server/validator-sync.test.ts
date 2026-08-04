@@ -297,6 +297,8 @@ describe('validator list/detail serialization', () => {
         status: 'insufficient-data',
         lastObservedAt: null,
         historyDepthDays: 0,
+        observedWindows: null,
+        expectedWindows: null,
       },
       registryUpdatedAt: STAMP,
       // Keyring is on the committed canary probe roster (server/config/probe-roster.public.json).

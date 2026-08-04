@@ -97,6 +97,9 @@ export interface ValidatorListItem {
     status: ObservationStatus
     lastObservedAt: string | null
     historyDepthDays: number
+    /** Schedule grid counts when graded; null when not applicable. */
+    observedWindows: number | null
+    expectedWindows: number | null
   }
   registryUpdatedAt: string
   /** True when Steakout runs a canary probe stake on this validator. */
@@ -152,6 +155,8 @@ const STUB_OBSERVATION: ValidatorListItem['observation'] = {
   status: 'insufficient-data',
   lastObservedAt: null,
   historyDepthDays: 0,
+  observedWindows: null,
+  expectedWindows: null,
 }
 
 function defaultLogger(line: string): void {

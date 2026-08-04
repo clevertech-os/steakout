@@ -1,7 +1,11 @@
 /**
  * Observation status chip (METHODOLOGY §3 / STYLING §5).
  * Neutral labels only; never accusatory. Colors from `--so-*` tokens only.
+ *
+ * Definition is available on tap/click (mobile-safe) — native `title` alone
+ * does not work on touch devices.
  */
+import { useId, useState } from 'react'
 import './StatusChip.css'
 
 export type ObservationStatus =
@@ -22,13 +26,12 @@ export const OBSERVATION_STATUS_LABELS: Record<ObservationStatus, string> = {
 
 /**
  * One-sentence definitions for every observation label (P2-09 / METHODOLOGY §3).
- * Shown via title + aria so chips are never bare color blobs.
  */
 export const OBSERVATION_STATUS_DEFINITIONS: Record<ObservationStatus, string> = {
   'on-schedule':
-    'At least 95% of expected payout windows were observed in the analysis window.',
+    'At least 95% of expected payout windows were observed in the analysis period.',
   'mostly-on-schedule':
-    'Between 80% and 95% of expected payout windows were observed in the analysis window.',
+    'Between 80% and 95% of expected payout windows were observed in the analysis period.',
   irregular:
     'Fewer than 80% of expected payout windows were observed, with a normalizable schedule and enough history to judge.',
   'insufficient-data':
@@ -53,14 +56,20 @@ const TONES: Record<ObservationStatus, 'verified' | 'warn' | 'disabled'> = {
 
 export interface StatusChipProps {
   status: ObservationStatus
-  /** Override the one-sentence definition (title + aria). */
+  /** Override the one-sentence definition. */
   definition?: string
+  /**
+   * When true, always show the definition under the chip (hero surfaces).
+   * When false (default), definition toggles via the info control.
+   */
+  alwaysShowDefinition?: boolean
   className?: string
 }
 
 export default function StatusChip({
   status,
   definition,
+  alwaysShowDefinition = false,
   className = '',
 }: StatusChipProps) {
   const label =
@@ -70,18 +79,39 @@ export default function StatusChip({
     definition ??
     OBSERVATION_STATUS_DEFINITIONS[status] ??
     OBSERVATION_STATUS_DEFINITIONS['insufficient-data']
+  const defId = useId()
+  const [open, setOpen] = useState(false)
+  const showDef = alwaysShowDefinition || open
 
   return (
-    <span
-      className={`status-chip status-chip--${tone} ${className}`.trim()}
-      title={def}
-      aria-label={`${label}. ${def}`}
-      data-status={status}
-    >
-      <span className="status-chip-label">{label}</span>
-      <span className="status-chip-info" aria-hidden="true">
-        i
+    <span className={`status-chip-wrap ${className}`.trim()} data-status={status}>
+      <span
+        className={`status-chip status-chip--${tone}`}
+        data-status={status}
+      >
+        <span className="status-chip-label">{label}</span>
+        {alwaysShowDefinition ? null : (
+          <button
+            type="button"
+            className="status-chip-info"
+            aria-expanded={open}
+            aria-controls={defId}
+            aria-label={open ? 'Hide status definition' : 'Show status definition'}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setOpen((v) => !v)
+            }}
+          >
+            i
+          </button>
+        )}
       </span>
+      {showDef ? (
+        <span id={defId} className="status-chip-definition" role="note">
+          {def}
+        </span>
+      ) : null}
     </span>
   )
 }

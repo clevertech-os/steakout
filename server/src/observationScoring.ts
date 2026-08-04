@@ -556,6 +556,9 @@ export interface ObservationSummaryFields {
   status: ObservationStatus
   lastObservedAt: string | null
   historyDepthDays: number
+  /** From latest schedule-adherence payload; null when not graded / no grid. */
+  observedWindows: number | null
+  expectedWindows: number | null
 }
 
 /**
@@ -598,11 +601,19 @@ export function loadObservationSummaries(
   for (const row of adherenceRows) {
     const key = normalizeAddress(row.validator_address)
     let payloadDepth = 0
+    let observedWindows: number | null = null
+    let expectedWindows: number | null = null
     try {
       const payload = JSON.parse(row.payload_json) as ScheduleAdherencePayload
       payloadDepth = typeof payload.historyDepthDays === 'number'
         ? payload.historyDepthDays
         : 0
+      if (payload.window && typeof payload.window.observedWindows === 'number') {
+        observedWindows = payload.window.observedWindows
+      }
+      if (payload.window && typeof payload.window.expectedWindows === 'number') {
+        expectedWindows = payload.window.expectedWindows
+      }
     } catch {
       payloadDepth = 0
     }
@@ -612,6 +623,8 @@ export function loadObservationSummaries(
       status: row.status as ObservationStatus,
       lastObservedAt: null,
       historyDepthDays,
+      observedWindows,
+      expectedWindows,
     })
   }
 
@@ -637,6 +650,8 @@ export function loadObservationSummaries(
         status: 'insufficient-data',
         lastObservedAt: row.last_at,
         historyDepthDays: depth,
+        observedWindows: null,
+        expectedWindows: null,
       })
     }
   }

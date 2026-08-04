@@ -71,6 +71,8 @@ interface ValidatorProfileData {
     status: ObservationStatus
     lastObservedAt: string | null
     historyDepthDays: number
+    observedWindows?: number | null
+    expectedWindows?: number | null
   }
   registryUpdatedAt: string
   website: string | null
@@ -189,6 +191,23 @@ function historyDepthCaption(days: number): string {
   return n === 1 ? '1 day indexed' : `${n} days indexed`
 }
 
+/** Compact windows line for hero / evidence summary. */
+function windowsCaption(
+  observed: number | null | undefined,
+  expected: number | null | undefined,
+): string | null {
+  if (
+    observed == null ||
+    expected == null ||
+    !Number.isFinite(observed) ||
+    !Number.isFinite(expected) ||
+    expected <= 0
+  ) {
+    return null
+  }
+  return `${observed.toLocaleString()} of ${expected.toLocaleString()} windows`
+}
+
 function dominanceStripLabel(ratio: number | null): string {
   const formatted = formatDominance(ratio)
   if (formatted === INSUFFICIENT_DATA) return formatted
@@ -249,6 +268,8 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
   const [evidenceMeta, setEvidenceMeta] = useState<EvidenceSummaryMeta | null>(
     null,
   )
+  /** Defer heavy observations fetch until the user opens evidence. */
+  const [evidenceOpen, setEvidenceOpen] = useState(false)
 
   const wallet = useWallet({ auth: walletAuthApi })
 
@@ -575,12 +596,23 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
     OBSERVATION_STATUS_LABELS['insufficient-data']
   const obsHistoryDays =
     evidenceMeta?.historyDepthDays ?? profile.observation.historyDepthDays
+  const profileWindowsLabel = windowsCaption(
+    profile.observation.observedWindows,
+    profile.observation.expectedWindows,
+  )
+  const windowsLabel = evidenceMeta?.windowsLabel ?? profileWindowsLabel
   const evidenceSummaryParts = [
     'Payout evidence',
     obsStatusLabel,
-    evidenceMeta?.windowsLabel,
+    windowsLabel,
     historyDepthCaption(obsHistoryDays),
   ].filter(Boolean)
+  const observationFacts = [
+    windowsLabel,
+    historyDepthCaption(obsHistoryDays),
+  ]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <div className="profile">
@@ -658,17 +690,17 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
             Payout observation
           </h2>
           <div className="profile-observation-chip">
-            <StatusChip status={obsStatus} />
+            <StatusChip status={obsStatus} alwaysShowDefinition />
           </div>
-          <p className="profile-hero-caption">
-            {historyDepthCaption(obsHistoryDays)}
-          </p>
+          {observationFacts ? (
+            <p className="profile-hero-caption mono">{observationFacts}</p>
+          ) : null}
         </section>
       </div>
       <p className="profile-hero-freshness" aria-label={registryFreshness}>
         {registryFreshness}
         <span className="profile-hero-freshness-sep"> · </span>
-        Registry snapshot
+        Server snapshot (not a live chain call)
       </p>
 
       {/* Policy strip — values only for quick compare. */}
@@ -712,8 +744,14 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
         }}
       />
 
-      {/* Collapsed by default: evidence, canary, technical. */}
-      <details className="profile-disclosure nq-card shell-card profile-card profile-card--observation">
+      {/* Collapsed by default: evidence, canary, technical.
+          Evidence API is large (run hashes); only fetch when opened. */}
+      <details
+        className="profile-disclosure nq-card shell-card profile-card profile-card--observation"
+        onToggle={(e) => {
+          if (e.currentTarget.open) setEvidenceOpen(true)
+        }}
+      >
         <summary className="profile-disclosure-summary">
           <span className="profile-disclosure-title">Payout evidence</span>
           <span className="profile-disclosure-meta">
@@ -721,14 +759,20 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           </span>
         </summary>
         <div className="profile-disclosure-body">
-          <Evidence
-            address={profile.address}
-            embedded
-            profileStatus={profile.observation.status}
-            profileHistoryDepthDays={profile.observation.historyDepthDays}
-            profileLastObservedAt={profile.observation.lastObservedAt}
-            onSummaryMeta={onEvidenceMeta}
-          />
+          {evidenceOpen ? (
+            <Evidence
+              address={profile.address}
+              embedded
+              profileStatus={profile.observation.status}
+              profileHistoryDepthDays={profile.observation.historyDepthDays}
+              profileLastObservedAt={profile.observation.lastObservedAt}
+              onSummaryMeta={onEvidenceMeta}
+            />
+          ) : (
+            <p className="nq-subline profile-section-note">
+              Open to load indexed payout runs and explorer links.
+            </p>
+          )}
         </div>
       </details>
 
