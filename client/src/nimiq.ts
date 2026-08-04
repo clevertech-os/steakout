@@ -971,25 +971,57 @@ function formatProviderRaw(value: unknown): string {
   }
 }
 
+/**
+ * Mini-app SDK `getNetwork()` returns the Trust-style **coin** id (`"nimiq"`),
+ * not mainnet vs testnet (see `@nimiq/mini-app-sdk` `NimiqProvider.NETWORK = "nimiq"`).
+ * Only hard-block when the label is an explicit opposite chain name.
+ */
+export function isNimiqCoinNetworkLabel(label: string): boolean {
+  const n = label.trim().toLowerCase()
+  return n === 'nimiq' || n === 'nim' || n === 'albatross'
+}
+
+export function isExplicitTestnetNetworkLabel(label: string): boolean {
+  const n = label.trim().toLowerCase()
+  return n === 'testnet' || n === 'test' || n.includes('testnet')
+}
+
+export function isExplicitMainnetNetworkLabel(label: string): boolean {
+  const n = label.trim().toLowerCase()
+  if (isNimiqCoinNetworkLabel(n) || isExplicitTestnetNetworkLabel(n)) return false
+  return n === 'mainnet' || n === 'main' || n.includes('mainnet')
+}
+
+/**
+ * Refuse only clear app↔provider chain mismatches.
+ * `"nimiq"` alone is not a mismatch — it is the provider coin id on both nets.
+ */
+export function assertProviderNetworkCompatibleWithApp(
+  providerNetwork: string | null | undefined,
+): void {
+  const active = (providerNetwork ?? '').trim()
+  if (!active || isNimiqCoinNetworkLabel(active)) return
+  if (IS_TESTNET && isExplicitMainnetNetworkLabel(active)) {
+    throw new Error(
+      `Nimiq Pay reports “${active}”, but Steakout is testnet. Switch Pay to testnet and try again.`,
+    )
+  }
+  if (!IS_TESTNET && isExplicitTestnetNetworkLabel(active)) {
+    throw new Error(
+      `Nimiq Pay reports “${active}”, but Steakout is mainnet. Switch Pay to mainnet (or use a testnet app build).`,
+    )
+  }
+}
+
 async function withConnectedProvider(
   existing?: NimiqProvider | null,
 ): Promise<NimiqProvider> {
   const provider = await ensureNimiqProvider(existing ?? null)
   await provider.connect()
-  // App testnet vs Pay mainnet is a common blank failure — refuse early with a clear message.
   try {
-    const active = (provider.getNetwork?.() ?? '').trim().toLowerCase()
-    if (IS_TESTNET && active && active !== 'testnet' && active !== 'test') {
-      throw new Error(
-        `Nimiq Pay is on “${active}”, but Steakout is testnet. Switch Pay to testnet and try again.`,
-      )
-    }
-    if (!IS_TESTNET && (active === 'testnet' || active === 'test')) {
-      throw new Error(
-        `Nimiq Pay is on testnet, but Steakout is mainnet. Switch Pay to mainnet (or use a testnet app build).`,
-      )
-    }
+    assertProviderNetworkCompatibleWithApp(provider.getNetwork?.() ?? '')
   } catch (err) {
+    if (err instanceof Error && /Nimiq Pay reports/i.test(err.message)) throw err
     if (err instanceof Error && /Nimiq Pay is on/i.test(err.message)) throw err
     // getNetwork may be missing on older hosts — continue.
   }

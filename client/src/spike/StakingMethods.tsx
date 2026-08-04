@@ -254,8 +254,19 @@ function StakingMethods() {
 
       const activeNetwork = activeProvider.getNetwork()
       setNetwork(activeNetwork)
-      if (activeNetwork.toLowerCase() !== 'testnet') {
-        throw new Error(`Refusing to call ${method}: provider network is ${activeNetwork}, not testnet.`)
+      // SDK getNetwork() is the coin id ("nimiq"), not mainnet/testnet. Only refuse
+      // an explicit mainnet label; testnet app + "nimiq" is expected in Pay.
+      {
+        const n = activeNetwork.trim().toLowerCase()
+        const isCoin = n === 'nimiq' || n === 'nim' || n === 'albatross'
+        const isTest = n === 'testnet' || n === 'test' || n.includes('testnet')
+        const isMain =
+          !isCoin && !isTest && (n === 'mainnet' || n === 'main' || n.includes('mainnet'))
+        if (isMain) {
+          throw new Error(
+            `Refusing to call ${method}: provider reports “${activeNetwork}” (mainnet). Use Pay testnet for this harness.`,
+          )
+        }
       }
 
       const accountsResult = await activeProvider.listAccounts()
