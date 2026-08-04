@@ -27,6 +27,11 @@ import {
   setCachedPublicResponse,
 } from './responseCache.js'
 import {
+  buildCanaryProbeSummary,
+  canaryConfiguredForValidator,
+  type CanaryProbeSummary,
+} from './probeRoster.js'
+import {
   fetchValidators,
   type FetchValidatorsOptions,
   type NormalizedValidator,
@@ -94,6 +99,8 @@ export interface ValidatorListItem {
     historyDepthDays: number
   }
   registryUpdatedAt: string
+  /** True when Steakout runs a canary probe stake on this validator. */
+  canaryConfigured: boolean
 }
 
 export interface ValidatorProfile extends ValidatorListItem {
@@ -103,6 +110,8 @@ export interface ValidatorProfile extends ValidatorListItem {
   rewardExplorerUrl: string | null
   /** Registry score components are not persisted in v1 schema; always null until stored. */
   scoreComponents: null
+  /** Canary probe monitoring block (pending until observations exist). */
+  canaryProbe: CanaryProbeSummary
 }
 
 export interface SyncResult {
@@ -599,12 +608,14 @@ export function toListItem(
     // Prefer latest schedule-adherence observation (P2-03/P2-06); else insufficient-data stub.
     observation: observation ? { ...observation } : { ...STUB_OBSERVATION },
     registryUpdatedAt: row.registry_updated_at ?? '',
+    canaryConfigured: canaryConfiguredForValidator(row.address),
   }
 }
 
 export function toProfile(
   row: ValidatorRow,
   observation?: ObservationSummary | null,
+  options?: { database?: Database.Database },
 ): ValidatorProfile {
   const list = toListItem(row, observation)
   const rewardAddress = row.reward_address
@@ -615,6 +626,10 @@ export function toProfile(
     rewardAddress,
     rewardExplorerUrl: rewardAddress ? buildNimiqAddressExplorerUrl(rewardAddress) : null,
     scoreComponents: null,
+    canaryProbe: buildCanaryProbeSummary(row.address, {
+      database: options?.database,
+      rewardAddress,
+    }),
   }
 }
 
@@ -798,7 +813,9 @@ export function mountValidatorsApi(app: Express, database: Database.Database): v
 
     const nowMs = Date.now()
     const summaries = loadObservationSummaries(database, { nowMs })
-    const profile = toProfile(row, observationForRow(row, summaries))
+    const profile = toProfile(row, observationForRow(row, summaries), {
+      database,
+    })
     const updatedAt = row.registry_updated_at ?? new Date(0).toISOString()
     const status = applyIndexerStaleStatus('ok', { nowMs, watermarkIso })
 

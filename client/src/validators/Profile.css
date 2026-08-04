@@ -70,6 +70,21 @@
   color: var(--so-muted);
 }
 
+.profile-card--canary {
+  border-color: var(--so-rule);
+}
+
+.profile-canary-status {
+  margin: 0 0 var(--so-space-4);
+  font-size: var(--so-text-md);
+  line-height: 1.4;
+}
+
+.profile-canary-note {
+  color: var(--so-muted);
+  font-weight: 400;
+}
+
 .profile-state-card {
   padding: var(--so-space-5) 1.35rem;
 }

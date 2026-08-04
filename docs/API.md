@@ -100,12 +100,39 @@ Each item:
   "dominanceRatio": 0.0,             // or null
   "stakersCount": 0,                 // or null
   "declared": { "fee": "string | null", "payoutType": "direct" | "restake" | "unknown", "payoutSchedule": "string | null", "scheduleNormalized": { "everyHours": 12 } | null },
-  "observation": { "status": "on-schedule" | "mostly-on-schedule" | "irregular" | "insufficient-data" | "unavailable", "lastObservedAt": "ISO | null", "historyDepthDays": 0 }
+  "observation": { "status": "on-schedule" | "mostly-on-schedule" | "irregular" | "insufficient-data" | "unavailable", "lastObservedAt": "ISO | null", "historyDepthDays": 0 },
+  "canaryConfigured": false   // true when Steakout runs a canary probe stake on this validator
 }
 ```
 
 ### `GET /api/validators/:address`
-Full profile: everything from the list item plus `website`, `description`, `rewardAddress` (+ explorer link), score components if provided by registry, and `registryUpdatedAt`.
+Full profile: everything from the list item plus `website`, `description`, `rewardAddress` (+ explorer link), score components if provided by registry, `registryUpdatedAt`, and `canaryProbe`.
+
+```jsonc
+"canaryProbe": {
+  "configured": true,
+  "status": "not-configured" | "pending" | "active",
+  "statusLabel": "Pending observation",
+  "probeId": "probe-01",
+  "probeAddress": "NQ..",
+  "probeExplorerUrl": "https://nimiq.watch/#…",
+  "stakeAmountLuna": 99900000,
+  "stakedAt": "ISO | null",
+  "stakeTxHash": "hex | null",
+  "stakeExplorerUrl": "https://nimiq.watch/#… | null",
+  "payoutType": "direct" | "restake" | "unknown" | null,
+  "lastPaymentAt": "ISO | null",           // pending until indexer sees reward→probe
+  "lastPaymentLuna": null,
+  "lastPaymentTxHash": null,
+  "lastPaymentExplorerUrl": null,
+  "lastStakerBalanceLuna": null,           // pending until staker snapshots exist
+  "lastStakerBalanceAt": null,
+  "note": "…",
+  "dataStatus": "insufficient" | "verified" | "unavailable"
+}
+```
+
+Roster source: `server/config/probe-roster.public.json` (public addresses only; override with `PROBE_ROSTER_PATH`).
 
 ### `GET /api/validators/:address/observations`
 Evidence payload (paginated, `?cursor=`):

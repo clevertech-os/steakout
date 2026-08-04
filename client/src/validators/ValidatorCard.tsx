@@ -78,6 +78,14 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
           ) : (
             <span className="validator-chip validator-chip--listed">Listed</span>
           )}
+          {validator.canaryConfigured ? (
+            <span
+              className="validator-chip validator-chip--canary"
+              title="Steakout runs a small canary stake on this validator for payout observation. Fields stay pending until history accumulates."
+            >
+              Canary
+            </span>
+          ) : null}
         </div>
       </div>
 

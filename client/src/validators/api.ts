@@ -42,6 +42,31 @@ export interface ValidatorListItem {
     historyDepthDays: number
   }
   registryUpdatedAt?: string
+  /** True when Steakout runs a canary probe stake on this validator. */
+  canaryConfigured?: boolean
+}
+
+/** Canary probe monitoring block on GET /api/validators/:address. */
+export interface CanaryProbeSummary {
+  configured: boolean
+  status: 'not-configured' | 'pending' | 'active'
+  statusLabel: string
+  probeId: string | null
+  probeAddress: string | null
+  probeExplorerUrl: string | null
+  stakeAmountLuna: number | null
+  stakedAt: string | null
+  stakeTxHash: string | null
+  stakeExplorerUrl: string | null
+  payoutType: DeclaredPayoutType | null
+  lastPaymentAt: string | null
+  lastPaymentLuna: number | null
+  lastPaymentTxHash: string | null
+  lastPaymentExplorerUrl: string | null
+  lastStakerBalanceLuna: number | null
+  lastStakerBalanceAt: string | null
+  note: string
+  dataStatus: 'insufficient' | 'verified' | 'unavailable'
 }
 
 export interface ValidatorsListEnvelope {

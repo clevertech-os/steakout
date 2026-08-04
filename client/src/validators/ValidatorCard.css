@@ -119,6 +119,12 @@
   border-color: var(--so-disabled);
 }
 
+.validator-chip--canary {
+  color: var(--so-ink);
+  background: var(--so-surface-raised, var(--so-disabled-soft));
+  border-color: var(--so-rule);
+}
+
 /* Observation chips use StatusChip (components/StatusChip.css) as source of truth. */
 
 .validator-card-metrics {

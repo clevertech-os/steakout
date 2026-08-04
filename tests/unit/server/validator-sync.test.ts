@@ -299,6 +299,8 @@ describe('validator list/detail serialization', () => {
         historyDepthDays: 0,
       },
       registryUpdatedAt: STAMP,
+      // Keyring is on the committed canary probe roster (server/config/probe-roster.public.json).
+      canaryConfigured: true,
     })
   })
 
@@ -315,7 +317,7 @@ describe('validator list/detail serialization', () => {
     expect(item.declared.payoutSchedule).toBe('0 * * * *')
   })
 
-  it('toProfile adds website, description, reward explorer link, registryUpdatedAt', () => {
+  it('toProfile adds website, description, reward explorer link, registryUpdatedAt, canaryProbe', () => {
     const profile = toProfile(baseRow({
       reward_address: 'NQ37 6EL5 BP9K XL1A 3ED0 L3EC NPR5 C9D3 BRKG',
     }))
@@ -327,6 +329,9 @@ describe('validator list/detail serialization', () => {
     )
     expect(profile.scoreComponents).toBeNull()
     expect(profile.registryUpdatedAt).toBe(STAMP)
+    expect(profile.canaryProbe).toBeDefined()
+    expect(typeof profile.canaryConfigured).toBe('boolean')
+    expect(profile.canaryProbe.configured).toBe(profile.canaryConfigured)
   })
 
   it('compareValidators implements all sort options', () => {

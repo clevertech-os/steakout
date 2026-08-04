@@ -69,6 +69,28 @@ interface ValidatorProfileData {
   rewardAddress: string | null
   rewardExplorerUrl: string | null
   scoreComponents: null
+  canaryConfigured?: boolean
+  canaryProbe?: {
+    configured: boolean
+    status: 'not-configured' | 'pending' | 'active'
+    statusLabel: string
+    probeId: string | null
+    probeAddress: string | null
+    probeExplorerUrl: string | null
+    stakeAmountLuna: number | null
+    stakedAt: string | null
+    stakeTxHash: string | null
+    stakeExplorerUrl: string | null
+    payoutType: DeclaredPayoutType | null
+    lastPaymentAt: string | null
+    lastPaymentLuna: number | null
+    lastPaymentTxHash: string | null
+    lastPaymentExplorerUrl: string | null
+    lastStakerBalanceLuna: number | null
+    lastStakerBalanceAt: string | null
+    note: string
+    dataStatus: 'insufficient' | 'verified' | 'unavailable'
+  }
 }
 
 interface ApiOk {
@@ -116,6 +138,39 @@ function formatOfficialScore(score: number | null): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })
+}
+
+function formatIsoOrPending(iso: string | null): string {
+  if (!iso) return 'Pending'
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    })
+  } catch {
+    return iso
+  }
+}
+
+function formatTxLink(
+  hash: string | null,
+  explorerUrl: string | null,
+): ReactNode {
+  if (!hash) return 'Pending'
+  const short = `${hash.slice(0, 8)}…${hash.slice(-6)}`
+  if (explorerUrl) {
+    return (
+      <a
+        className="profile-external mono"
+        href={explorerUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {short}
+      </a>
+    )
+  }
+  return <span className="mono">{short}</span>
 }
 
 function formatFreshness(ageSeconds: number, updatedAt: string): string {
@@ -632,6 +687,146 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
         profileHistoryDepthDays={profile.observation.historyDepthDays}
         profileLastObservedAt={profile.observation.lastObservedAt}
       />
+
+      {/* Canary probe monitoring — wired now; observation fields fill as history accumulates. */}
+      {profile.canaryProbe?.configured ? (
+        <section
+          className="nq-card shell-card profile-card profile-card--canary"
+          aria-labelledby="profile-canary"
+          data-testid="canary-probe"
+        >
+          <p className="card-kicker">Steakout canary</p>
+          <h2 id="profile-canary" className="profile-section-title">
+            Probe monitoring
+          </h2>
+          <p className="nq-subline profile-section-note">
+            Steakout stakes a small canary position to this validator and watches
+            what reaches that address. This is not a fee rating and not proof of
+            how every staker is treated.
+          </p>
+          <p className="profile-canary-status" data-testid="canary-status">
+            <strong>{profile.canaryProbe.statusLabel}</strong>
+            {profile.canaryProbe.note ? (
+              <span className="profile-canary-note">
+                {' '}
+                — {profile.canaryProbe.note}
+              </span>
+            ) : null}
+          </p>
+          <dl className="profile-metrics">
+            <MetricRow
+              label="Probe address"
+              definition="Steakout-controlled canary address delegated to this validator. Public only; not a user wallet."
+              value={
+                profile.canaryProbe.probeAddress ? (
+                  profile.canaryProbe.probeExplorerUrl ? (
+                    <a
+                      className="profile-external mono"
+                      href={profile.canaryProbe.probeExplorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {formatDisplayAddress(profile.canaryProbe.probeAddress)}
+                    </a>
+                  ) : (
+                    <span className="mono">
+                      {formatDisplayAddress(profile.canaryProbe.probeAddress)}
+                    </span>
+                  )
+                ) : (
+                  'Unavailable'
+                )
+              }
+              status="registry"
+              freshness={
+                profile.canaryProbe.stakedAt
+                  ? `Staked ${formatIsoOrPending(profile.canaryProbe.stakedAt)}`
+                  : 'Configured'
+              }
+            />
+            <MetricRow
+              label="Canary stake"
+              definition="Amount staked on the canary address for observation. Protocol minimum is 100 NIM."
+              value={formatNimFromLuna(profile.canaryProbe.stakeAmountLuna)}
+              status={
+                profile.canaryProbe.stakeAmountLuna == null
+                  ? 'unavailable'
+                  : 'verified'
+              }
+              freshness={formatIsoOrPending(profile.canaryProbe.stakedAt)}
+            />
+            <MetricRow
+              label="Stake transaction"
+              definition="On-chain create-staker (or add-stake) transaction that opened the canary position."
+              value={formatTxLink(
+                profile.canaryProbe.stakeTxHash,
+                profile.canaryProbe.stakeExplorerUrl,
+              )}
+              status={
+                profile.canaryProbe.stakeTxHash ? 'verified' : 'insufficient'
+              }
+              freshness={formatIsoOrPending(profile.canaryProbe.stakedAt)}
+            />
+            <MetricRow
+              label="Last observed payment"
+              definition="Most recent successful transfer from this validator’s reward address to the canary probe. Pending until the indexer sees one."
+              value={
+                profile.canaryProbe.lastPaymentLuna != null
+                  ? formatNimFromLuna(profile.canaryProbe.lastPaymentLuna)
+                  : 'Pending'
+              }
+              status={profile.canaryProbe.dataStatus}
+              freshness={
+                profile.canaryProbe.lastPaymentAt
+                  ? formatIsoOrPending(profile.canaryProbe.lastPaymentAt)
+                  : 'No payment indexed yet'
+              }
+            />
+            <MetricRow
+              label="Last payment evidence"
+              definition="Transaction hash for the last observed canary payment, when available."
+              value={formatTxLink(
+                profile.canaryProbe.lastPaymentTxHash,
+                profile.canaryProbe.lastPaymentExplorerUrl,
+              )}
+              status={profile.canaryProbe.dataStatus}
+              freshness={
+                profile.canaryProbe.lastPaymentAt
+                  ? formatIsoOrPending(profile.canaryProbe.lastPaymentAt)
+                  : 'Pending'
+              }
+            />
+            <MetricRow
+              label="Observed staker balance"
+              definition="Last indexed staker-account total for the canary (useful for restake validators). Pending until snapshots exist."
+              value={
+                profile.canaryProbe.lastStakerBalanceLuna != null
+                  ? formatNimFromLuna(profile.canaryProbe.lastStakerBalanceLuna)
+                  : 'Pending'
+              }
+              status={
+                profile.canaryProbe.lastStakerBalanceLuna != null
+                  ? 'verified'
+                  : 'insufficient'
+              }
+              freshness={
+                profile.canaryProbe.lastStakerBalanceAt
+                  ? formatIsoOrPending(profile.canaryProbe.lastStakerBalanceAt)
+                  : 'No snapshot yet'
+              }
+            />
+          </dl>
+          <p className="profile-limitations-link">
+            <a className="nq-arrow" href="#/learn/methodology">
+              Methodology
+            </a>
+            {' · '}
+            <a className="nq-arrow" href="#/learn/limitations">
+              Limitations
+            </a>
+          </p>
+        </section>
+      ) : null}
 
       {/* Reward address */}
       <section

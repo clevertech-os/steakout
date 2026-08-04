@@ -30,3 +30,10 @@ npm-debug.log*
 # Local notes and spike scratch
 tmp/
 docs/spikes/local/
+
+# Probe-stakes ops output (may contain private keys)
+probe-data/
+probe-data-*/
+scripts/probe-stakes/out/
+**/secrets.json
+**/treasury.private-key.hex

@@ -17,7 +17,11 @@
     "test:server": "vitest run tests/unit/server",
     "test:integration": "vitest run tests/integration",
     "build": "npm run build --prefix server && npm run build --prefix client",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "probe:accounts": "node scripts/probe-stakes/probe-accounts.mjs",
+    "probe:wizard": "node scripts/probe-stakes/probe-accounts.mjs wizard",
+    "probe:treasury": "node scripts/probe-stakes/probe-accounts.mjs generate-treasury",
+    "probe:stake": "node scripts/probe-stakes/probe-accounts.mjs stake"
   },
   "engines": {
     "node": ">=22"
