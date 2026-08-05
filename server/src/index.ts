@@ -109,7 +109,18 @@ mountProfileShareRoutes(app, {
   publicOrigin: process.env.PUBLIC_APP_URL,
 })
 
-app.use(express.static(clientDist.pathname))
+// Hashed Vite assets: long-cache. HTML entry must revalidate so deploys pick up new hashes.
+app.use(
+  express.static(clientDist.pathname, {
+    maxAge: '1y',
+    immutable: true,
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate')
+      }
+    },
+  }),
+)
 app.get(['/spike', '/spike/', '/spike/staking-methods', '/spike/staking-methods/'], (_request, response) => {
   response.sendFile(clientIndexHtml)
 })

@@ -296,6 +296,8 @@ describe('validator list/detail serialization', () => {
         payoutType: 'restake',
         payoutSchedule: 'Every 12 hours',
         scheduleNormalized: { everyHours: 12 },
+        // Keyring min payout from server/config/min-payout-declarations.json
+        minPayout: { nim: 10, kind: 'fixed', confidence: 'high' },
       },
       observation: {
         status: 'insufficient-data',
@@ -303,6 +305,15 @@ describe('validator list/detail serialization', () => {
         historyDepthDays: 0,
         observedWindows: null,
         expectedWindows: null,
+      },
+      observedPaymentFloor: {
+        minNim: null,
+        p5Nim: null,
+        sampleSize: 0,
+        recipientCount: 0,
+        historyDepthDays: null,
+        status: 'unavailable',
+        computedAt: new Date(0).toISOString(),
       },
       registryUpdatedAt: STAMP,
       // Keyring is on the committed canary probe roster (server/config/probe-roster.public.json).

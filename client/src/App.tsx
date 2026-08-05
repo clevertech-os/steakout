@@ -30,6 +30,13 @@ function preloadRouteChunks() {
   void loadLearn()
 }
 
+/** Warm public validator JSON after shell is up (Home → Validators is instant). */
+function preloadValidatorsData() {
+  void import('./validators/api').then((m) => {
+    m.prefetchValidatorsDirectory()
+  })
+}
+
 function RouteFallback() {
   return (
     <div className="route-shell" aria-busy="true">
@@ -102,14 +109,18 @@ function RoutedShell() {
     }
   }, [path])
 
-  // Prefetch other destinations after first paint so nav feels instant.
+  // Prefetch other destinations + public directory data after first paint.
   useEffect(() => {
+    const warm = () => {
+      preloadRouteChunks()
+      preloadValidatorsData()
+    }
     const ric = window.requestIdleCallback?.bind(window)
     if (ric) {
-      const id = ric(() => preloadRouteChunks(), { timeout: 2500 })
+      const id = ric(warm, { timeout: 2500 })
       return () => window.cancelIdleCallback?.(id)
     }
-    const t = window.setTimeout(preloadRouteChunks, 400)
+    const t = window.setTimeout(warm, 400)
     return () => window.clearTimeout(t)
   }, [])
 

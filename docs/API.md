@@ -99,8 +99,30 @@ Each item:
   "stakeLuna": 0,
   "dominanceRatio": 0.0,             // or null
   "stakersCount": 0,                 // or null
-  "declared": { "fee": "string | null", "payoutType": "direct" | "restake" | "unknown", "payoutSchedule": "string | null", "scheduleNormalized": { "everyHours": 12 } | null },
+  "declared": {
+    "fee": "string | null",
+    "payoutType": "direct" | "restake" | "unknown",
+    "payoutSchedule": "string | null",
+    "scheduleNormalized": { "everyHours": 12 } | null,
+    // Steakout-researched (not official validators-api). Caption as Registry declaration.
+    "minPayout": {
+      "nim": 10,                                    // number | null — set when kind is "fixed"
+      "kind": "fixed" | "none" | "stake-based" | "not_applicable" | "unknown",
+      "confidence": "high" | "medium" | "low" | null
+    }
+  },
   "observation": { "status": "on-schedule" | "mostly-on-schedule" | "irregular" | "insufficient-data" | "unavailable", "lastObservedAt": "ISO | null", "historyDepthDays": 0 },
+  // Inferred from indexed reward-address outflows. Prefer p5Nim for display (dust-robust).
+  // Never replaces declared.minPayout. status: inferred | insufficient | unavailable
+  "observedPaymentFloor": {
+    "minNim": 3.98,
+    "p5Nim": 10.03,
+    "sampleSize": 192059,
+    "recipientCount": 14,
+    "historyDepthDays": 17.1,
+    "status": "inferred",
+    "computedAt": "ISO"
+  },
   "canaryConfigured": false   // true when Steakout runs a canary probe stake on this validator
 }
 ```

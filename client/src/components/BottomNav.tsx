@@ -1,8 +1,18 @@
 import './BottomNav.css'
 import { NAV_ROUTES, type RouteId } from '../routes'
+import { prefetchValidatorsDirectory } from '../validators/api'
 
 interface BottomNavProps {
   active: RouteId
+}
+
+function warmValidatorsIntent() {
+  void loadValidatorsChunk()
+  prefetchValidatorsDirectory()
+}
+
+function loadValidatorsChunk() {
+  void import('../validators/Validators')
 }
 
 /**
@@ -65,6 +75,12 @@ export default function BottomNav({ active }: BottomNavProps) {
                 href={`#${route.path}`}
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={route.label}
+                onPointerEnter={
+                  route.id === 'validators' ? warmValidatorsIntent : undefined
+                }
+                onFocus={
+                  route.id === 'validators' ? warmValidatorsIntent : undefined
+                }
               >
                 <NavIcon id={route.id} />
                 <span className="bottom-nav-label" aria-hidden="true">

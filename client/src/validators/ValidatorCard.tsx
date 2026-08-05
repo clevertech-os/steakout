@@ -5,10 +5,12 @@
  */
 import { normalizeAddress, shortAddress } from '../addresses'
 import StatusChip from '../components/StatusChip'
-import type { ValidatorListItem } from './api'
+import { prefetchValidatorProfile, type ValidatorListItem } from './api'
 import {
   formatDeclaredFee,
+  formatDeclaredMinPayout,
   formatDominance,
+  formatObservedPaymentFloor,
   formatOfficialScore,
   formatPayoutType,
   formatStakeNim,
@@ -30,16 +32,24 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
   const dominanceLabel = formatDominance(validator.dominanceRatio)
   const stakersLabel = formatStakersCount(validator.stakersCount)
   const feeLabel = formatDeclaredFee(validator.declared.fee)
+  const minPayoutLabel = formatDeclaredMinPayout(validator.declared.minPayout)
+  const observedFloorLabel = formatObservedPaymentFloor(
+    validator.observedPaymentFloor,
+  )
   const payoutLabel = formatPayoutType(validator.declared.payoutType)
   const scheduleLabel = validator.declared.payoutSchedule?.trim() || null
   const initials = validatorInitials(validator.name, validator.address)
   const scoreIsPresent = scoreLabel !== 'Insufficient data'
+  const minPayoutMuted = minPayoutLabel === 'Insufficient data'
+  const observedFloorMuted = observedFloorLabel === 'Insufficient data'
 
   return (
     <a
       className="validator-card nq-card shell-card nq-hoverable nq-hoverable-cta nq-focusable"
       href={profileHref}
       aria-label={`View record for ${displayName}`}
+      onPointerEnter={() => prefetchValidatorProfile(validator.address)}
+      onFocus={() => prefetchValidatorProfile(validator.address)}
     >
       <div className="validator-card-top">
         <div className="validator-card-identity">
@@ -149,6 +159,28 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
             ·
           </span>
           <span>Fee {feeLabel}</span>
+          <span className="validator-card-sep" aria-hidden="true">
+            ·
+          </span>
+          <span
+            className={
+              minPayoutMuted ? 'validator-card-value--muted' : undefined
+            }
+            title="Operator-stated or researched threshold (Registry declaration)."
+          >
+            Min payout {minPayoutLabel}
+          </span>
+          <span className="validator-card-sep" aria-hidden="true">
+            ·
+          </span>
+          <span
+            className={
+              observedFloorMuted ? 'validator-card-value--muted' : undefined
+            }
+            title="5th percentile of indexed reward-address outflows (Inferred). Not a declared policy."
+          >
+            Observed floor {observedFloorLabel}
+          </span>
         </p>
         {scheduleLabel ? (
           <p className="validator-card-schedule">{scheduleLabel}</p>

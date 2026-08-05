@@ -9,6 +9,7 @@
     "build": "tsc --noEmit",
     "index:payouts": "tsx scripts/index-payouts.ts",
     "classify": "tsx scripts/classify.ts",
+    "min-payout-inference": "tsx scripts/min-payout-inference.ts",
     "probe:rpc": "tsx scripts/probe-rpc.ts",
     "audit:rewards": "tsx scripts/audit-reward-addresses.ts"
   },

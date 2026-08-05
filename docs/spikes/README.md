@@ -4,6 +4,10 @@ This directory holds evidence from the Phase 0 de-risk spikes. P0-01 establishes
 the application shell and engineering baseline only; later tasks add reports
 for wallet, RPC, registry, indexing, and payout-classification probes.
 
+## Later spikes
+
+- [min-payout-inference.md](min-payout-inference.md) — observed payment floors from reward outflows (Inferred; not registry policy). Re-run: `DATA_DIR=./server/data npm run min-payout-inference --prefix server`.
+
 ## P0-01 Scaffold Notes
 
 - Client: Vite + React 19 + TypeScript on port 5173.

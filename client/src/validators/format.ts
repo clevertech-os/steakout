@@ -73,6 +73,70 @@ export function formatPayoutType(type: 'direct' | 'restake' | 'unknown'): string
   }
 }
 
+export type FormatMinPayoutInput = {
+  nim?: number | null
+  kind?: string | null
+} | null | undefined
+
+/**
+ * Format Steakout-researched min payout for Registry declaration display.
+ * fixed → "N NIM"; none → "None"; stake-based / n/a / unknown → labeled or insufficient.
+ */
+export function formatDeclaredMinPayout(min: FormatMinPayoutInput): string {
+  if (min == null || min.kind == null || min.kind === '' || min.kind === 'unknown') {
+    return INSUFFICIENT_DATA
+  }
+  switch (min.kind) {
+    case 'fixed': {
+      const n = min.nim
+      if (n == null || !Number.isFinite(n) || n < 0) return INSUFFICIENT_DATA
+      // Prefer compact whole NIM when integer.
+      if (Number.isInteger(n)) return `${n} NIM`
+      return `${n} NIM`
+    }
+    case 'none':
+      return 'None'
+    case 'stake-based':
+      return 'Stake-based'
+    case 'not_applicable':
+      return 'Not applicable'
+    default:
+      return INSUFFICIENT_DATA
+  }
+}
+
+export type FormatObservedFloorInput = {
+  p5Nim?: number | null
+  minNim?: number | null
+  status?: string | null
+  sampleSize?: number | null
+} | null | undefined
+
+/**
+ * Format live observed payment floor. Prefer p5; fall back to min.
+ * insufficient/unavailable → Insufficient data.
+ */
+export function formatObservedPaymentFloor(
+  floor: FormatObservedFloorInput,
+): string {
+  if (floor == null) return INSUFFICIENT_DATA
+  if (floor.status === 'unavailable' || floor.status === 'insufficient') {
+    return INSUFFICIENT_DATA
+  }
+  const n =
+    floor.p5Nim != null && Number.isFinite(floor.p5Nim)
+      ? floor.p5Nim
+      : floor.minNim != null && Number.isFinite(floor.minNim)
+        ? floor.minNim
+        : null
+  if (n == null || n < 0) return INSUFFICIENT_DATA
+  if (n >= 100) return `~${n.toFixed(1)} NIM`
+  if (n >= 10) return `~${n.toFixed(2)} NIM`
+  if (n >= 1) return `~${n.toFixed(2)} NIM`
+  if (n >= 0.01) return `~${n.toFixed(3)} NIM`
+  return `~${n.toFixed(4)} NIM`
+}
+
 /**
  * @deprecated Prefer StatusChip / OBSERVATION_STATUS_LABELS (P2-09 source of truth).
  * Kept for non-UI formatters and tests.

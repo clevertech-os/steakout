@@ -7,6 +7,8 @@ import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
 import { humanizeFetchError } from '../components/humanizeError'
 import {
   fetchValidators,
+  peekValidatorsList,
+  prefetchValidatorProfile,
   VALIDATOR_SORTS,
   type ValidatorListItem,
   type ValidatorSort,
@@ -63,12 +65,28 @@ export default function Directory() {
 
   useEffect(() => {
     const controller = new AbortController()
-    // Keep previous results visible while filters change (page shell stays put).
-    setState((prev) =>
-      prev.kind === 'ready'
-        ? { ...prev, refreshing: true }
-        : { kind: 'loading' },
-    )
+
+    // Instant paint from client cache (warmed by App idle / nav hover).
+    const peek = peekValidatorsList(sort, listedOnly)
+    if (peek) {
+      setState({
+        kind: 'ready',
+        validators: peek.envelope.data.validators,
+        status: peek.envelope.status,
+        updatedAt: peek.envelope.updatedAt,
+        refreshing: !peek.fresh || reloadToken > 0,
+      })
+      // Fresh cache and no forced reload: skip network this mount.
+      if (peek.fresh && reloadToken === 0) {
+        return () => controller.abort()
+      }
+    } else {
+      setState((prev) =>
+        prev.kind === 'ready'
+          ? { ...prev, refreshing: true }
+          : { kind: 'loading' },
+      )
+    }
 
     void (async () => {
       try {
@@ -76,6 +94,8 @@ export default function Directory() {
           sort,
           listed: listedOnly,
           signal: controller.signal,
+          // Network when cold, stale, or user retry.
+          force: true,
         })
         if (controller.signal.aborted) return
         setState({

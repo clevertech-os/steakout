@@ -10,7 +10,9 @@ import {
 } from '../../../client/src/components/StatusChip.tsx'
 import {
   formatDeclaredFee,
+  formatDeclaredMinPayout,
   formatDominance,
+  formatObservedPaymentFloor,
   formatOfficialScore,
   formatObservationStatus,
   formatStakeNim,
@@ -55,6 +57,54 @@ describe('formatDeclaredFee', () => {
     expect(formatDeclaredFee(null)).toBe(INSUFFICIENT_DATA)
     expect(formatDeclaredFee('0.05')).toBe('5%')
     expect(formatDeclaredFee('0')).toBe('0%')
+  })
+})
+
+describe('formatDeclaredMinPayout', () => {
+  it('formats fixed NIM thresholds and special kinds', () => {
+    expect(formatDeclaredMinPayout({ nim: 10, kind: 'fixed' })).toBe('10 NIM')
+    expect(formatDeclaredMinPayout({ nim: 1, kind: 'fixed' })).toBe('1 NIM')
+    expect(formatDeclaredMinPayout({ nim: null, kind: 'none' })).toBe('None')
+    expect(formatDeclaredMinPayout({ nim: null, kind: 'stake-based' })).toBe(
+      'Stake-based',
+    )
+    expect(formatDeclaredMinPayout({ nim: null, kind: 'not_applicable' })).toBe(
+      'Not applicable',
+    )
+  })
+
+  it('maps missing/unknown to Insufficient data', () => {
+    expect(formatDeclaredMinPayout(null)).toBe(INSUFFICIENT_DATA)
+    expect(formatDeclaredMinPayout(undefined)).toBe(INSUFFICIENT_DATA)
+    expect(formatDeclaredMinPayout({ nim: null, kind: 'unknown' })).toBe(
+      INSUFFICIENT_DATA,
+    )
+    expect(formatDeclaredMinPayout({ nim: null, kind: 'fixed' })).toBe(
+      INSUFFICIENT_DATA,
+    )
+  })
+})
+
+describe('formatObservedPaymentFloor', () => {
+  it('prefers p5 and marks insufficient/unavailable', () => {
+    expect(
+      formatObservedPaymentFloor({
+        p5Nim: 10.03,
+        minNim: 3.98,
+        status: 'inferred',
+      }),
+    ).toBe('~10.03 NIM')
+    expect(
+      formatObservedPaymentFloor({
+        p5Nim: null,
+        minNim: 0.0073,
+        status: 'inferred',
+      }),
+    ).toMatch(/^~0\.007/)
+    expect(
+      formatObservedPaymentFloor({ status: 'insufficient', sampleSize: 3 }),
+    ).toBe(INSUFFICIENT_DATA)
+    expect(formatObservedPaymentFloor(null)).toBe(INSUFFICIENT_DATA)
   })
 })
 

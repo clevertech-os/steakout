@@ -37,8 +37,16 @@ import { useWallet } from '../wallet/useWallet'
 import Evidence, { type EvidenceSummaryMeta } from './Evidence'
 import ObservationHeroPanel from './ObservationHeroPanel'
 import {
+  fetchValidatorProfile,
+  peekValidatorProfile,
+  ValidatorsApiError,
+  type ValidatorProfileEnvelope,
+} from './api'
+import {
   formatDeclaredFee,
+  formatDeclaredMinPayout,
   formatDominance,
+  formatObservedPaymentFloor,
   formatPayoutType,
   INSUFFICIENT_DATA,
 } from './format'
@@ -111,24 +119,12 @@ interface ValidatorProfileData {
   }
 }
 
-interface ApiOk {
-  updatedAt: string
-  source: string
-  status: string
-  dataFreshness: { ageSeconds: number; historyDepthDays?: number }
-  data: ValidatorProfileData
-}
-
-interface ApiErr {
-  error: { code: string; message: string }
-}
-
 type LoadState =
   | { kind: 'loading' }
   | { kind: 'invalid' }
   | { kind: 'not-found'; message: string }
   | { kind: 'error'; message: string }
-  | { kind: 'ok'; envelope: ApiOk }
+  | { kind: 'ok'; envelope: ValidatorProfileEnvelope }
 
 function formatNimFromLuna(luna: number | null): string {
   if (luna == null || !Number.isFinite(luna)) return 'Unavailable'
@@ -349,47 +345,51 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
       return
     }
 
-    setState({ kind: 'loading' })
     setEvidenceMeta(null)
 
-    const path = `/api/validators/${encodeURIComponent(rawAddress.trim())}`
+    // Instant paint from client cache (card hover / prior visit).
+    const peek = peekValidatorProfile(rawAddress)
+    if (peek) {
+      setState({ kind: 'ok', envelope: peek.envelope as ValidatorProfileEnvelope })
+      if (peek.fresh && reloadToken === 0) {
+        return () => {
+          cancelled = true
+        }
+      }
+    } else {
+      setState({ kind: 'loading' })
+    }
 
     ;(async () => {
       try {
-        const res = await fetch(path)
-        let body: ApiOk | ApiErr | null = null
-        try {
-          body = (await res.json()) as ApiOk | ApiErr
-        } catch {
-          body = null
-        }
-
+        const envelope = await fetchValidatorProfile(rawAddress, {
+          force: true,
+        })
         if (cancelled) return
-
-        if (!res.ok || !body || 'error' in body) {
-          const err = body as ApiErr | null
-          const code = err?.error?.code
-          const message =
-            err?.error?.message ?? 'Could not load this validator profile.'
-          if (res.status === 404 || code === 'VALIDATOR_NOT_FOUND') {
-            setState({ kind: 'not-found', message })
+        setState({ kind: 'ok', envelope })
+      } catch (err) {
+        if (cancelled) return
+        if (err instanceof ValidatorsApiError) {
+          if (
+            err.httpStatus === 404 ||
+            err.code === 'VALIDATOR_NOT_FOUND'
+          ) {
+            setState({ kind: 'not-found', message: err.message })
             return
           }
-          setState({ kind: 'error', message })
+          // Keep cached profile if revalidate fails.
+          if (peek) return
+          setState({ kind: 'error', message: err.message })
           return
         }
-
-        setState({ kind: 'ok', envelope: body as ApiOk })
-      } catch (err) {
-        if (!cancelled) {
-          setState({
-            kind: 'error',
-            message: humanizeFetchError(
-              err,
-              'Could not load this validator profile. Try again later.',
-            ),
-          })
-        }
+        if (peek) return
+        setState({
+          kind: 'error',
+          message: humanizeFetchError(
+            err,
+            'Could not load this validator profile. Try again later.',
+          ),
+        })
       }
     })()
 
@@ -597,7 +597,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
   const profile = envelope.data
   const registryFreshness = formatFreshness(
     envelope.dataFreshness.ageSeconds,
-    envelope.updatedAt || profile.registryUpdatedAt,
+    envelope.updatedAt || profile.registryUpdatedAt || '',
   )
   const displayName = profile.name?.trim() || shortAddress(profile.address)
   const explorerForValidator = buildNimiqAddressExplorerUrl(profile.address)
@@ -750,6 +750,18 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           <span className="profile-policy-label">Fee</span>
           <span className="profile-policy-value mono">
             {formatDeclaredFee(profile.declared.fee)}
+          </span>
+        </li>
+        <li className="profile-policy-item">
+          <span className="profile-policy-label">Min payout</span>
+          <span className="profile-policy-value mono">
+            {formatDeclaredMinPayout(profile.declared.minPayout)}
+          </span>
+        </li>
+        <li className="profile-policy-item">
+          <span className="profile-policy-label">Obs. floor</span>
+          <span className="profile-policy-value mono">
+            {formatObservedPaymentFloor(profile.observedPaymentFloor)}
           </span>
         </li>
         <li className="profile-policy-item">
@@ -1023,6 +1035,30 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
               value={formatDeclaredFee(profile.declared.fee)}
               status="registry"
               freshness={registryFreshness}
+            />
+            <MetricRow
+              label="Min payout"
+              definition="Operator-stated minimum accumulated reward before a payout is issued (Steakout research; not in the official validators API). Not a verified on-chain observation."
+              value={formatDeclaredMinPayout(profile.declared.minPayout)}
+              status="registry"
+              freshness={registryFreshness}
+            />
+            <MetricRow
+              label="Observed payment floor"
+              definition="5th percentile of indexed outflows from the validator’s reward address (excludes self-transfers). Inferred upper bound on a fixed min threshold only if these are reward payouts—not an operator declaration. Prefer this over the absolute minimum, which can be dust."
+              value={formatObservedPaymentFloor(profile.observedPaymentFloor)}
+              status={
+                profile.observedPaymentFloor?.status === 'inferred'
+                  ? 'inferred'
+                  : profile.observedPaymentFloor?.status === 'unavailable'
+                    ? 'unavailable'
+                    : 'insufficient'
+              }
+              freshness={
+                profile.observedPaymentFloor?.computedAt
+                  ? profile.observedPaymentFloor.computedAt
+                  : registryFreshness
+              }
             />
             <MetricRow
               label="Payout type"

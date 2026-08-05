@@ -27,6 +27,15 @@ import {
   setCachedPublicResponse,
 } from './responseCache.js'
 import {
+  getDeclaredMinPayout,
+  type DeclaredMinPayout,
+} from './minPayoutDeclarations.js'
+import {
+  getObservedPaymentFloor,
+  loadPaymentFloors,
+  type ObservedPaymentFloor,
+} from './paymentFloor.js'
+import {
   buildCanaryProbeSummary,
   canaryConfiguredForValidator,
   type CanaryProbeSummary,
@@ -92,6 +101,11 @@ export interface ValidatorListItem {
     payoutType: DeclaredPayoutType
     payoutSchedule: string | null
     scheduleNormalized: { everyHours: number } | null
+    /**
+     * Steakout-researched min payout (not in official validators-api).
+     * Caption as Registry declaration; never a Verified observation.
+     */
+    minPayout: DeclaredMinPayout
   }
   observation: {
     status: ObservationStatus
@@ -101,6 +115,11 @@ export interface ValidatorListItem {
     observedWindows: number | null
     expectedWindows: number | null
   }
+  /**
+   * Inferred floor from indexed reward outflows (p5 preferred for display).
+   * Never replaces declared.minPayout (registry / research sheet).
+   */
+  observedPaymentFloor: ObservedPaymentFloor
   registryUpdatedAt: string
   /** True when Steakout runs a canary probe stake on this validator. */
   canaryConfigured: boolean
@@ -636,9 +655,20 @@ export function compareValidators(
 
 export type ObservationSummary = ValidatorListItem['observation']
 
+const UNAVAILABLE_PAYMENT_FLOOR: ObservedPaymentFloor = {
+  minNim: null,
+  p5Nim: null,
+  sampleSize: 0,
+  recipientCount: 0,
+  historyDepthDays: null,
+  status: 'unavailable',
+  computedAt: new Date(0).toISOString(),
+}
+
 export function toListItem(
   row: ValidatorRow,
   observation?: ObservationSummary | null,
+  options?: { paymentFloor?: ObservedPaymentFloor | null },
 ): ValidatorListItem {
   const everyHours = row.schedule_every_hours
   return {
@@ -659,9 +689,13 @@ export function toListItem(
         everyHours !== null && Number.isFinite(everyHours)
           ? { everyHours }
           : null,
+      minPayout: getDeclaredMinPayout(row.address),
     },
     // Prefer latest schedule-adherence observation (P2-03/P2-06); else insufficient-data stub.
     observation: observation ? { ...observation } : { ...STUB_OBSERVATION },
+    observedPaymentFloor: options?.paymentFloor
+      ? { ...options.paymentFloor }
+      : { ...UNAVAILABLE_PAYMENT_FLOOR },
     registryUpdatedAt: row.registry_updated_at ?? '',
     canaryConfigured: canaryConfiguredForValidator(row.address),
   }
@@ -672,7 +706,10 @@ export function toProfile(
   observation?: ObservationSummary | null,
   options?: { database?: Database.Database },
 ): ValidatorProfile {
-  const list = toListItem(row, observation)
+  const paymentFloor = options?.database
+    ? getObservedPaymentFloor(options.database, row.address)
+    : null
+  const list = toListItem(row, observation, { paymentFloor })
   const rewardAddress = row.reward_address
   return {
     ...list,
@@ -706,6 +743,8 @@ export function listValidators(
   }
   // Load live observation summaries before sort so `recommended` can use them (P2-09).
   const summaries = loadObservationSummaries(database, { nowMs: options.nowMs })
+  // Inferred payment floors from reward outflows (cached scan).
+  const floors = loadPaymentFloors(database, { nowMs: options.nowMs })
   // listed=false (default) → all observable rows already stored from all-observable sync.
   rows = [...rows].sort((a, b) =>
     compareValidators(a, b, sort, {
@@ -713,7 +752,16 @@ export function listValidators(
       statusB: observationForRow(b, summaries).status,
     }),
   )
-  return rows.map((row) => toListItem(row, observationForRow(row, summaries)))
+  return rows.map((row) => {
+    let floorKey: string
+    try {
+      floorKey = normalizeAddress(row.address)
+    } catch {
+      floorKey = ''
+    }
+    const paymentFloor = floorKey ? floors.get(floorKey) : undefined
+    return toListItem(row, observationForRow(row, summaries), { paymentFloor })
+  })
 }
 
 function parseSort(value: unknown): ValidatorSort | null {
