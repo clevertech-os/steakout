@@ -1,0 +1,347 @@
+/* Observation hero: muted info-blue graph + expandable timeline (anti-slop: no side stripe). */
+
+.profile-obs-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  isolation: isolate;
+  /* Soft blue wash so the card reads as observation without scaffold chrome */
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--so-info-soft) 72%, var(--so-card)) 0%,
+      var(--so-card) 58%
+    );
+  border-color: color-mix(in srgb, var(--so-info) 18%, var(--so-rule));
+  transition:
+    border-color 0.28s ease,
+    box-shadow 0.28s ease;
+}
+
+.profile-obs-hero[data-expanded='true'] {
+  border-color: color-mix(in srgb, var(--so-info) 32%, var(--so-rule));
+  box-shadow: var(--so-shadow);
+}
+
+/* —— Backdrop graph —— */
+
+.profile-obs-hero-graph {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.profile-obs-hero-svg {
+  position: absolute;
+  right: -4%;
+  bottom: 0;
+  width: 112%;
+  height: 68%;
+  min-height: 4.5rem;
+}
+
+.profile-obs-hero-stop-top {
+  stop-color: var(--so-info);
+  stop-opacity: 0.22;
+}
+
+.profile-obs-hero-stop-bottom {
+  stop-color: var(--so-info);
+  stop-opacity: 0.02;
+}
+
+.profile-obs-hero-area {
+  opacity: 1;
+}
+
+.profile-obs-hero-line {
+  stroke: color-mix(in srgb, var(--so-info) 55%, transparent);
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .profile-obs-hero-line {
+    stroke-dasharray: 320;
+    stroke-dashoffset: 320;
+    animation: profile-obs-line-draw 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.05s forwards;
+  }
+
+  .profile-obs-hero-area {
+    opacity: 0;
+    animation: profile-obs-area-in 0.7s ease 0.12s forwards;
+  }
+}
+
+@keyframes profile-obs-line-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes profile-obs-area-in {
+  to {
+    opacity: 1;
+  }
+}
+
+/* —— Foreground content —— */
+
+.profile-obs-hero-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.profile-obs-hero .profile-hero-label,
+.profile-obs-hero .profile-observation-chip,
+.profile-obs-hero .profile-hero-caption {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-obs-hero .profile-hero-caption {
+  /* Slightly stronger so mono facts sit readable over the graph */
+  color: color-mix(in srgb, var(--so-ink) 72%, var(--so-muted));
+}
+
+.profile-obs-hero-actions {
+  margin-top: var(--so-space-3);
+}
+
+.profile-obs-hero-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: var(--so-touch);
+  margin: 0;
+  padding: 0.35rem 0.85rem 0.35rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--so-info) 28%, var(--so-rule));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--so-card) 82%, var(--so-info-soft));
+  color: var(--so-info-strong);
+  font: inherit;
+  font-size: var(--so-text-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.profile-obs-hero-toggle:hover {
+  background: color-mix(in srgb, var(--so-info-soft) 70%, var(--so-card));
+  border-color: color-mix(in srgb, var(--so-info) 42%, var(--so-rule));
+}
+
+.profile-obs-hero-toggle:focus-visible {
+  outline: 2px solid var(--so-focus);
+  outline-offset: 2px;
+}
+
+.profile-obs-hero-chevron {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  flex-shrink: 0;
+}
+
+.profile-obs-hero-chevron[data-open='true'] {
+  transform: rotate(225deg) translateY(-1px);
+}
+
+/* —— Expand drawer (grid 0fr → 1fr) —— */
+
+.profile-obs-hero-drawer {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.profile-obs-hero-drawer[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+
+.profile-obs-hero-drawer-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.profile-obs-hero-timeline {
+  padding-top: var(--so-space-3);
+  margin-top: var(--so-space-2);
+  border-top: 1px solid color-mix(in srgb, var(--so-info) 16%, var(--so-rule));
+  opacity: 0;
+  transform: translateY(-0.35rem);
+  transition:
+    opacity 0.28s ease,
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.profile-obs-hero-drawer[data-open='true'] .profile-obs-hero-timeline {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.06s;
+}
+
+.profile-obs-hero-timeline-kicker {
+  margin: 0 0 var(--so-space-3);
+  font-size: var(--so-text-xs);
+  font-weight: 600;
+  color: var(--so-muted);
+  line-height: 1.35;
+}
+
+.profile-obs-hero-timeline-range {
+  font-weight: 500;
+  color: color-mix(in srgb, var(--so-muted) 80%, var(--so-info));
+}
+
+.profile-obs-hero-timeline-status,
+.profile-obs-hero-timeline-error p {
+  margin: 0 0 var(--so-space-2);
+  color: var(--so-muted);
+  font-size: var(--so-text-sm);
+  line-height: 1.4;
+}
+
+.profile-obs-hero-retry {
+  min-height: var(--so-touch);
+}
+
+/* Vertical track */
+.profile-obs-hero-track {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 0.15rem;
+  position: relative;
+}
+
+.profile-obs-hero-track::before {
+  content: '';
+  position: absolute;
+  left: 0.28rem;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  width: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--so-info) 28%, var(--so-rule));
+}
+
+.profile-obs-hero-node {
+  position: relative;
+  display: grid;
+  grid-template-columns: 0.7rem 1fr;
+  gap: var(--so-space-3);
+  padding: 0.4rem 0 0.55rem;
+  min-width: 0;
+}
+
+.profile-obs-hero-dot {
+  position: relative;
+  z-index: 1;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: 0.28rem;
+  border-radius: 50%;
+  background: var(--so-info);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--so-info-soft) 90%, transparent);
+  flex-shrink: 0;
+}
+
+.profile-obs-hero-node-body {
+  min-width: 0;
+}
+
+.profile-obs-hero-node-when {
+  display: block;
+  font-size: var(--so-text-sm);
+  font-weight: 600;
+  color: var(--so-ink);
+  line-height: 1.3;
+}
+
+.profile-obs-hero-node-meta {
+  margin: 0.15rem 0 0;
+  font-size: var(--so-text-xs);
+  color: var(--so-muted);
+  line-height: 1.35;
+}
+
+.profile-obs-hero-footnote {
+  margin: var(--so-space-3) 0 0;
+  font-size: var(--so-text-2xs);
+  color: var(--so-muted);
+  line-height: 1.4;
+}
+
+.profile-obs-hero-full-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--so-touch);
+  margin: var(--so-space-2) 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--so-info);
+  font: inherit;
+  font-size: var(--so-text-sm);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.profile-obs-hero-full-link:hover {
+  color: var(--so-info-strong);
+}
+
+.profile-obs-hero-full-link:focus-visible {
+  outline: 2px solid var(--so-focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Expanded: span full hero row for readable timeline */
+@media (min-width: 520px) {
+  .profile-hero:has(.profile-obs-hero[data-expanded='true']) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .profile-obs-hero[data-expanded='true'] {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-obs-hero-line,
+  .profile-obs-hero-area {
+    animation: none !important;
+    opacity: 1;
+    stroke-dashoffset: 0;
+  }
+
+  .profile-obs-hero-drawer,
+  .profile-obs-hero-timeline,
+  .profile-obs-hero-chevron,
+  .profile-obs-hero-toggle {
+    transition: none !important;
+  }
+}

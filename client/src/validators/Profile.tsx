@@ -5,7 +5,13 @@
  * Official Nimiq Trust Score is always shown as the official score,
  * never blended with Steakout observation status (invariant #6).
  */
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import {
   formatDisplayAddress,
   isValidNimiqAddress,
@@ -16,7 +22,7 @@ import type { PositionState } from '../api/position'
 import DataStatusTag from '../components/DataStatusTag'
 import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
 import { humanizeFetchError } from '../components/humanizeError'
-import StatusChip, {
+import {
   OBSERVATION_STATUS_LABELS,
   type ObservationStatus,
 } from '../components/StatusChip'
@@ -29,6 +35,7 @@ import StakeFlow, {
 import { STAKE_CONNECT_FIRST } from '../staking/copy'
 import { useWallet } from '../wallet/useWallet'
 import Evidence, { type EvidenceSummaryMeta } from './Evidence'
+import ObservationHeroPanel from './ObservationHeroPanel'
 import {
   formatDeclaredFee,
   formatDominance,
@@ -270,8 +277,24 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
   )
   /** Defer heavy observations fetch until the user opens evidence. */
   const [evidenceOpen, setEvidenceOpen] = useState(false)
+  const evidenceDetailsRef = useRef<HTMLDetailsElement | null>(null)
 
   const wallet = useWallet({ auth: walletAuthApi })
+
+  const openFullEvidence = useCallback(() => {
+    setEvidenceOpen(true)
+    const el = evidenceDetailsRef.current
+    if (el && !el.open) {
+      el.open = true
+    }
+    // Next frame so disclosure body mounts before scroll.
+    requestAnimationFrame(() => {
+      evidenceDetailsRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      })
+    })
+  }, [])
 
   const retry = useCallback(() => {
     setReloadToken((n) => n + 1)
@@ -689,25 +712,31 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           </p>
         </section>
 
-        <section
-          className="nq-card shell-card profile-card profile-card--observation profile-hero-panel"
-          aria-labelledby="profile-observation"
-          data-observation-status={obsStatus}
-        >
-          <h2 id="profile-observation" className="profile-hero-label">
-            Payout observation
-          </h2>
-          <div className="profile-observation-chip">
-            <StatusChip
-              status={obsStatus}
-              alwaysShowDefinition
-              definition={heroStatusDefinition}
-            />
-          </div>
-          {observationFacts ? (
-            <p className="profile-hero-caption mono">{observationFacts}</p>
-          ) : null}
-        </section>
+        <ObservationHeroPanel
+          address={profile.address}
+          status={obsStatus}
+          statusDefinition={heroStatusDefinition}
+          observedWindows={
+            profile.observation.observedWindows ?? null
+          }
+          expectedWindows={
+            profile.observation.expectedWindows ?? null
+          }
+          historyDepthDays={obsHistoryDays}
+          lastObservedAt={profile.observation.lastObservedAt}
+          factsLine={observationFacts}
+          onOpenFullEvidence={openFullEvidence}
+          onTimelineMeta={(meta) => {
+            onEvidenceMeta({
+              status: meta.status,
+              windowsLabel: windowsCaption(
+                meta.observedWindows,
+                meta.expectedWindows,
+              ),
+              historyDepthDays: meta.historyDepthDays,
+            })
+          }}
+        />
       </div>
       <p className="profile-hero-freshness" aria-label={registryFreshness}>
         {registryFreshness}
@@ -759,6 +788,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
       {/* Collapsed by default: evidence, canary, technical.
           Evidence API is large (run hashes); only fetch when opened. */}
       <details
+        ref={evidenceDetailsRef}
         className="profile-disclosure nq-card shell-card profile-card profile-card--observation"
         onToggle={(e) => {
           if (e.currentTarget.open) setEvidenceOpen(true)
