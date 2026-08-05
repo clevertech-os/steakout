@@ -1,18 +1,17 @@
-/* Observation hero: muted info-blue graph + expandable timeline (anti-slop: no side stripe). */
+/* Observation hero: real payment-spike chart (date axis) + expandable timeline. */
 
 .profile-obs-hero {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 0;
-  overflow: hidden;
   isolation: isolate;
-  /* Soft blue wash so the card reads as observation without scaffold chrome */
+  border-radius: var(--so-radius-card, 1.25rem);
   background:
     linear-gradient(
       165deg,
-      color-mix(in srgb, var(--so-info-soft) 72%, var(--so-card)) 0%,
-      var(--so-card) 58%
+      color-mix(in srgb, var(--so-info-soft) 70%, var(--so-card)) 0%,
+      var(--so-card) 62%
     );
   border-color: color-mix(in srgb, var(--so-info) 18%, var(--so-rule));
   transition:
@@ -20,33 +19,47 @@
     box-shadow 0.28s ease;
 }
 
+/*
+ * Beat `.app-main .nq-card { overflow: visible }` (base.css) so the chart
+ * cannot paint outside the rounded card edge (see screenshot bleed).
+ */
+.app-main .nq-card.profile-obs-hero,
+.profile-obs-hero.shell-card {
+  overflow: hidden;
+  overflow: clip;
+}
+
 .profile-obs-hero[data-expanded='true'] {
   border-color: color-mix(in srgb, var(--so-info) 32%, var(--so-rule));
   box-shadow: var(--so-shadow);
 }
 
-/* —— Backdrop graph —— */
+/* —— Backdrop chart (contained) —— */
 
 .profile-obs-hero-graph {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 0;
+  height: min(46%, 5.75rem);
   pointer-events: none;
-  opacity: 0.9;
+  overflow: hidden;
+  /* Leave a little air under content / Timeline button */
+  opacity: 0.95;
 }
 
 .profile-obs-hero-svg {
-  position: absolute;
-  right: -4%;
-  bottom: 0;
-  width: 112%;
-  height: 68%;
-  min-height: 4.5rem;
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Fill the graph slot only — no overflow hacks */
+  max-width: 100%;
 }
 
 .profile-obs-hero-stop-top {
   stop-color: var(--so-info);
-  stop-opacity: 0.22;
+  stop-opacity: 0.2;
 }
 
 .profile-obs-hero-stop-bottom {
@@ -54,40 +67,81 @@
   stop-opacity: 0.02;
 }
 
-.profile-obs-hero-area {
-  opacity: 1;
+.profile-obs-hero-baseline {
+  stroke: color-mix(in srgb, var(--so-info) 22%, var(--so-rule));
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
 }
 
-.profile-obs-hero-line {
-  stroke: color-mix(in srgb, var(--so-info) 55%, transparent);
-  stroke-width: 1.35;
+.profile-obs-hero-area {
+  opacity: 0.95;
+}
+
+.profile-obs-hero-ridge {
+  stroke: color-mix(in srgb, var(--so-info) 38%, transparent);
+  stroke-width: 1;
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .profile-obs-hero-line {
-    stroke-dasharray: 320;
-    stroke-dashoffset: 320;
-    animation: profile-obs-line-draw 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.05s forwards;
-  }
-
-  .profile-obs-hero-area {
-    opacity: 0;
-    animation: profile-obs-area-in 0.7s ease 0.12s forwards;
-  }
+.profile-obs-hero-stem {
+  stroke: color-mix(in srgb, var(--so-info) 58%, transparent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
 }
 
-@keyframes profile-obs-line-draw {
-  to {
-    stroke-dashoffset: 0;
+.profile-obs-hero-tip {
+  fill: color-mix(in srgb, var(--so-info) 72%, var(--so-card));
+  stroke: color-mix(in srgb, var(--so-info) 40%, transparent);
+  stroke-width: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .profile-obs-hero[data-chart='ready'] .profile-obs-hero-area {
+    opacity: 0;
+    animation: profile-obs-area-in 0.55s ease 0.05s forwards;
+  }
+
+  .profile-obs-hero[data-chart='ready'] .profile-obs-hero-spike {
+    opacity: 0;
+    animation: profile-obs-spike-in 0.4s ease forwards;
+  }
+
+  .profile-obs-hero[data-chart='ready'] .profile-obs-hero-spike:nth-child(n) {
+    animation-delay: 0.08s;
+  }
+
+  /* Stagger a handful of spikes without per-index classes */
+  .profile-obs-hero[data-chart='ready'] .profile-obs-hero-spike:nth-child(3n) {
+    animation-delay: 0.12s;
+  }
+
+  .profile-obs-hero[data-chart='ready'] .profile-obs-hero-spike:nth-child(3n + 1) {
+    animation-delay: 0.18s;
+  }
+
+  .profile-obs-hero[data-chart='ready'] .profile-obs-hero-spike:nth-child(3n + 2) {
+    animation-delay: 0.24s;
   }
 }
 
 @keyframes profile-obs-area-in {
   to {
+    opacity: 0.95;
+  }
+}
+
+@keyframes profile-obs-spike-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -100,6 +154,8 @@
   flex-direction: column;
   gap: 0;
   min-width: 0;
+  /* Keep status/copy above the chart band */
+  padding-bottom: 0.15rem;
 }
 
 .profile-obs-hero .profile-hero-label,
@@ -110,11 +166,12 @@
 }
 
 .profile-obs-hero .profile-hero-caption {
-  /* Slightly stronger so mono facts sit readable over the graph */
   color: color-mix(in srgb, var(--so-ink) 72%, var(--so-muted));
 }
 
 .profile-obs-hero-actions {
+  position: relative;
+  z-index: 1;
   margin-top: var(--so-space-3);
 }
 
@@ -127,13 +184,14 @@
   padding: 0.35rem 0.85rem 0.35rem 0.9rem;
   border: 1px solid color-mix(in srgb, var(--so-info) 28%, var(--so-rule));
   border-radius: 999px;
-  background: color-mix(in srgb, var(--so-card) 82%, var(--so-info-soft));
+  background: color-mix(in srgb, var(--so-card) 88%, var(--so-info-soft));
   color: var(--so-info-strong);
   font: inherit;
   font-size: var(--so-text-sm);
   font-weight: 600;
   letter-spacing: -0.01em;
   cursor: pointer;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--so-card) 70%, transparent);
   transition:
     background 0.2s ease,
     border-color 0.2s ease,
@@ -165,7 +223,7 @@
   transform: rotate(225deg) translateY(-1px);
 }
 
-/* —— Expand drawer (grid 0fr → 1fr) —— */
+/* —— Expand drawer —— */
 
 .profile-obs-hero-drawer {
   position: relative;
@@ -226,7 +284,6 @@
   min-height: var(--so-touch);
 }
 
-/* Vertical track */
 .profile-obs-hero-track {
   list-style: none;
   margin: 0;
@@ -319,23 +376,18 @@
   border-radius: 2px;
 }
 
-/* Expanded: span full hero row for readable timeline */
 @media (min-width: 520px) {
-  .profile-hero:has(.profile-obs-hero[data-expanded='true']) {
-    grid-template-columns: 1fr 1fr;
-  }
-
   .profile-obs-hero[data-expanded='true'] {
     grid-column: 1 / -1;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .profile-obs-hero-line,
-  .profile-obs-hero-area {
+  .profile-obs-hero-area,
+  .profile-obs-hero-spike {
     animation: none !important;
-    opacity: 1;
-    stroke-dashoffset: 0;
+    opacity: 1 !important;
+    transform: none !important;
   }
 
   .profile-obs-hero-drawer,

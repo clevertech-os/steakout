@@ -1,7 +1,6 @@
 /**
- * Payout observation hero: muted Nimiq-blue backdrop graph + expandable timeline.
- * Status remains StatusChip-only (no side-stripe). Graph is decorative density,
- * not a claim about individual unobserved windows.
+ * Payout observation hero: muted Nimiq-blue payment-spike chart (by date) +
+ * expandable timeline. Status stays on StatusChip (no side-stripe).
  */
 import {
   useCallback,
@@ -22,7 +21,12 @@ import {
 } from './api'
 import './ObservationHeroPanel.css'
 
-const TIMELINE_LIMIT = 12
+/** Runs loaded for the chart; timeline list shows the newest subset. */
+const FETCH_LIMIT = 48
+const TIMELINE_LIST_LIMIT = 12
+
+const CHART_W = 320
+const CHART_H = 80
 
 export interface ObservationHeroPanelProps {
   address: string
@@ -36,7 +40,7 @@ export interface ObservationHeroPanelProps {
   factsLine: string | null
   /** Opens the full payout-evidence disclosure further down the profile. */
   onOpenFullEvidence?: () => void
-  /** Keep parent summary in sync when timeline loads. */
+  /** Keep parent summary in sync when runs load. */
   onTimelineMeta?: (meta: {
     status: ObservationStatus
     observedWindows: number | null
@@ -45,7 +49,7 @@ export interface ObservationHeroPanelProps {
   }) => void
 }
 
-type TimelineState =
+type RunsState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'error'; message: string }
@@ -60,67 +64,97 @@ type TimelineState =
       historyDepthDays: number
     }
 
+interface ChartSpike {
+  x: number
+  yTip: number
+  yBase: number
+  weight: number
+}
+
+interface ChartModel {
+  spikes: ChartSpike[]
+  baselineY: number
+  /** Soft fill under spikes (may be empty). */
+  areaPath: string
+  /** Polyline connecting spike tips for readability when dense. */
+  ridgePath: string
+}
+
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n))
 }
 
 /**
- * Deterministic decorative sparkline heights (0–1) from observation summary.
- * Same inputs → same curve; not a reconstruction of individual windows.
+ * Build a date-axis spike chart from observed payout runs.
+ * X = windowStart time (oldest → newest left → right).
+ * Spike height ∝ txCount in that run (honest magnitude, not decorative wave).
  */
-function sparkHeights(
-  observed: number | null | undefined,
-  expected: number | null | undefined,
-  depthDays: number,
-  points = 18,
-): number[] {
-  const rate =
-    expected != null &&
-    expected > 0 &&
-    observed != null &&
-    Number.isFinite(observed)
-      ? clamp(observed / expected, 0.08, 1)
-      : depthDays > 0
-        ? 0.35
-        : 0.18
+function buildPaymentSpikeChart(
+  runs: readonly ObservationRunItem[],
+  width: number,
+  height: number,
+): ChartModel {
+  const padX = 10
+  const padTop = 8
+  const baselineY = height - 6
+  const usableW = width - padX * 2
+  const maxBar = baselineY - padTop
 
-  const seed = Math.round((observed ?? 0) * 17 + (expected ?? 0) * 3 + depthDays * 5)
-  const out: number[] = []
-  for (let i = 0; i < points; i += 1) {
-    const t = i / (points - 1)
-    const wave =
-      0.55 +
-      0.28 * Math.sin(t * Math.PI * 2.1 + (seed % 7) * 0.4) +
-      0.12 * Math.sin(t * Math.PI * 5.3 + seed * 0.07)
-    const taper = 0.75 + 0.25 * Math.sin(t * Math.PI)
-    out.push(clamp(wave * rate * taper, 0.06, 0.95))
+  const events = runs
+    .map((run) => {
+      const t = Date.parse(run.windowStart)
+      const weight = Number.isFinite(run.txCount) ? Math.max(1, run.txCount) : 1
+      return { t, weight }
+    })
+    .filter((e) => Number.isFinite(e.t))
+    .sort((a, b) => a.t - b.t)
+
+  if (events.length === 0) {
+    return {
+      spikes: [],
+      baselineY,
+      areaPath: '',
+      ridgePath: '',
+    }
   }
-  return out
-}
 
-function buildAreaPath(heights: number[], width: number, height: number): string {
-  if (heights.length === 0) return ''
-  const step = width / (heights.length - 1)
-  const top = heights
-    .map((h, i) => {
-      const x = i * step
-      const y = height - h * height * 0.88 - height * 0.06
-      return `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`
-    })
-    .join(' ')
-  return `${top} L${width},${height} L0,${height} Z`
-}
+  let tMin = events[0]!.t
+  let tMax = events[events.length - 1]!.t
+  // Single run: center it with a day of padding so the axis still reads as time.
+  if (tMax <= tMin) {
+    const day = 24 * 60 * 60 * 1000
+    tMin -= day
+    tMax += day
+  }
+  const span = tMax - tMin
+  const maxWeight = Math.max(...events.map((e) => e.weight), 1)
 
-function buildLinePath(heights: number[], width: number, height: number): string {
-  if (heights.length === 0) return ''
-  const step = width / (heights.length - 1)
-  return heights
-    .map((h, i) => {
-      const x = i * step
-      const y = height - h * height * 0.88 - height * 0.06
-      return `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`
-    })
-    .join(' ')
+  const spikes: ChartSpike[] = events.map((e) => {
+    const x = padX + ((e.t - tMin) / span) * usableW
+    // sqrt so huge multi-tx runs do not dominate the card.
+    const h = Math.sqrt(e.weight / maxWeight) * maxBar * 0.92
+    const yTip = baselineY - clamp(h, maxBar * 0.12, maxBar)
+    return { x, yTip, yBase: baselineY, weight: e.weight }
+  })
+
+  // Soft area: baseline → tips left-to-right → back along baseline.
+  const ridge =
+    spikes.length === 0
+      ? ''
+      : spikes
+          .map((s, i) => `${i === 0 ? 'M' : 'L'}${s.x.toFixed(2)},${s.yTip.toFixed(2)}`)
+          .join(' ')
+  const areaPath =
+    spikes.length === 0
+      ? ''
+      : `${ridge} L${spikes[spikes.length - 1]!.x.toFixed(2)},${baselineY} L${spikes[0]!.x.toFixed(2)},${baselineY} Z`
+
+  return {
+    spikes,
+    baselineY,
+    areaPath,
+    ridgePath: ridge,
+  }
 }
 
 function formatTimelineWhen(iso: string): string {
@@ -146,8 +180,6 @@ export default function ObservationHeroPanel({
   address,
   status,
   statusDefinition,
-  observedWindows,
-  expectedWindows,
   historyDepthDays,
   lastObservedAt,
   factsLine,
@@ -156,79 +188,87 @@ export default function ObservationHeroPanel({
 }: ObservationHeroPanelProps) {
   const reactId = useId()
   const panelId = `obs-hero-timeline-${reactId.replace(/:/g, '')}`
+  const gradId = `${panelId}-fill`
   const [expanded, setExpanded] = useState(false)
-  const [timeline, setTimeline] = useState<TimelineState>({ kind: 'idle' })
+  const [runsState, setRunsState] = useState<RunsState>({ kind: 'idle' })
   const onTimelineMetaRef = useRef(onTimelineMeta)
   onTimelineMetaRef.current = onTimelineMeta
 
-  const heights = useMemo(
-    () => sparkHeights(observedWindows, expectedWindows, historyDepthDays),
-    [observedWindows, expectedWindows, historyDepthDays],
+  const loadRuns = useCallback(
+    async (signal?: AbortSignal) => {
+      setRunsState({ kind: 'loading' })
+      try {
+        const envelope = await fetchValidatorObservations(address, {
+          limit: FETCH_LIMIT,
+          signal,
+        })
+        const next: RunsState = {
+          kind: 'ok',
+          runs: envelope.data.runs,
+          observedWindows: envelope.data.window.observedWindows,
+          expectedWindows: envelope.data.window.expectedWindows,
+          windowFrom: envelope.data.window.from,
+          windowTo: envelope.data.window.to,
+          status: envelope.data.observationStatus,
+          historyDepthDays: envelope.dataFreshness.historyDepthDays,
+        }
+        setRunsState(next)
+        onTimelineMetaRef.current?.({
+          status: next.status,
+          observedWindows: next.observedWindows,
+          expectedWindows: next.expectedWindows,
+          historyDepthDays: next.historyDepthDays,
+        })
+      } catch (err) {
+        if (signal?.aborted) return
+        setRunsState({
+          kind: 'error',
+          message: humanizeFetchError(
+            err,
+            'Could not load the observation timeline.',
+          ),
+        })
+      }
+    },
+    [address],
   )
 
-  const areaPath = useMemo(() => buildAreaPath(heights, 240, 72), [heights])
-  const linePath = useMemo(() => buildLinePath(heights, 240, 72), [heights])
-
-  const loadTimeline = useCallback(async (signal?: AbortSignal) => {
-    setTimeline({ kind: 'loading' })
-    try {
-      const envelope = await fetchValidatorObservations(address, {
-        limit: TIMELINE_LIMIT,
-        signal,
-      })
-      const next: TimelineState = {
-        kind: 'ok',
-        runs: envelope.data.runs,
-        observedWindows: envelope.data.window.observedWindows,
-        expectedWindows: envelope.data.window.expectedWindows,
-        windowFrom: envelope.data.window.from,
-        windowTo: envelope.data.window.to,
-        status: envelope.data.observationStatus,
-        historyDepthDays: envelope.dataFreshness.historyDepthDays,
-      }
-      setTimeline(next)
-      onTimelineMetaRef.current?.({
-        status: next.status,
-        observedWindows: next.observedWindows,
-        expectedWindows: next.expectedWindows,
-        historyDepthDays: next.historyDepthDays,
-      })
-    } catch (err) {
-      if (signal?.aborted) return
-      setTimeline({
-        kind: 'error',
-        message: humanizeFetchError(err, 'Could not load the observation timeline.'),
-      })
-    }
-  }, [address])
-
+  // Load payout runs on mount so the date-axis graph is real payment spikes.
   useEffect(() => {
-    if (!expanded) return
-    if (timeline.kind === 'ok' || timeline.kind === 'loading') return
     const ac = new AbortController()
-    void loadTimeline(ac.signal)
+    void loadRuns(ac.signal)
     return () => ac.abort()
-  }, [expanded, loadTimeline, timeline.kind])
+  }, [loadRuns])
 
-  // Reset cached timeline when navigating to another validator.
   useEffect(() => {
     setExpanded(false)
-    setTimeline({ kind: 'idle' })
+    setRunsState({ kind: 'idle' })
   }, [address])
 
-  const toggle = () => {
-    setExpanded((v) => !v)
-  }
+  const chart = useMemo(() => {
+    const runs = runsState.kind === 'ok' ? runsState.runs : []
+    return buildPaymentSpikeChart(runs, CHART_W, CHART_H)
+  }, [runsState])
+
+  const listRuns = useMemo(() => {
+    if (runsState.kind !== 'ok') return []
+    // API returns newest-first typically; keep that for the timeline list.
+    return runsState.runs.slice(0, TIMELINE_LIST_LIMIT)
+  }, [runsState])
 
   const chipDefinition =
     statusDefinition ?? OBSERVATION_STATUS_DEFINITIONS[status]
 
   const rangeLabel =
-    timeline.kind === 'ok'
-      ? formatRange(timeline.windowFrom, timeline.windowTo)
+    runsState.kind === 'ok'
+      ? formatRange(runsState.windowFrom, runsState.windowTo)
       : lastObservedAt
         ? `Last observed ${formatTimelineWhen(lastObservedAt)}`
         : null
+
+  const chartEmpty =
+    runsState.kind === 'ok' && runsState.runs.length === 0
+  const chartReady = runsState.kind === 'ok' && chart.spikes.length > 0
 
   return (
     <section
@@ -236,26 +276,66 @@ export default function ObservationHeroPanel({
       aria-labelledby="profile-observation"
       data-observation-status={status}
       data-expanded={expanded ? 'true' : 'false'}
+      data-chart={chartReady ? 'ready' : chartEmpty ? 'empty' : 'pending'}
     >
       <div className="profile-obs-hero-graph" aria-hidden="true">
         <svg
           className="profile-obs-hero-svg"
-          viewBox="0 0 240 72"
+          viewBox={`0 0 ${CHART_W} ${CHART_H}`}
           preserveAspectRatio="none"
           focusable="false"
         >
           <defs>
-            <linearGradient id={`${panelId}-fill`} x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" className="profile-obs-hero-stop-top" />
               <stop offset="100%" className="profile-obs-hero-stop-bottom" />
             </linearGradient>
           </defs>
-          <path
-            className="profile-obs-hero-area"
-            d={areaPath}
-            fill={`url(#${panelId}-fill)`}
+
+          {/* Baseline (time axis) */}
+          <line
+            className="profile-obs-hero-baseline"
+            x1={8}
+            y1={chart.baselineY}
+            x2={CHART_W - 8}
+            y2={chart.baselineY}
           />
-          <path className="profile-obs-hero-line" d={linePath} fill="none" />
+
+          {chartReady ? (
+            <>
+              {chart.areaPath ? (
+                <path
+                  className="profile-obs-hero-area"
+                  d={chart.areaPath}
+                  fill={`url(#${gradId})`}
+                />
+              ) : null}
+              {chart.ridgePath ? (
+                <path
+                  className="profile-obs-hero-ridge"
+                  d={chart.ridgePath}
+                  fill="none"
+                />
+              ) : null}
+              {chart.spikes.map((s, i) => (
+                <g key={`spike-${i}`} className="profile-obs-hero-spike">
+                  <line
+                    className="profile-obs-hero-stem"
+                    x1={s.x}
+                    y1={s.yBase}
+                    x2={s.x}
+                    y2={s.yTip}
+                  />
+                  <circle
+                    className="profile-obs-hero-tip"
+                    cx={s.x}
+                    cy={s.yTip}
+                    r={1.8}
+                  />
+                </g>
+              ))}
+            </>
+          ) : null}
         </svg>
       </div>
 
@@ -280,7 +360,7 @@ export default function ObservationHeroPanel({
             className="profile-obs-hero-toggle"
             aria-expanded={expanded}
             aria-controls={panelId}
-            onClick={toggle}
+            onClick={() => setExpanded((v) => !v)}
           >
             <span>{expanded ? 'Hide timeline' : 'Timeline'}</span>
             <span
@@ -296,7 +376,6 @@ export default function ObservationHeroPanel({
         id={panelId}
         className="profile-obs-hero-drawer"
         data-open={expanded ? 'true' : 'false'}
-        // Keep closed drawer out of tab order.
         inert={!expanded}
       >
         <div className="profile-obs-hero-drawer-inner">
@@ -311,34 +390,34 @@ export default function ObservationHeroPanel({
               ) : null}
             </p>
 
-            {timeline.kind === 'loading' || timeline.kind === 'idle' ? (
+            {runsState.kind === 'loading' || runsState.kind === 'idle' ? (
               <p className="profile-obs-hero-timeline-status" role="status">
                 Loading timeline…
               </p>
             ) : null}
 
-            {timeline.kind === 'error' ? (
+            {runsState.kind === 'error' ? (
               <div className="profile-obs-hero-timeline-error" role="alert">
-                <p>{timeline.message}</p>
+                <p>{runsState.message}</p>
                 <button
                   type="button"
                   className="nq-pill-secondary profile-obs-hero-retry"
-                  onClick={() => void loadTimeline()}
+                  onClick={() => void loadRuns()}
                 >
                   Try again
                 </button>
               </div>
             ) : null}
 
-            {timeline.kind === 'ok' && timeline.runs.length === 0 ? (
+            {runsState.kind === 'ok' && listRuns.length === 0 ? (
               <p className="profile-obs-hero-timeline-status">
                 No indexed payout runs in this analysis window yet.
               </p>
             ) : null}
 
-            {timeline.kind === 'ok' && timeline.runs.length > 0 ? (
+            {runsState.kind === 'ok' && listRuns.length > 0 ? (
               <ol className="profile-obs-hero-track">
-                {timeline.runs.map((run) => (
+                {listRuns.map((run) => (
                   <li
                     key={`${run.windowStart}-${run.txHashes[0] ?? run.windowEnd}-${run.txCount}`}
                     className="profile-obs-hero-node"
@@ -365,8 +444,12 @@ export default function ObservationHeroPanel({
             ) : null}
 
             <p className="profile-obs-hero-footnote">
-              Timeline shows indexed runs only. Backdrop graph is a density sketch
-              from observed vs expected windows, not a window-by-window record.
+              Graph plots indexed payout runs by time. Spike height reflects
+              transaction count in each run
+              {historyDepthDays > 0
+                ? ` over about ${Math.floor(historyDepthDays)} days of history`
+                : ''}
+              .
             </p>
 
             {onOpenFullEvidence ? (
