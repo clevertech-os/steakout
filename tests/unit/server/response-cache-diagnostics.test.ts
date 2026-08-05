@@ -15,8 +15,11 @@ import {
 } from '../../../server/src/diagnostics.js'
 import {
   buildPublicCacheKey,
+  buildPublicCacheStableKey,
   clearPublicResponseCache,
   getCachedPublicResponse,
+  lookupPublicResponse,
+  markEnvelopeStaleForServe,
   publicResponseCacheStats,
   setCachedPublicResponse,
 } from '../../../server/src/responseCache.js'
@@ -97,23 +100,50 @@ describe('responseCache unit', () => {
     clearPublicResponseCache()
   })
 
-  it('hits within TTL and misses after expiry', () => {
-    const key = buildPublicCacheKey('/api/validators/x', { sort: 'stake' }, 'wm-1')
-    setCachedPublicResponse(key, { ok: true }, { nowMs: 1_000, ttlMs: 100 })
+  it('hits within TTL; fresh-only API misses after TTL while SWR still serves stale', () => {
+    const key = buildPublicCacheStableKey('/api/validators/x', { sort: 'stake' })
+    setCachedPublicResponse(key, { ok: true }, {
+      nowMs: 1_000,
+      ttlMs: 100,
+      staleMs: 10_000,
+    })
     expect(getCachedPublicResponse(key, 1_050)).toEqual({ body: { ok: true }, status: 200 })
+    // Past fresh TTL: legacy fresh-only API → null
     expect(getCachedPublicResponse(key, 1_200)).toBeNull()
+    // SWR still has last-good
+    expect(lookupPublicResponse(key, 1_200).kind).toBe('stale')
     const stats = publicResponseCacheStats()
-    expect(stats.hits).toBe(1)
-    expect(stats.misses).toBe(1)
+    expect(stats.hits).toBeGreaterThanOrEqual(1)
+    expect(stats.staleServes).toBeGreaterThanOrEqual(1)
   })
 
-  it('different watermarks are distinct keys (invalidation on advance)', () => {
+  it('stable keys ignore watermark; last-good survives advance', () => {
+    const key = buildPublicCacheStableKey('/api/validators', { listed: 'false' })
+    setCachedPublicResponse(key, { v: 1 }, { watermark: 'wm-old', nowMs: 1_000, ttlMs: 100 })
+    // Same stable key after "watermark advance"
+    expect(lookupPublicResponse(key, 1_050).kind).toBe('fresh')
+    expect(lookupPublicResponse(key, 1_200).kind).toBe('stale')
+    expect((lookupPublicResponse(key, 1_200) as { body: { v: number } }).body).toEqual({ v: 1 })
+  })
+
+  it('legacy watermarked keys remain distinct', () => {
     const a = buildPublicCacheKey('/api/validators', { listed: 'false' }, 'wm-old')
     const b = buildPublicCacheKey('/api/validators', { listed: 'false' }, 'wm-new')
     expect(a).not.toBe(b)
     setCachedPublicResponse(a, { v: 1 })
     expect(getCachedPublicResponse(b)).toBeNull()
     expect(getCachedPublicResponse(a)?.body).toEqual({ v: 1 })
+  })
+
+  it('markEnvelopeStaleForServe only flips ok → stale', () => {
+    expect(markEnvelopeStaleForServe({ status: 'ok', data: 1 })).toEqual({
+      status: 'stale',
+      data: 1,
+    })
+    expect(markEnvelopeStaleForServe({ status: 'partial', data: 1 })).toEqual({
+      status: 'partial',
+      data: 1,
+    })
   })
 })
 
@@ -146,7 +176,7 @@ describe('public validators cache (HTTP)', () => {
     }
   })
 
-  it('watermark advance causes cache miss', async () => {
+  it('watermark advance keeps last-good as HIT within fresh TTL (stable keys)', async () => {
     const ctx = await startApp()
     try {
       const path = `/api/validators/${encodeURIComponent(VALIDATOR)}`
@@ -160,9 +190,51 @@ describe('public validators cache (HTTP)', () => {
         VALUES ('rpc:test', ?, 100, NULL, ?)
       `).run(REWARD, new Date().toISOString())
 
+      // Stable cache key: still HIT while within fresh TTL (no forced recompute).
       const after = await fetch(`${ctx.baseUrl}${path}`)
       expect(after.status).toBe(200)
-      expect(after.headers.get('x-cache')).toBe('MISS')
+      expect(after.headers.get('x-cache')).toBe('HIT')
+    } finally {
+      await closeApp(ctx)
+    }
+  })
+
+  it('directory list serves precomputed floors without rescanning txs', async () => {
+    const ctx = await startApp()
+    try {
+      const insert = ctx.database.prepare(`
+        INSERT INTO transactions (
+          hash, from_address, to_address, value_luna, fee_luna, block_number,
+          timestamp, execution_result, raw_json
+        ) VALUES (?, ?, ?, 1_000_000, 0, 1, '2026-08-01T00:00:00.000Z', 'ok', '{}')
+      `)
+      for (let i = 0; i < 200; i += 1) {
+        insert.run(
+          `hash${i}`.padEnd(64, 'a'),
+          REWARD,
+          `NQ00 RECIPIENT ${i}`.padEnd(44, '0'),
+        )
+      }
+      // Weekly job writes floors; list only reads payment_floors.
+      const { refreshPaymentFloors } = await import(
+        '../../../server/src/paymentFloor.js'
+      )
+      refreshPaymentFloors(ctx.database, { logger: () => {} })
+      clearPublicResponseCache()
+      const t0 = performance.now()
+      const res = await fetch(`${ctx.baseUrl}/api/validators?sort=recommended&listed=false`)
+      const ms = performance.now() - t0
+      expect(res.status).toBe(200)
+      const body = await res.json() as {
+        data: { validators: Array<{ observedPaymentFloor?: { status: string; sampleSize?: number } }> }
+      }
+      expect(body.data.validators.length).toBeGreaterThan(0)
+      const withFloor = body.data.validators.find(
+        (v) => v.observedPaymentFloor && v.observedPaymentFloor.sampleSize,
+      )
+      expect(withFloor?.observedPaymentFloor?.sampleSize).toBe(200)
+      // Request path must stay fast (DB read only).
+      expect(ms).toBeLessThan(2_000)
     } finally {
       await closeApp(ctx)
     }

@@ -20,10 +20,12 @@ import {
 import { incrementMetric, METRIC_KEYS } from './metrics.js'
 import { loadObservationSummaries } from './observationScoring.js'
 import {
-  buildPublicCacheKey,
+  buildPublicCacheStableKey,
   clearPublicResponseCache,
-  getCachedPublicResponse,
+  lookupPublicResponse,
+  markEnvelopeStaleForServe,
   PUBLIC_CACHE_CONTROL,
+  schedulePublicRevalidate,
   setCachedPublicResponse,
 } from './responseCache.js'
 import {
@@ -158,6 +160,11 @@ export interface ListValidatorsOptions {
   listed?: boolean
   /** Wall clock for historyDepthDays (earliest → now). Defaults to Date.now(). */
   nowMs?: number
+  /**
+   * When true (default), attach precomputed observed payment floors from
+   * `payment_floors` (O(validators) SQLite read — never a full tx scan).
+   */
+  includePaymentFloors?: boolean
 }
 
 const VALID_SORTS = new Set<ValidatorSort>([
@@ -743,8 +750,6 @@ export function listValidators(
   }
   // Load live observation summaries before sort so `recommended` can use them (P2-09).
   const summaries = loadObservationSummaries(database, { nowMs: options.nowMs })
-  // Inferred payment floors from reward outflows (cached scan).
-  const floors = loadPaymentFloors(database, { nowMs: options.nowMs })
   // listed=false (default) → all observable rows already stored from all-observable sync.
   rows = [...rows].sort((a, b) =>
     compareValidators(a, b, sort, {
@@ -752,6 +757,11 @@ export function listValidators(
       statusB: observationForRow(b, summaries).status,
     }),
   )
+  // Precomputed floors from SQLite (weekly refresh). Cheap O(validators) join.
+  if (options.includePaymentFloors === false) {
+    return rows.map((row) => toListItem(row, observationForRow(row, summaries)))
+  }
+  const floors = loadPaymentFloors(database, { nowMs: options.nowMs })
   return rows.map((row) => {
     let floorKey: string
     try {
@@ -762,6 +772,81 @@ export function listValidators(
     const paymentFloor = floorKey ? floors.get(floorKey) : undefined
     return toListItem(row, observationForRow(row, summaries), { paymentFloor })
   })
+}
+
+/** Build the GET /api/validators envelope (SQLite only; no live RPC). */
+export function buildValidatorsListEnvelope(
+  database: Database.Database,
+  options: {
+    sort: ValidatorSort
+    listed: boolean
+    nowMs?: number
+  },
+): {
+  updatedAt: string
+  source: 'registry'
+  status: EnvelopeStatus
+  dataFreshness: ReturnType<typeof buildDataFreshness>
+  data: { validators: ValidatorListItem[] }
+} {
+  const nowMs = options.nowMs ?? Date.now()
+  const watermarkIso = getIndexerWatermarkIso(database)
+  const allRows = listValidatorRows(database)
+  const validators = listValidators(database, {
+    sort: options.sort,
+    listed: options.listed,
+    nowMs,
+    // Precomputed floors only (weekly job); no request-path tx scan.
+    includePaymentFloors: true,
+  })
+  const updatedAt = maxRegistryUpdatedAt(allRows) ?? new Date(0).toISOString()
+  const baseStatus: EnvelopeStatus = allRows.length === 0 ? 'unavailable' : 'ok'
+  const status = applyIndexerStaleStatus(baseStatus, { nowMs, watermarkIso })
+  const historyDepthDays = maxHistoryDepthDays(validators)
+  return {
+    updatedAt,
+    source: 'registry',
+    status,
+    dataFreshness: buildDataFreshness({
+      updatedAt,
+      nowMs,
+      historyDepthDays,
+      ageFromIso: watermarkIso ?? updatedAt,
+    }),
+    data: { validators },
+  }
+}
+
+/** Build GET /api/validators/:address envelope. */
+export function buildValidatorProfileEnvelope(
+  database: Database.Database,
+  row: ValidatorRow,
+  options?: { nowMs?: number },
+): {
+  updatedAt: string
+  source: 'registry'
+  status: EnvelopeStatus
+  dataFreshness: ReturnType<typeof buildDataFreshness>
+  data: ValidatorProfile
+} {
+  const nowMs = options?.nowMs ?? Date.now()
+  const watermarkIso = getIndexerWatermarkIso(database)
+  const summaries = loadObservationSummaries(database, { nowMs })
+  const profile = toProfile(row, observationForRow(row, summaries), { database })
+  const updatedAt = row.registry_updated_at ?? new Date(0).toISOString()
+  const status = applyIndexerStaleStatus('ok', { nowMs, watermarkIso })
+  return {
+    updatedAt,
+    source: 'registry',
+    status,
+    dataFreshness: buildDataFreshness({
+      updatedAt,
+      nowMs,
+      historyDepthDays: profile.observation.historyDepthDays,
+      ageFromIso: watermarkIso ?? updatedAt,
+    }),
+    data: profile,
+  }
 }
 
 function parseSort(value: unknown): ValidatorSort | null {
@@ -834,43 +919,42 @@ export function mountValidatorsApi(app: Express, database: Database.Database): v
       return
     }
 
-    // P2-13: short-TTL cache keyed by path + query + indexer watermark.
+    // Stable key (no watermark): last-good survives indexer advances; SWR revalidates.
+    const listedFlag = listed === true ? 'true' : 'false'
+    const cacheKey = buildPublicCacheStableKey('/api/validators', {
+      sort,
+      listed: listedFlag,
+    })
     const watermarkIso = getIndexerWatermarkIso(database)
-    const cacheKey = buildPublicCacheKey(
-      '/api/validators',
-      { sort, listed: listed === true ? 'true' : 'false' },
-      watermarkIso,
-    )
-    const cached = getCachedPublicResponse(cacheKey)
-    if (cached) {
+    const lookup = lookupPublicResponse(cacheKey)
+
+    if (lookup.kind === 'fresh') {
       res.setHeader('Cache-Control', PUBLIC_CACHE_CONTROL)
       res.setHeader('X-Cache', 'HIT')
-      res.status(cached.status).json(cached.body)
+      res.status(lookup.status).json(lookup.body)
       return
     }
 
-    const nowMs = Date.now()
-    const allRows = listValidatorRows(database)
-    const validators = listValidators(database, { sort, listed, nowMs })
-    const updatedAt = maxRegistryUpdatedAt(allRows) ?? new Date(0).toISOString()
-    const baseStatus: EnvelopeStatus = allRows.length === 0 ? 'unavailable' : 'ok'
-    // List embeds observation fields; mark stale when indexer watermark is old.
-    const status = applyIndexerStaleStatus(baseStatus, { nowMs, watermarkIso })
-    const historyDepthDays = maxHistoryDepthDays(validators)
-
-    const body = {
-      updatedAt,
-      source: 'registry' as const,
-      status,
-      dataFreshness: buildDataFreshness({
-        updatedAt,
-        nowMs,
-        historyDepthDays,
-        // Prefer indexer watermark for ageSeconds when present so stale + age align.
-        ageFromIso: watermarkIso ?? updatedAt,
-      }),
-      data: { validators },
+    if (lookup.kind === 'stale') {
+      res.setHeader('Cache-Control', PUBLIC_CACHE_CONTROL)
+      res.setHeader('X-Cache', 'STALE')
+      res.status(lookup.status).json(markEnvelopeStaleForServe(lookup.body))
+      schedulePublicRevalidate(
+        cacheKey,
+        () =>
+          buildValidatorsListEnvelope(database, {
+            sort,
+            listed: listed === true,
+          }),
+        { watermark: watermarkIso },
+      )
+      return
     }
+
+    const body = buildValidatorsListEnvelope(database, {
+      sort,
+      listed: listed === true,
+    })
     setCachedPublicResponse(cacheKey, body, { watermark: watermarkIso })
     res.setHeader('Cache-Control', PUBLIC_CACHE_CONTROL)
     res.setHeader('X-Cache', 'MISS')
@@ -894,52 +978,42 @@ export function mountValidatorsApi(app: Express, database: Database.Database): v
     }
 
     const normalized = normalizeAddress(address)
+    const cacheKey = buildPublicCacheStableKey(`/api/validators/${normalized}`)
     const watermarkIso = getIndexerWatermarkIso(database)
-    const cacheKey = buildPublicCacheKey(
-      `/api/validators/${normalized}`,
-      {},
-      watermarkIso,
-    )
-    const cached = getCachedPublicResponse(cacheKey)
-    if (cached) {
-      // P3-04: count cache hits as profile views (client still requested the profile).
+    const lookup = lookupPublicResponse(cacheKey)
+
+    const recordProfileView = (): void => {
       try {
         incrementMetric(database, METRIC_KEYS.validatorProfileViews)
       } catch {
         // Metrics must never break public profiles.
       }
+    }
+
+    if (lookup.kind === 'fresh') {
+      recordProfileView()
       res.setHeader('Cache-Control', PUBLIC_CACHE_CONTROL)
       res.setHeader('X-Cache', 'HIT')
-      res.status(cached.status).json(cached.body)
+      res.status(lookup.status).json(lookup.body)
       return
     }
 
-    const nowMs = Date.now()
-    const summaries = loadObservationSummaries(database, { nowMs })
-    const profile = toProfile(row, observationForRow(row, summaries), {
-      database,
-    })
-    const updatedAt = row.registry_updated_at ?? new Date(0).toISOString()
-    const status = applyIndexerStaleStatus('ok', { nowMs, watermarkIso })
+    if (lookup.kind === 'stale') {
+      recordProfileView()
+      res.setHeader('Cache-Control', PUBLIC_CACHE_CONTROL)
+      res.setHeader('X-Cache', 'STALE')
+      res.status(lookup.status).json(markEnvelopeStaleForServe(lookup.body))
+      schedulePublicRevalidate(
+        cacheKey,
+        () => buildValidatorProfileEnvelope(database, row),
+        { watermark: watermarkIso },
+      )
+      return
+    }
 
-    const body = {
-      updatedAt,
-      source: 'registry' as const,
-      status,
-      dataFreshness: buildDataFreshness({
-        updatedAt,
-        nowMs,
-        historyDepthDays: profile.observation.historyDepthDays,
-        ageFromIso: watermarkIso ?? updatedAt,
-      }),
-      data: profile,
-    }
+    const body = buildValidatorProfileEnvelope(database, row)
     setCachedPublicResponse(cacheKey, body, { watermark: watermarkIso })
-    try {
-      incrementMetric(database, METRIC_KEYS.validatorProfileViews)
-    } catch {
-      // Metrics must never break public profiles.
-    }
+    recordProfileView()
     res.setHeader('Cache-Control', PUBLIC_CACHE_CONTROL)
     res.setHeader('X-Cache', 'MISS')
     res.json(body)

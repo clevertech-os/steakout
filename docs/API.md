@@ -113,7 +113,8 @@ Each item:
   },
   "observation": { "status": "on-schedule" | "mostly-on-schedule" | "irregular" | "insufficient-data" | "unavailable", "lastObservedAt": "ISO | null", "historyDepthDays": 0 },
   // Inferred from indexed reward-address outflows. Prefer p5Nim for display (dust-robust).
-  // Never replaces declared.minPayout. status: inferred | insufficient | unavailable
+  // Never replaces declared.minPayout. status: inferred | insufficient | unavailable.
+  // Precomputed weekly into payment_floors (not scanned on request). computedAt = last job.
   "observedPaymentFloor": {
     "minNim": 3.98,
     "p5Nim": 10.03,

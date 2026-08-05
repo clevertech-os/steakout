@@ -118,6 +118,18 @@ const schema = `
     value       INTEGER NOT NULL DEFAULT 0,
     updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   );
+
+  -- Precomputed observed payment floors (weekly refresh; never scan txs on request).
+  CREATE TABLE IF NOT EXISTS payment_floors (
+    validator_address   TEXT PRIMARY KEY,
+    min_nim             REAL,
+    p5_nim              REAL,
+    sample_size         INTEGER NOT NULL DEFAULT 0,
+    recipient_count     INTEGER NOT NULL DEFAULT 0,
+    history_depth_days  REAL,
+    status              TEXT NOT NULL DEFAULT 'unavailable',
+    computed_at         TEXT NOT NULL
+  );
 `
 
 const requiredColumns: Record<string, readonly string[]> = {
@@ -151,6 +163,10 @@ const requiredColumns: Record<string, readonly string[]> = {
     'id', 'status', 'address', 'created_at', 'expires_at', 'approved_at', 'claimed_at',
   ],
   metrics: ['key', 'value', 'updated_at'],
+  payment_floors: [
+    'validator_address', 'min_nim', 'p5_nim', 'sample_size', 'recipient_count',
+    'history_depth_days', 'status', 'computed_at',
+  ],
 }
 
 const additiveColumnDefinitions: Record<string, Record<string, string>> = {
@@ -208,6 +224,15 @@ const additiveColumnDefinitions: Record<string, Record<string, string>> = {
   metrics: {
     value: 'INTEGER NOT NULL DEFAULT 0',
     updated_at: "TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+  },
+  payment_floors: {
+    min_nim: 'REAL',
+    p5_nim: 'REAL',
+    sample_size: 'INTEGER NOT NULL DEFAULT 0',
+    recipient_count: 'INTEGER NOT NULL DEFAULT 0',
+    history_depth_days: 'REAL',
+    status: "TEXT NOT NULL DEFAULT 'unavailable'",
+    computed_at: "TEXT NOT NULL DEFAULT ''",
   },
 }
 

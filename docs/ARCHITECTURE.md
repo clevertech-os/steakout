@@ -161,7 +161,8 @@ Single client-visible enum (P1-05 owns the mapping; verify against P0-04 fixture
 
 - Registry data: server cache, refresh ≥ hourly; responses always carry `registry_updated_at`.
 - Position reads: short TTL (seconds) cache per address; never serve without `updatedAt`.
-- Public profile/observation endpoints: in-process response cache (`server/src/responseCache.ts`, ~45s TTL) keyed by path + query + indexer watermark (`MAX(index_cursors.updated_at)`). Watermark advance invalidates automatically. `X-Cache: HIT|MISS` for ops.
+- Public profile/observation endpoints: in-process **stale-while-revalidate** cache (`server/src/responseCache.ts`). Stable key = path + query (not watermark). Fresh TTL ~45s; last-good kept ~1h. On TTL expiry or after idle, serve last-good immediately (`X-Cache: STALE`, envelope `status: stale` when previously `ok`) and revalidate in the background. Cold miss rebuilds from SQLite only (no live RPC). Boot warms default recommended list keys. `X-Cache: HIT|STALE|MISS` for ops.
+- **Payment floors:** weekly precompute into `payment_floors` (`paymentFloor.ts`). List/profile join precomputed rows only — never scan `transactions` on a request. Scheduler checks hourly; refresh when empty or `computed_at` ≥ 7 days old.
 - Rate limits (P2-13):
   - Global `/api`: 300 req / 60s per IP.
   - Auth challenge: 12 / 60s per IP + 12 / 60s per address; verify: 24 / 60s per IP.

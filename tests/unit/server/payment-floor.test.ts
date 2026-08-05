@@ -1,13 +1,21 @@
 /**
- * Observed payment floor from indexed reward outflows.
+ * Observed payment floor: compute, weekly persist, request-path DB reads.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { openDatabase } from '../../../server/src/db.js'
 import {
   computePaymentFloors,
   getObservedPaymentFloor,
+  getPaymentFloorLastComputedAt,
+  isPaymentFloorRefreshDue,
+  loadPaymentFloors,
+  loadPaymentFloorsFromDb,
   PAYMENT_FLOOR_MIN_SAMPLES,
+  PAYMENT_FLOOR_REFRESH_MS,
+  persistPaymentFloors,
+  refreshPaymentFloors,
   resetPaymentFloorCache,
+  startPaymentFloorScheduler,
 } from '../../../server/src/paymentFloor.js'
 import type Database from 'better-sqlite3'
 
@@ -55,7 +63,7 @@ function insertTx(
 }
 
 describe('paymentFloor', () => {
-  it('returns unavailable when no outflows', () => {
+  it('returns unavailable when no outflows (after refresh)', () => {
     const floor = getObservedPaymentFloor(db, VALIDATOR, { reload: true })
     expect(floor.status).toBe('unavailable')
     expect(floor.sampleSize).toBe(0)
@@ -63,16 +71,8 @@ describe('paymentFloor', () => {
   })
 
   it('computes min and p5; excludes self-transfers', () => {
-    // Self-loop should be ignored
     insertTx(REWARD, 0.001, { hash: 'self'.padEnd(64, '0') })
-    // Build a series of payments to many recipients with a hard ~10 floor and rare dust
     for (let i = 0; i < PAYMENT_FLOOR_MIN_SAMPLES; i += 1) {
-      const to = `NQ${String(i).padStart(2, '0')} TEST RECIPIENT ADDR ${i}`.slice(
-        0,
-        44,
-      )
-      // Nimiq addresses need proper format - use OTHER with suffix via unique hash only
-      // Use spaced OTHER for first, then random-looking but any string is ok for this unit test
       insertTx(
         i === 0 ? OTHER : `${OTHER.slice(0, -1)}${i % 10}`,
         i < 2 ? 4 : 10 + i * 0.01,
@@ -86,7 +86,6 @@ describe('paymentFloor', () => {
     expect(floor.sampleSize).toBeGreaterThanOrEqual(PAYMENT_FLOOR_MIN_SAMPLES)
     expect(floor.minNim).not.toBeNull()
     expect(floor.p5Nim).not.toBeNull()
-    // Absolute min can be dust; p5 should sit near the 10 NIM regime
     expect(floor.minNim!).toBeLessThan(floor.p5Nim!)
     expect(floor.p5Nim!).toBeGreaterThanOrEqual(4)
     expect(floor.status).toBe('inferred')
@@ -106,5 +105,112 @@ describe('paymentFloor', () => {
     expect(map.size).toBe(1)
     const only = [...map.values()][0]!
     expect(only.minNim).toBe(1.5)
+  })
+
+  it('refresh persists and loadPaymentFloors reads SQLite without rescanning when not reload', () => {
+    insertTx(OTHER, 12, { hash: 'persist'.padEnd(64, 'd') })
+    const result = refreshPaymentFloors(db, { logger: () => {} })
+    expect(result.count).toBe(1)
+    expect(getPaymentFloorLastComputedAt(db)).toBe(result.computedAt)
+
+    // Wipe txs so a recompute would see zero outflows.
+    db.prepare(`DELETE FROM transactions`).run()
+    resetPaymentFloorCache()
+
+    const fromDb = loadPaymentFloorsFromDb(db)
+    expect(fromDb.size).toBe(1)
+    const floor = getObservedPaymentFloor(db, VALIDATOR)
+    // Still the precomputed values — request path does not recompute.
+    expect(floor.minNim).toBe(12)
+    expect(floor.sampleSize).toBe(1)
+    expect(floor.status).toBe('insufficient')
+  })
+
+  it('isPaymentFloorRefreshDue when empty or older than weekly window', () => {
+    expect(isPaymentFloorRefreshDue(db, Date.now())).toBe(true)
+
+    const nowMs = Date.parse('2026-08-01T00:00:00.000Z')
+    refreshPaymentFloors(db, { nowMs, logger: () => {} })
+    expect(isPaymentFloorRefreshDue(db, nowMs + 1000)).toBe(false)
+    expect(
+      isPaymentFloorRefreshDue(db, nowMs + PAYMENT_FLOOR_REFRESH_MS - 1),
+    ).toBe(false)
+    expect(
+      isPaymentFloorRefreshDue(db, nowMs + PAYMENT_FLOOR_REFRESH_MS),
+    ).toBe(true)
+  })
+
+  it('persistPaymentFloors replaces rows for dropped validators', () => {
+    const computedAt = '2026-08-01T00:00:00.000Z'
+    persistPaymentFloors(
+      db,
+      new Map([
+        [
+          'AAAA',
+          {
+            minNim: 1,
+            p5Nim: 2,
+            sampleSize: 10,
+            recipientCount: 3,
+            historyDepthDays: 7,
+            status: 'inferred',
+            computedAt,
+          },
+        ],
+        [
+          'BBBB',
+          {
+            minNim: null,
+            p5Nim: null,
+            sampleSize: 0,
+            recipientCount: 0,
+            historyDepthDays: null,
+            status: 'unavailable',
+            computedAt,
+          },
+        ],
+      ]),
+    )
+    expect(loadPaymentFloorsFromDb(db).size).toBe(2)
+
+    persistPaymentFloors(
+      db,
+      new Map([
+        [
+          'AAAA',
+          {
+            minNim: 3,
+            p5Nim: 4,
+            sampleSize: 20,
+            recipientCount: 5,
+            historyDepthDays: 14,
+            status: 'inferred',
+            computedAt: '2026-08-08T00:00:00.000Z',
+          },
+        ],
+      ]),
+    )
+    const map = loadPaymentFloorsFromDb(db)
+    expect(map.size).toBe(1)
+    expect(map.get('AAAA')?.minNim).toBe(3)
+  })
+
+  it('scheduler runNow refreshes when due', () => {
+    insertTx(OTHER, 5, { hash: 'sched'.padEnd(64, 'e') })
+    const logs: string[] = []
+    const { stop, runNow } = startPaymentFloorScheduler(db, {
+      runIfDueOnStart: false,
+      logger: (line) => logs.push(line),
+      checkIntervalMs: 60_000,
+    })
+    try {
+      expect(isPaymentFloorRefreshDue(db)).toBe(true)
+      const result = runNow()
+      expect(result?.count).toBe(1)
+      expect(logs.some((l) => l.includes('"paymentFloors":"refresh"'))).toBe(true)
+      expect(loadPaymentFloors(db).size).toBe(1)
+    } finally {
+      stop()
+    }
   })
 })

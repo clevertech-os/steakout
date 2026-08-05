@@ -32,6 +32,7 @@ const DIAG_TABLES = [
   'staking_intents',
   'auth_challenges',
   'metrics',
+  'payment_floors',
 ] as const
 
 /** Short non-reversible fingerprint for operator correlation without PII. */

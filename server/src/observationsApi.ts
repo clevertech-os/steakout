@@ -39,9 +39,11 @@ import {
   type PayoutRunPayload,
 } from './payoutClassifier.js'
 import {
-  buildPublicCacheKey,
-  getCachedPublicResponse,
+  buildPublicCacheStableKey,
+  lookupPublicResponse,
+  markEnvelopeStaleForServe,
   PUBLIC_CACHE_CONTROL,
+  schedulePublicRevalidate,
   setCachedPublicResponse,
 } from './responseCache.js'
 import { getValidatorRowByAddress, listValidatorRows, type ValidatorRow } from './validatorSync.js'
@@ -574,22 +576,36 @@ export function mountObservationsApi(app: Express, database: Database.Database):
       return
     }
 
-    // P2-13: short-TTL cache keyed by path + query + indexer watermark.
+    // Stable key + SWR: last-good survives watermark advances / TTL expiry.
     const normalized = normalizeAddress(address)
     const watermarkIso = getIndexerWatermarkIso(database)
-    const cacheKey = buildPublicCacheKey(
+    const cacheKey = buildPublicCacheStableKey(
       `/api/validators/${normalized}/observations`,
       {
         cursor: typeof req.query.cursor === 'string' ? req.query.cursor : '',
         limit: String(limit),
       },
-      watermarkIso,
     )
-    const cached = getCachedPublicResponse(cacheKey)
-    if (cached) {
+    const lookup = lookupPublicResponse(cacheKey)
+    if (lookup.kind === 'fresh') {
       res.setHeader('Cache-Control', PUBLIC_CACHE_CONTROL)
       res.setHeader('X-Cache', 'HIT')
-      res.status(cached.status).json(cached.body)
+      res.status(lookup.status).json(lookup.body)
+      return
+    }
+    if (lookup.kind === 'stale') {
+      res.setHeader('Cache-Control', PUBLIC_CACHE_CONTROL)
+      res.setHeader('X-Cache', 'STALE')
+      res.status(lookup.status).json(markEnvelopeStaleForServe(lookup.body))
+      schedulePublicRevalidate(
+        cacheKey,
+        () =>
+          buildObservationsForValidator(database, row, {
+            cursorOffset: offset,
+            limit,
+          }),
+        { watermark: watermarkIso },
+      )
       return
     }
 

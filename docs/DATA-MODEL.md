@@ -109,6 +109,19 @@ CREATE TABLE IF NOT EXISTS metrics (
   value       INTEGER NOT NULL DEFAULT 0,
   updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+
+-- Precomputed observed payment floors (inferred from reward outflows).
+-- Weekly background refresh only; list/profile never scan `transactions`.
+CREATE TABLE IF NOT EXISTS payment_floors (
+  validator_address   TEXT PRIMARY KEY,   -- compact normalized address
+  min_nim             REAL,
+  p5_nim              REAL,               -- preferred display floor
+  sample_size         INTEGER NOT NULL DEFAULT 0,
+  recipient_count     INTEGER NOT NULL DEFAULT 0,
+  history_depth_days  REAL,
+  status              TEXT NOT NULL,      -- inferred | insufficient | unavailable
+  computed_at         TEXT NOT NULL
+);
 ```
 
 Sessions: signed httpOnly cookie (no table needed for v1 volume); if server-side sessions become necessary, add a `sessions` table additively.
@@ -148,6 +161,17 @@ The indexer is the most time-sensitive asset — history only accumulates with w
 - In-process queue; max 2 addresses concurrently; per-RPC-call timeout 10s.
 - Structured log line per cycle: `{ address, fetched, inserted, ms, errors }`.
 - `GET /api/health` exposes `lastRunAt`, `addressesIndexed`, `lagBlocks`.
+
+### Payment floors (weekly precompute)
+
+Observed payment floors (p5 / min from reward-address outflows) are **not** computed on the request path.
+
+1. Background job (`startPaymentFloorScheduler`) checks hourly whether a refresh is due.
+2. Due = `payment_floors` empty **or** `MAX(computed_at)` older than **7 days** (`PAYMENT_FLOOR_REFRESH_DAYS`, default 7).
+3. On due: scan `transactions` once, upsert all rows into `payment_floors`, log `{ paymentFloors: "refresh", count, durationMs }`.
+4. `GET /api/validators` and profile read `payment_floors` only (memory-cached ~60s).
+
+Disable with `PAYMENT_FLOOR_REFRESH_ENABLED=false`.
 
 ### Re-classification
 

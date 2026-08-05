@@ -4,7 +4,10 @@
  * Memory + optional sessionStorage so revisits within a tab session paint instantly.
  */
 
+/** Align with server PUBLIC_RESPONSE_CACHE_TTL_MS. */
 export const CLIENT_PUBLIC_CACHE_TTL_MS = 45_000
+/** Last-good paint window (align with server PUBLIC_RESPONSE_STALE_MS). */
+export const CLIENT_PUBLIC_CACHE_STALE_MS = 60 * 60_000
 
 const STORAGE_PREFIX = 'steakout:pub:'
 const STORAGE_VERSION = '1'
@@ -65,7 +68,7 @@ export function peekPublicCache<T>(key: string, now: number = nowMs()): T | null
 /** Stale-or-fresh peek for SWR (may be expired). */
 export function peekPublicCacheAnyAge<T>(
   key: string,
-  maxStaleMs: number = CLIENT_PUBLIC_CACHE_TTL_MS * 4,
+  maxStaleMs: number = CLIENT_PUBLIC_CACHE_STALE_MS,
   now: number = nowMs(),
 ): { data: T; fresh: boolean } | null {
   const mem = memory.get(key) as CacheRecord<T> | undefined

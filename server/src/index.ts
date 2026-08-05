@@ -17,8 +17,22 @@ import {
   startPayoutIndexerScheduler,
 } from './payoutIndexer.js'
 import { getBlockNumber } from './nimiq-rpc.js'
+import {
+  isPaymentFloorRefreshDue,
+  PAYMENT_FLOOR_CHECK_INTERVAL_MS,
+  PAYMENT_FLOOR_REFRESH_MS,
+  refreshPaymentFloors,
+  startPaymentFloorScheduler,
+} from './paymentFloor.js'
 import { mountProfileShareRoutes } from './profileMeta.js'
-import { startValidatorSyncScheduler } from './validatorSync.js'
+import {
+  buildPublicCacheStableKey,
+  setCachedPublicResponse,
+} from './responseCache.js'
+import {
+  buildValidatorsListEnvelope,
+  startValidatorSyncScheduler,
+} from './validatorSync.js'
 import { resolveValidatorsApiUrl } from './validators-api.js'
 
 const port = Number(process.env.PORT ?? 3000)
@@ -76,6 +90,29 @@ if (process.env.INDEXER_ENABLED === 'true') {
   )
 }
 
+// Observed payment floors: weekly full recompute into payment_floors (request path is read-only).
+// Disable with PAYMENT_FLOOR_REFRESH_ENABLED=false (tests / local without indexed txs).
+let paymentFloorScheduler: { stop: () => void } | undefined
+if (process.env.PAYMENT_FLOOR_REFRESH_ENABLED !== 'false') {
+  const configuredDays = Number(process.env.PAYMENT_FLOOR_REFRESH_DAYS ?? 7)
+  const refreshMs =
+    Number.isFinite(configuredDays) && configuredDays > 0
+      ? configuredDays * 24 * 60 * 60_000
+      : PAYMENT_FLOOR_REFRESH_MS
+  console.log(
+    JSON.stringify({
+      paymentFloors: 'scheduler',
+      refreshDays:
+        Number.isFinite(configuredDays) && configuredDays > 0 ? configuredDays : 7,
+      checkIntervalMs: PAYMENT_FLOOR_CHECK_INTERVAL_MS,
+    }),
+  )
+  paymentFloorScheduler = startPaymentFloorScheduler(database, {
+    refreshMs,
+    checkIntervalMs: PAYMENT_FLOOR_CHECK_INTERVAL_MS,
+  })
+}
+
 // Registry sync (P1-04): hourly by default; disable with VALIDATORS_SYNC_ENABLED=false.
 let validatorScheduler: { stop: () => void } | undefined
 if (process.env.VALIDATORS_SYNC_ENABLED !== 'false') {
@@ -125,13 +162,44 @@ app.get(['/spike', '/spike/', '/spike/staking-methods', '/spike/staking-methods/
   response.sendFile(clientIndexHtml)
 })
 
+function warmPublicValidatorsCache(): void {
+  try {
+    // If floors are empty/stale, recompute once before warming the list so cards
+    // ship inferred floors when indexed txs already exist (still no RPC).
+    if (
+      process.env.PAYMENT_FLOOR_REFRESH_ENABLED !== 'false'
+      && isPaymentFloorRefreshDue(database)
+    ) {
+      refreshPaymentFloors(database)
+    }
+    for (const listed of [false, true] as const) {
+      const body = buildValidatorsListEnvelope(database, {
+        sort: 'recommended',
+        listed,
+      })
+      setCachedPublicResponse(
+        buildPublicCacheStableKey('/api/validators', {
+          sort: 'recommended',
+          listed: listed ? 'true' : 'false',
+        }),
+        body,
+      )
+    }
+  } catch {
+    // Warm is best-effort; empty DB or lock must not prevent listen.
+  }
+}
+
 const server = app.listen(port, () => {
   console.log(`Steakout server listening on http://localhost:${port}`)
+  // Defer so the port is open before any sync SQLite work on the main thread.
+  setImmediate(warmPublicValidatorsCache)
 })
 
 function shutdown() {
   payoutScheduler?.stop()
   validatorScheduler?.stop()
+  paymentFloorScheduler?.stop()
   server.close(() => {
     database.close()
     process.exit(0)
