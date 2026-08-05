@@ -12,6 +12,7 @@ import {
   formatDeclaredFee,
   formatDeclaredMinPayout,
   formatDominance,
+  formatMinPayoutTooltip,
   formatObservedPaymentFloor,
   formatOfficialScore,
   formatObservationStatus,
@@ -105,6 +106,23 @@ describe('formatObservedPaymentFloor', () => {
       formatObservedPaymentFloor({ status: 'insufficient', sampleSize: 3 }),
     ).toBe(INSUFFICIENT_DATA)
     expect(formatObservedPaymentFloor(null)).toBe(INSUFFICIENT_DATA)
+  })
+})
+
+describe('formatMinPayoutTooltip', () => {
+  it('includes observed floor when inferred', () => {
+    const tip = formatMinPayoutTooltip(
+      { nim: 10, kind: 'fixed' },
+      { p5Nim: 10.03, minNim: 3.98, status: 'inferred' },
+    )
+    expect(tip).toContain('Registry declaration')
+    expect(tip).toContain('~10.03 NIM')
+    expect(tip).toContain('Inferred')
+  })
+
+  it('notes insufficient observed data when floor missing', () => {
+    const tip = formatMinPayoutTooltip({ nim: 10, kind: 'fixed' }, null)
+    expect(tip).toContain('insufficient indexed data')
   })
 })
 

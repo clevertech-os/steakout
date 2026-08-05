@@ -138,6 +138,23 @@ export function formatObservedPaymentFloor(
 }
 
 /**
+ * Tooltip for directory “Min payout” — declaration first, optional observed
+ * floor when inferred (so we do not need a second line on the card).
+ */
+export function formatMinPayoutTooltip(
+  declared: FormatMinPayoutInput,
+  floor?: FormatObservedFloorInput,
+): string {
+  const base =
+    'Operator-stated or researched payout threshold (Registry declaration). Not the protocol minimum stake.'
+  const observed = formatObservedPaymentFloor(floor)
+  if (observed === INSUFFICIENT_DATA) {
+    return `${base} Observed floor: insufficient indexed data.`
+  }
+  return `${base} Observed floor ${observed} (5th percentile of indexed reward outflows; Inferred).`
+}
+
+/**
  * @deprecated Prefer StatusChip / OBSERVATION_STATUS_LABELS (P2-09 source of truth).
  * Kept for non-UI formatters and tests.
  */

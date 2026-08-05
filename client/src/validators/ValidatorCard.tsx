@@ -2,6 +2,7 @@
  * Validator directory card (P1-10 / P2-09).
  * Official score captioned distinctly from Steakout observation StatusChip.
  * Clickable → `#/validators/:address`.
+ * Directory only shows listed validators; unlisted are never rendered here.
  */
 import { normalizeAddress, shortAddress } from '../addresses'
 import StatusChip from '../components/StatusChip'
@@ -10,7 +11,7 @@ import {
   formatDeclaredFee,
   formatDeclaredMinPayout,
   formatDominance,
-  formatObservedPaymentFloor,
+  formatMinPayoutTooltip,
   formatOfficialScore,
   formatPayoutType,
   formatStakeNim,
@@ -33,7 +34,8 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
   const stakersLabel = formatStakersCount(validator.stakersCount)
   const feeLabel = formatDeclaredFee(validator.declared.fee)
   const minPayoutLabel = formatDeclaredMinPayout(validator.declared.minPayout)
-  const observedFloorLabel = formatObservedPaymentFloor(
+  const minPayoutTitle = formatMinPayoutTooltip(
+    validator.declared.minPayout,
     validator.observedPaymentFloor,
   )
   const payoutLabel = formatPayoutType(validator.declared.payoutType)
@@ -41,7 +43,6 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
   const initials = validatorInitials(validator.name, validator.address)
   const scoreIsPresent = scoreLabel !== 'Insufficient data'
   const minPayoutMuted = minPayoutLabel === 'Insufficient data'
-  const observedFloorMuted = observedFloorLabel === 'Insufficient data'
 
   return (
     <a
@@ -83,11 +84,6 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
           </div>
         </div>
         <div className="validator-card-badges">
-          {!validator.isListed ? (
-            <span className="validator-chip validator-chip--unlisted">Unlisted</span>
-          ) : (
-            <span className="validator-chip validator-chip--listed">Listed</span>
-          )}
           {validator.canaryConfigured ? (
             <span
               className="validator-chip validator-chip--canary"
@@ -166,20 +162,9 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
             className={
               minPayoutMuted ? 'validator-card-value--muted' : undefined
             }
-            title="Operator-stated or researched threshold (Registry declaration)."
+            title={minPayoutTitle}
           >
             Min payout {minPayoutLabel}
-          </span>
-          <span className="validator-card-sep" aria-hidden="true">
-            ·
-          </span>
-          <span
-            className={
-              observedFloorMuted ? 'validator-card-value--muted' : undefined
-            }
-            title="5th percentile of indexed reward-address outflows (Inferred). Not a declared policy."
-          >
-            Observed floor {observedFloorLabel}
           </span>
         </p>
         {scheduleLabel ? (

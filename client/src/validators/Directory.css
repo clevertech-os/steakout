@@ -39,46 +39,6 @@
   appearance: auto;
 }
 
-.directory-toggle {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--so-space-3);
-  min-height: var(--so-touch);
-  padding: 0.65rem 0.85rem;
-  border: 1px solid var(--so-rule);
-  border-radius: 0.9rem;
-  background: var(--so-card);
-  cursor: pointer;
-}
-
-.directory-checkbox {
-  flex: 0 0 auto;
-  width: 1.15rem;
-  height: 1.15rem;
-  margin-top: 0.15rem;
-  accent-color: var(--so-info);
-}
-
-.directory-toggle-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
-.directory-toggle-title {
-  font-weight: 600;
-  font-size: var(--so-text-md);
-  color: var(--so-ink);
-}
-
-.directory-toggle-hint {
-  margin: 0;
-  color: var(--so-muted);
-  font-size: var(--so-text-sm);
-  line-height: 1.35;
-}
-
 /* .directory-explainer chrome: .so-notice--info (base.css V-10). */
 
 .directory-count {
@@ -216,10 +176,6 @@
 
   .directory-field {
     flex: 1 1 16rem;
-  }
-
-  .directory-toggle {
-    flex: 1 1 14rem;
-    align-items: center;
+    max-width: 22rem;
   }
 }

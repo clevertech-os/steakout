@@ -414,11 +414,10 @@ export async function fetchValidatorObservations(
 }
 
 /**
- * Warm default directory list (+ listed-only) after Home is ready or on nav intent.
- * Fire-and-forget; errors are ignored.
+ * Warm listed directory list after Home is ready or on nav intent.
+ * Fire-and-forget; errors are ignored. Unlisted validators are not shown in UI.
  */
 export function prefetchValidatorsDirectory(): void {
-  void fetchValidators({ sort: 'recommended', listed: false }).catch(() => {})
   void fetchValidators({ sort: 'recommended', listed: true }).catch(() => {})
 }
 
