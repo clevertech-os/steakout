@@ -246,15 +246,77 @@
   border-color: var(--so-rule);
 }
 
-.profile-canary-status {
-  margin: 0 0 var(--so-space-4);
-  font-size: var(--so-text-md);
-  line-height: 1.4;
+/* Simplified personal-check block: statement + optional how-it-works. */
+.profile-canary-simple {
+  display: flex;
+  flex-direction: column;
+  gap: var(--so-space-3);
+  padding: var(--so-space-2) 0 var(--so-space-1);
 }
 
-.profile-canary-note {
+.profile-canary-headline {
+  margin: 0;
+  font-size: var(--so-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--so-ink);
+}
+
+.profile-canary-simple[data-verified='true'] .profile-canary-headline {
+  color: var(--so-verified);
+}
+
+.profile-canary-body {
+  margin: 0;
+  font-size: var(--so-text-md);
+  line-height: 1.45;
+  color: var(--so-ink);
+}
+
+.profile-canary-how {
+  margin: var(--so-space-1) 0 0;
+  border-top: 1px solid var(--so-rule);
+  padding-top: var(--so-space-3);
+}
+
+.profile-canary-how-summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: var(--so-touch);
+  display: flex;
+  align-items: center;
+  font-size: var(--so-text-md);
+  font-weight: 600;
+  color: var(--so-info);
+  user-select: none;
+}
+
+.profile-canary-how-summary::-webkit-details-marker {
+  display: none;
+}
+
+.profile-canary-how-summary::after {
+  content: '';
+  width: 0.45em;
+  height: 0.45em;
+  margin-left: 0.45em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.profile-canary-how[open] > .profile-canary-how-summary::after {
+  transform: rotate(-135deg);
+  margin-top: 0.2em;
+}
+
+.profile-canary-how-body {
+  margin: 0 0 var(--so-space-3);
+  font-size: var(--so-text-sm);
+  line-height: 1.5;
   color: var(--so-muted);
-  font-weight: 400;
 }
 
 .profile-state-card {

@@ -47,6 +47,11 @@
   font-size: var(--so-text-sm);
 }
 
+.directory-count .so-freshness {
+  font-size: inherit;
+  color: inherit;
+}
+
 .directory-list {
   display: flex;
   flex-direction: column;

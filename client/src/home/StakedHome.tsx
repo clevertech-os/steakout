@@ -5,7 +5,7 @@
 import { useState } from 'react'
 import type { NimiqProvider } from '@nimiq/mini-app-sdk'
 import Amount from '../components/Amount'
-import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
+import EnvelopeStatusBanner, { humanStaleMessage } from '../components/EnvelopeStatusBanner'
 import FreshnessTag from '../components/FreshnessTag'
 import PositionStateBadge from '../components/PositionStateBadge'
 import type { PositionState, StakingPositionEnvelope } from '../api/position'
@@ -68,9 +68,15 @@ export default function StakedHome({
       <EnvelopeStatusBanner
         status={envelopeStatus}
         onRetry={onRetry}
+        ageSeconds={dataFreshness.ageSeconds}
+        updatedAt={updatedAt}
         message={
           envelopeStatus === 'stale'
-            ? 'Position snapshot may be outdated. Showing the last known on-chain read.'
+            ? humanStaleMessage(
+                dataFreshness.ageSeconds,
+                updatedAt,
+                'Your position snapshot',
+              )
             : envelopeStatus === 'partial'
               ? 'Position data is partial. Some fields may be incomplete.'
               : envelopeStatus === 'unavailable'

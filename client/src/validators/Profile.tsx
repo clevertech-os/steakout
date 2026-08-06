@@ -20,7 +20,7 @@ import {
 import { walletAuthApi } from '../api/walletAuth'
 import type { PositionState } from '../api/position'
 import DataStatusTag from '../components/DataStatusTag'
-import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
+import EnvelopeStatusBanner, { humanStaleMessage } from '../components/EnvelopeStatusBanner'
 import { humanizeFetchError } from '../components/humanizeError'
 import {
   OBSERVATION_STATUS_LABELS,
@@ -141,37 +141,35 @@ function formatOfficialScore(score: number | null): string {
   })
 }
 
-function formatIsoOrPending(iso: string | null): string {
-  if (!iso) return 'Pending'
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    })
-  } catch {
-    return iso
+/**
+ * Simplified canary copy: claim personal verification only when the indexer
+ * has observed a reward path (status active / dataStatus verified).
+ */
+function canaryVerificationCopy(probe: {
+  status: 'not-configured' | 'pending' | 'active'
+  dataStatus: 'insufficient' | 'verified' | 'unavailable'
+}): {
+  summaryLabel: string
+  headline: string
+  body: string
+  verified: boolean
+} {
+  const verified =
+    probe.status === 'active' && probe.dataStatus === 'verified'
+  if (verified) {
+    return {
+      summaryLabel: 'Verified',
+      headline: 'Personally verified',
+      body: 'Steakout has observed that rewards reach our own stake on this validator as expected.',
+      verified: true,
+    }
   }
-}
-
-function formatTxLink(
-  hash: string | null,
-  explorerUrl: string | null,
-): ReactNode {
-  if (!hash) return 'Pending'
-  const short = `${hash.slice(0, 8)}…${hash.slice(-6)}`
-  if (explorerUrl) {
-    return (
-      <a
-        className="profile-external mono"
-        href={explorerUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {short}
-      </a>
-    )
+  return {
+    summaryLabel: 'Watching',
+    headline: 'Watching our stake',
+    body: 'Steakout has a small stake on this validator and is waiting for the first reward observation.',
+    verified: false,
   }
-  return <span className="mono">{short}</span>
 }
 
 function formatFreshness(ageSeconds: number, updatedAt: string): string {
@@ -645,14 +643,24 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
     .filter(Boolean)
     .join(' · ')
 
+  const canaryCopy = profile.canaryProbe?.configured
+    ? canaryVerificationCopy(profile.canaryProbe)
+    : null
+
   return (
     <div className="profile">
       <EnvelopeStatusBanner
         status={envelope.status}
         onRetry={retry}
+        ageSeconds={envelope.dataFreshness.ageSeconds}
+        updatedAt={envelope.updatedAt}
         message={
           envelope.status === 'stale'
-            ? 'Profile snapshot may be outdated. Registry and observation fields reflect the last successful sync.'
+            ? humanStaleMessage(
+                envelope.dataFreshness.ageSeconds,
+                envelope.updatedAt,
+                'This profile',
+              )
             : undefined
         }
       />
@@ -830,145 +838,50 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
         </div>
       </details>
 
-      {profile.canaryProbe?.configured ? (
+      {canaryCopy && profile.canaryProbe?.configured ? (
         <details
           className="profile-disclosure nq-card shell-card profile-card profile-card--canary"
           data-testid="canary-probe"
+          data-canary-verified={canaryCopy.verified ? 'true' : 'false'}
         >
           <summary className="profile-disclosure-summary">
-            <span className="profile-disclosure-title">Canary probe</span>
+            <span className="profile-disclosure-title">Personal check</span>
             <span
               className="profile-disclosure-meta"
               data-testid="canary-status"
             >
-              {profile.canaryProbe.statusLabel}
+              {canaryCopy.summaryLabel}
             </span>
           </summary>
           <div className="profile-disclosure-body">
-            <p className="nq-subline profile-section-note">
-              Steakout stakes a small canary position to this validator and
-              watches what reaches that address. This is not a fee rating and not
-              proof of how every staker is treated.
-            </p>
-            {profile.canaryProbe.note ? (
-              <p className="profile-canary-status">
-                <span className="profile-canary-note">
-                  {profile.canaryProbe.note}
-                </span>
-              </p>
-            ) : null}
-            <dl className="profile-metrics">
-              <MetricRow
-                label="Probe address"
-                definition="Steakout-controlled canary address delegated to this validator. Public only; not a user wallet."
-                value={
-                  profile.canaryProbe.probeAddress ? (
-                    profile.canaryProbe.probeExplorerUrl ? (
-                      <a
-                        className="profile-external mono"
-                        href={profile.canaryProbe.probeExplorerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {formatDisplayAddress(profile.canaryProbe.probeAddress)}
-                      </a>
-                    ) : (
-                      <span className="mono">
-                        {formatDisplayAddress(profile.canaryProbe.probeAddress)}
-                      </span>
-                    )
-                  ) : (
-                    'Unavailable'
-                  )
-                }
-                status="registry"
-                freshness={
-                  profile.canaryProbe.stakedAt
-                    ? `Staked ${formatIsoOrPending(profile.canaryProbe.stakedAt)}`
-                    : 'Configured'
-                }
-              />
-              <MetricRow
-                label="Canary stake"
-                definition="Amount staked on the canary address for observation. Protocol minimum is 100 NIM."
-                value={formatNimFromLuna(profile.canaryProbe.stakeAmountLuna)}
-                status={
-                  profile.canaryProbe.stakeAmountLuna == null
-                    ? 'unavailable'
-                    : 'verified'
-                }
-                freshness={formatIsoOrPending(profile.canaryProbe.stakedAt)}
-              />
-              <MetricRow
-                label="Stake transaction"
-                definition="On-chain create-staker (or add-stake) transaction that opened the canary position."
-                value={formatTxLink(
-                  profile.canaryProbe.stakeTxHash,
-                  profile.canaryProbe.stakeExplorerUrl,
-                )}
-                status={
-                  profile.canaryProbe.stakeTxHash ? 'verified' : 'insufficient'
-                }
-                freshness={formatIsoOrPending(profile.canaryProbe.stakedAt)}
-              />
-              <MetricRow
-                label="Last observed payment"
-                definition="Most recent successful transfer from this validator’s reward address to the canary probe. Pending until the indexer sees one."
-                value={
-                  profile.canaryProbe.lastPaymentLuna != null
-                    ? formatNimFromLuna(profile.canaryProbe.lastPaymentLuna)
-                    : 'Pending'
-                }
-                status={profile.canaryProbe.dataStatus}
-                freshness={
-                  profile.canaryProbe.lastPaymentAt
-                    ? formatIsoOrPending(profile.canaryProbe.lastPaymentAt)
-                    : 'No payment indexed yet'
-                }
-              />
-              <MetricRow
-                label="Last payment evidence"
-                definition="Transaction hash for the last observed canary payment, when available."
-                value={formatTxLink(
-                  profile.canaryProbe.lastPaymentTxHash,
-                  profile.canaryProbe.lastPaymentExplorerUrl,
-                )}
-                status={profile.canaryProbe.dataStatus}
-                freshness={
-                  profile.canaryProbe.lastPaymentAt
-                    ? formatIsoOrPending(profile.canaryProbe.lastPaymentAt)
-                    : 'Pending'
-                }
-              />
-              <MetricRow
-                label="Observed staker balance"
-                definition="Last indexed staker-account total for the canary (useful for restake validators). Pending until snapshots exist."
-                value={
-                  profile.canaryProbe.lastStakerBalanceLuna != null
-                    ? formatNimFromLuna(profile.canaryProbe.lastStakerBalanceLuna)
-                    : 'Pending'
-                }
-                status={
-                  profile.canaryProbe.lastStakerBalanceLuna != null
-                    ? 'verified'
-                    : 'insufficient'
-                }
-                freshness={
-                  profile.canaryProbe.lastStakerBalanceAt
-                    ? formatIsoOrPending(profile.canaryProbe.lastStakerBalanceAt)
-                    : 'No snapshot yet'
-                }
-              />
-            </dl>
-            <p className="profile-limitations-link">
-              <a className="nq-arrow" href="#/learn/methodology">
-                Methodology
-              </a>
-              {' · '}
-              <a className="nq-arrow" href="#/learn/limitations">
-                Limitations
-              </a>
-            </p>
+            <div
+              className="profile-canary-simple"
+              data-verified={canaryCopy.verified ? 'true' : 'false'}
+            >
+              <p className="profile-canary-headline">{canaryCopy.headline}</p>
+              <p className="profile-canary-body">{canaryCopy.body}</p>
+              <details className="profile-canary-how">
+                <summary className="profile-canary-how-summary">
+                  How we check
+                </summary>
+                <p className="profile-canary-how-body">
+                  Steakout stakes a small amount of our own NIM with this
+                  validator and watches whether rewards reach that address. A
+                  successful observation confirms payouts reached our position —
+                  it is not a fee rating and not proof of how every staker is
+                  treated.
+                </p>
+                <p className="profile-limitations-link">
+                  <a className="nq-arrow" href="#/learn/methodology">
+                    Methodology
+                  </a>
+                  {' · '}
+                  <a className="nq-arrow" href="#/learn/limitations">
+                    Limitations
+                  </a>
+                </p>
+              </details>
+            </div>
           </div>
         </details>
       ) : null}

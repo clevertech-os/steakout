@@ -10,25 +10,45 @@ export interface FreshnessTagProps {
   className?: string
 }
 
-function formatAge(ageSeconds: number): string {
-  if (!Number.isFinite(ageSeconds) || ageSeconds < 0) return 'Updated recently'
-  if (ageSeconds < 60) return 'Updated just now'
+/** Relative age without the "Updated" prefix — e.g. "2 hours ago", "just now". */
+export function formatAgeLabel(ageSeconds: number): string {
+  if (!Number.isFinite(ageSeconds) || ageSeconds < 0) return 'recently'
+  if (ageSeconds < 60) return 'just now'
   const minutes = Math.floor(ageSeconds / 60)
   if (minutes < 60) {
-    return minutes === 1 ? 'Updated 1 min ago' : `Updated ${minutes} min ago`
+    return minutes === 1 ? '1 min ago' : `${minutes} min ago`
   }
   const hours = Math.floor(minutes / 60)
   if (hours < 48) {
-    return hours === 1 ? 'Updated 1 hour ago' : `Updated ${hours} hours ago`
+    return hours === 1 ? '1 hour ago' : `${hours} hours ago`
   }
   const days = Math.floor(hours / 24)
-  return days === 1 ? 'Updated 1 day ago' : `Updated ${days} days ago`
+  return days === 1 ? '1 day ago' : `${days} days ago`
 }
 
-function ageFromIso(iso: string): number | null {
+/** Full freshness phrase — e.g. "Updated 2 hours ago". */
+export function formatRelativeAge(ageSeconds: number): string {
+  if (!Number.isFinite(ageSeconds) || ageSeconds < 0) return 'Updated recently'
+  if (ageSeconds < 60) return 'Updated just now'
+  return `Updated ${formatAgeLabel(ageSeconds)}`
+}
+
+export function ageSecondsFromIso(iso: string): number | null {
   const ms = Date.parse(iso)
   if (!Number.isFinite(ms)) return null
   return Math.max(0, Math.floor((Date.now() - ms) / 1000))
+}
+
+/** Prefer envelope ageSeconds; fall back to clock age of updatedAt. */
+export function resolveAgeSeconds(
+  ageSeconds?: number | null,
+  updatedAt?: string | null,
+): number | null {
+  if (ageSeconds != null && Number.isFinite(ageSeconds) && ageSeconds >= 0) {
+    return ageSeconds
+  }
+  if (updatedAt) return ageSecondsFromIso(updatedAt)
+  return null
 }
 
 /**
@@ -40,10 +60,7 @@ export default function FreshnessTag({
   historyDepthDays,
   className = '',
 }: FreshnessTagProps) {
-  let age = ageSeconds
-  if ((age == null || !Number.isFinite(age)) && updatedAt) {
-    age = ageFromIso(updatedAt)
-  }
+  const age = resolveAgeSeconds(ageSeconds, updatedAt)
 
   if (age == null && historyDepthDays == null) {
     return null
@@ -51,7 +68,7 @@ export default function FreshnessTag({
 
   const parts: string[] = []
   if (age != null && Number.isFinite(age)) {
-    parts.push(formatAge(age))
+    parts.push(formatRelativeAge(age))
   }
   if (historyDepthDays != null && Number.isFinite(historyDepthDays) && historyDepthDays > 0) {
     const d = Math.floor(historyDepthDays)

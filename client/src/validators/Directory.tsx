@@ -4,7 +4,8 @@
  * not shown anywhere in the product UI).
  */
 import { useCallback, useEffect, useId, useState } from 'react'
-import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
+import EnvelopeStatusBanner, { humanStaleMessage } from '../components/EnvelopeStatusBanner'
+import FreshnessTag from '../components/FreshnessTag'
 import { humanizeFetchError } from '../components/humanizeError'
 import {
   fetchValidators,
@@ -27,6 +28,7 @@ type LoadState =
       validators: ValidatorListItem[]
       status: string
       updatedAt: string
+      ageSeconds?: number | null
       /** True while a sort/filter refetch is in flight (keep previous list). */
       refreshing?: boolean
     }
@@ -75,6 +77,7 @@ export default function Directory() {
         validators: peek.envelope.data.validators,
         status: peek.envelope.status,
         updatedAt: peek.envelope.updatedAt,
+        ageSeconds: peek.envelope.dataFreshness?.ageSeconds ?? null,
         refreshing: !peek.fresh || reloadToken > 0,
       })
       // Fresh cache and no forced reload: skip network this mount.
@@ -104,6 +107,7 @@ export default function Directory() {
           validators: envelope.data.validators,
           status: envelope.status,
           updatedAt: envelope.updatedAt,
+          ageSeconds: envelope.dataFreshness?.ageSeconds ?? null,
           refreshing: false,
         })
       } catch (err) {
@@ -206,17 +210,31 @@ export default function Directory() {
           <EnvelopeStatusBanner
             status={state.status}
             onRetry={retry}
+            ageSeconds={state.ageSeconds}
+            updatedAt={state.updatedAt}
             message={
               state.status === 'stale'
-                ? 'Directory snapshot may be outdated. Listing still reflects the last registry sync.'
+                ? humanStaleMessage(
+                    state.ageSeconds,
+                    state.updatedAt,
+                    'This validator list',
+                  )
                 : undefined
             }
           />
           <p className="directory-count nq-subline" aria-live="polite">
             {state.validators.length.toLocaleString('en-US')} listed validator
             {state.validators.length === 1 ? '' : 's'}
-            {state.status === 'stale' ? ' · stale snapshot' : null}
-            {state.status === 'unavailable' ? ' · registry status: unavailable' : null}
+            {state.updatedAt || state.ageSeconds != null ? (
+              <>
+                {' · '}
+                <FreshnessTag
+                  updatedAt={state.updatedAt}
+                  ageSeconds={state.ageSeconds}
+                />
+              </>
+            ) : null}
+            {state.status === 'unavailable' ? ' · registry temporarily unavailable' : null}
           </p>
           <ul className="directory-list">
             {state.validators.map((v) => (
