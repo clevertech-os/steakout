@@ -95,6 +95,7 @@ Each item:
   "name": "string | null",
   "isListed": true,
   "logoUrl": "string | null",
+  "website": "string | null",        // operator website from registry; directory shows external-link icon when set
   "officialScore": 0.0,              // or null -> client shows "Insufficient data" (registry may use -1)
   "stakeLuna": 0,
   "dominanceRatio": 0.0,             // or null
@@ -129,7 +130,7 @@ Each item:
 ```
 
 ### `GET /api/validators/:address`
-Full profile: everything from the list item plus `website`, `description`, `rewardAddress` (+ explorer link), score components if provided by registry, `registryUpdatedAt`, and `canaryProbe`.
+Full profile: everything from the list item plus `description`, `rewardAddress` (+ explorer link), score components if provided by registry, `registryUpdatedAt`, and `canaryProbe` (`website` is already on the list item).
 
 ```jsonc
 "canaryProbe": {

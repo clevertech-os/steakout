@@ -62,17 +62,56 @@
   min-width: 0;
 }
 
+.validator-card-name-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem 0.4rem;
+  min-width: 0;
+}
+
 .validator-card-name {
   margin: 0;
   font-size: var(--so-text-lg);
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.25;
+  min-width: 0;
+  flex: 1 1 auto;
   /* Long names: clamp rather than blow out the card */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+}
+
+/* Nested control inside the card profile link (stopPropagation on activate). */
+.validator-card-website {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-top: 0.05rem;
+  border-radius: 0.4rem;
+  color: var(--so-info);
+  background: transparent;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.validator-card-website:hover,
+.validator-card-website:focus-visible {
+  color: var(--so-info-ink, var(--so-ink));
+  background: color-mix(in srgb, var(--so-info-soft) 80%, transparent);
+  outline: none;
+}
+
+.validator-card-website:focus-visible {
+  box-shadow: 0 0 0 2px var(--so-info);
+}
+
+.validator-card-website-icon {
+  display: block;
 }
 
 .validator-card-address {

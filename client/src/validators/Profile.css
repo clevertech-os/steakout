@@ -249,7 +249,8 @@
 }
 
 .profile-disclosure-body {
-  padding: 0 var(--so-space-5) 1.15rem;
+  /* Top padding so first metric (e.g. Full address) is not flush under the divider. */
+  padding: var(--so-space-4) var(--so-space-5) 1.15rem;
   border-top: 1px solid var(--so-rule);
   min-width: 0;
 }
@@ -560,6 +561,6 @@
   }
 
   .profile-disclosure-body {
-    padding: 0 var(--so-space-6) 1.35rem;
+    padding: var(--so-space-4) var(--so-space-6) 1.35rem;
   }
 }

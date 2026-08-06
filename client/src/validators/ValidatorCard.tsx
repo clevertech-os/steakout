@@ -4,6 +4,7 @@
  * Clickable → `#/validators/:address`.
  * Directory only shows listed validators; unlisted are never rendered here.
  */
+import type { KeyboardEvent, MouseEvent } from 'react'
 import { normalizeAddress, shortAddress } from '../addresses'
 import StatusChip from '../components/StatusChip'
 import { prefetchValidatorProfile, type ValidatorListItem } from './api'
@@ -24,10 +25,54 @@ export interface ValidatorCardProps {
   validator: ValidatorListItem
 }
 
+/** http(s) only — reject javascript: / relative junk from registry. */
+export function safeHttpUrl(raw: string | null | undefined): string | null {
+  if (raw == null) return null
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  try {
+    const url = new URL(trimmed)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+    return url.href
+  } catch {
+    return null
+  }
+}
+
+function ExternalLinkIcon() {
+  return (
+    <svg
+      className="validator-card-website-icon"
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M6.5 3.5H3.5A1.5 1.5 0 0 0 2 5v7.5A1.5 1.5 0 0 0 3.5 14H11a1.5 1.5 0 0 0 1.5-1.5V9.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.5 2H14v4.5M14 2 7.5 8.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export default function ValidatorCard({ validator }: ValidatorCardProps) {
   const compact = normalizeAddress(validator.address)
   const profileHref = `#/validators/${compact}`
   const displayName = validator.name?.trim() || shortAddress(validator.address)
+  const websiteUrl = safeHttpUrl(validator.website)
   const scoreLabel = formatOfficialScore(validator.officialScore)
   const stakeLabel = formatStakeNim(validator.stakeLuna)
   const dominanceLabel = formatDominance(validator.dominanceRatio)
@@ -43,6 +88,13 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
   const initials = validatorInitials(validator.name, validator.address)
   const scoreIsPresent = scoreLabel !== 'Insufficient data'
   const minPayoutMuted = minPayoutLabel === 'Insufficient data'
+
+  const openWebsite = (e: MouseEvent | KeyboardEvent) => {
+    if (!websiteUrl) return
+    e.preventDefault()
+    e.stopPropagation()
+    window.open(websiteUrl, '_blank', 'noopener,noreferrer')
+  }
 
   return (
     <a
@@ -79,7 +131,24 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
             {initials}
           </span>
           <div className="validator-card-titles">
-            <h2 className="validator-card-name">{displayName}</h2>
+            <div className="validator-card-name-row">
+              <h2 className="validator-card-name">{displayName}</h2>
+              {websiteUrl ? (
+                <span
+                  className="validator-card-website"
+                  role="link"
+                  tabIndex={0}
+                  title={websiteUrl}
+                  aria-label={`Open ${displayName} website in a new tab`}
+                  onClick={openWebsite}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') openWebsite(e)
+                  }}
+                >
+                  <ExternalLinkIcon />
+                </span>
+              ) : null}
+            </div>
             <p className="validator-card-address">{shortAddress(validator.address)}</p>
           </div>
         </div>

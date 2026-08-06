@@ -94,6 +94,8 @@ export interface ValidatorListItem {
   name: string | null
   isListed: boolean
   logoUrl: string | null
+  /** Operator website from registry when present (directory link icon). */
+  website: string | null
   officialScore: number | null
   stakeLuna: number | null
   dominanceRatio: number | null
@@ -128,7 +130,6 @@ export interface ValidatorListItem {
 }
 
 export interface ValidatorProfile extends ValidatorListItem {
-  website: string | null
   description: string | null
   rewardAddress: string | null
   rewardExplorerUrl: string | null
@@ -683,6 +684,7 @@ export function toListItem(
     name: row.name,
     isListed: row.is_listed === 1,
     logoUrl: row.logo_url,
+    website: row.website,
     // official_score is already null for registry -1/missing (normalizeOfficialScore).
     officialScore: row.official_score,
     stakeLuna: row.stake_luna,
@@ -720,7 +722,6 @@ export function toProfile(
   const rewardAddress = row.reward_address
   return {
     ...list,
-    website: row.website,
     description: row.description,
     rewardAddress,
     rewardExplorerUrl: rewardAddress ? buildNimiqAddressExplorerUrl(rewardAddress) : null,

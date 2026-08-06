@@ -61,6 +61,8 @@ export interface ValidatorListItem {
   name: string | null
   isListed: boolean
   logoUrl: string | null
+  /** Operator website from registry when present. */
+  website?: string | null
   officialScore: number | null
   stakeLuna: number | null
   dominanceRatio: number | null

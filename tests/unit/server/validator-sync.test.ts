@@ -287,6 +287,7 @@ describe('validator list/detail serialization', () => {
       name: 'Keyring',
       isListed: true,
       logoUrl: null,
+      website: 'https://example.test',
       officialScore: 0.99,
       stakeLuna: 1000,
       dominanceRatio: 0.02,
