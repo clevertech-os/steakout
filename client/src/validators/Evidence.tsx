@@ -5,7 +5,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import DataStatusTag from '../components/DataStatusTag'
-import EnvelopeStatusBanner, { humanStaleMessage } from '../components/EnvelopeStatusBanner'
+import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
 import FreshnessTag from '../components/FreshnessTag'
 import { humanizeFetchError } from '../components/humanizeError'
 import StatusChip, {
@@ -503,17 +503,7 @@ function EvidenceOkBody({
 
   const body = (
     <>
-      <EnvelopeStatusBanner
-        status={envelope.status}
-        onRetry={onRetry}
-        ageSeconds={ageSeconds}
-        updatedAt={updatedAt}
-        message={
-          envelope.status === 'stale'
-            ? humanStaleMessage(ageSeconds, updatedAt, 'Payout observation data')
-            : undefined
-        }
-      />
+      <EnvelopeStatusBanner status={envelope.status} onRetry={onRetry} />
       {!embedded ? (
         <>
           <p className="card-kicker">Steakout observation</p>

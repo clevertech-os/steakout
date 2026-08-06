@@ -37,7 +37,7 @@ Fee · Type · Schedule · Dominance% of network   (policy strip)
 [ Stake / Change CTA ]   ← moved up; same ProfileStakeCta logic
 
 ▸ Payout evidence        (collapsed; summary may show status · windows)
-▸ Personal check         (if canary configured; summary = Verified / Watching)
+▸ Stakeout Findings      (if canary configured; summary = Verified when observed, else title only)
 ▸ Technical details      (collapsed)
 ```
 
@@ -62,9 +62,9 @@ Fee · Type · Schedule · Dominance% of network   (policy strip)
 - **Expanded:** short lede; summary grid (history, windows, schedule, analysis window, last activity) with **one section-level freshness** (not per row); quieter run list (drop per-run definition + FreshnessTag; keep window, recipients, tx count, coverage, explorer links); methodology & limitations; load more.
 - Keep loading observations on profile load so the closed summary can show windows without forcing open.
 
-### Personal check / canary (only if configured)
+### Stakeout Findings / canary (only if configured)
 
-- **Summary:** `Personal check` + `Verified` (reward path observed) or `Watching` (staked, no observation yet).
+- **Summary:** `Stakeout Findings` + `Verified` when a reward path has been observed; title only while still waiting (no “Watching” meta).
 - **Expanded:** one headline + one sentence claim; nested “How we check” with methodology limits + Learn links.
 - **Do not** surface probe address, stake amount, tx hashes, or payment amounts on this surface (ops detail only).
 - Omit section if not configured.

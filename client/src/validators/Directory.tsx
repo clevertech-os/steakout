@@ -4,7 +4,7 @@
  * not shown anywhere in the product UI).
  */
 import { useCallback, useEffect, useId, useState } from 'react'
-import EnvelopeStatusBanner, { humanStaleMessage } from '../components/EnvelopeStatusBanner'
+import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
 import FreshnessTag from '../components/FreshnessTag'
 import { humanizeFetchError } from '../components/humanizeError'
 import {
@@ -34,7 +34,7 @@ type LoadState =
     }
 
 const RECOMMENDED_EXPLAINER =
-  'Recommended order uses normalizable payout schedule, payout observability (direct before restake), live Steakout observation status when available, lower dominance, then the official Nimiq Validator Trust Score. Not financial advice, and not a “best validator” ranking.'
+  'This order prioritizes validators that are easier to understand: a clear payout schedule, payouts you can observe on-chain (direct before restake), Steakout’s observation status when we have it, then lower network share, and finally the official Nimiq Validator Trust Score. It is not financial advice and not a ranking of who is “best.”'
 
 function SkeletonCard() {
   return (
@@ -207,21 +207,7 @@ export default function Directory() {
 
       {state.kind === 'ready' && state.validators.length > 0 ? (
         <>
-          <EnvelopeStatusBanner
-            status={state.status}
-            onRetry={retry}
-            ageSeconds={state.ageSeconds}
-            updatedAt={state.updatedAt}
-            message={
-              state.status === 'stale'
-                ? humanStaleMessage(
-                    state.ageSeconds,
-                    state.updatedAt,
-                    'This validator list',
-                  )
-                : undefined
-            }
-          />
+          <EnvelopeStatusBanner status={state.status} onRetry={retry} />
           <p className="directory-count nq-subline" aria-live="polite">
             {state.validators.length.toLocaleString('en-US')} listed validator
             {state.validators.length === 1 ? '' : 's'}

@@ -106,9 +106,17 @@ export function matchRoute(rawPath: string): RouteMatch | null {
   }
 
   // /validators/:address → validator profile (P1-11 summary; P2-16 share meta).
+  // Decode percent-encoding so `#/validators/NQ15%205JNS…` (spaced form) works;
+  // cards use compact form without spaces either way.
   if (path.startsWith('/validators/')) {
-    const address = path.slice('/validators/'.length)
-    if (address.length > 0 && !address.includes('/')) {
+    const raw = path.slice('/validators/'.length)
+    if (raw.length > 0 && !raw.includes('/')) {
+      let address = raw
+      try {
+        address = decodeURIComponent(raw)
+      } catch {
+        // Keep raw segment if malformed % sequences.
+      }
       return { id: 'validators', param: address }
     }
   }

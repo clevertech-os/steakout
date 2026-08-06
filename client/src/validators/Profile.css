@@ -9,14 +9,34 @@
   min-width: 0;
 }
 
+.profile-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--so-space-3);
+  margin-bottom: var(--so-space-2);
+  min-width: 0;
+}
+
 .profile-back {
   display: inline-flex;
   align-items: center;
   min-height: var(--so-touch);
-  margin-bottom: var(--so-space-2);
+  margin-bottom: 0;
   color: var(--so-info);
   text-decoration: none;
   font-size: var(--so-text-md);
+}
+
+/* Quiet freshness — top-right, not a warn banner. */
+.profile-last-updated {
+  margin: 0;
+  flex-shrink: 0;
+  max-width: 55%;
+  text-align: right;
+  color: var(--so-muted);
+  font-size: var(--so-text-sm);
+  line-height: 1.3;
 }
 
 .profile-title-row {

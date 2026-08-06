@@ -61,6 +61,23 @@ describe('matchRoute', () => {
     })
   })
 
+  it('decodes percent-encoded validator addresses (spaced NQ form)', () => {
+    const spaced =
+      'NQ15 5JNS U7CE RAH5 3T02 F8A9 JCT6 QMG9 7TSV'
+    const encoded = encodeURIComponent(spaced)
+    expect(matchRoute(`/validators/${encoded}`)).toEqual({
+      id: 'validators',
+      param: spaced,
+    })
+    // Compact form still matches as-is.
+    expect(
+      matchRoute('/validators/NQ155JNSU7CERAH53T02F8A9JCT6QMG97TSV'),
+    ).toEqual({
+      id: 'validators',
+      param: 'NQ155JNSU7CERAH53T02F8A9JCT6QMG97TSV',
+    })
+  })
+
   it('matches Learn article subpaths (P2-12)', () => {
     for (const slug of LEARN_ARTICLES) {
       expect(matchRoute(`${LEARN_PATH}/${slug}`)).toEqual({

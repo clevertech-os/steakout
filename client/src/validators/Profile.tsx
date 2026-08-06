@@ -20,7 +20,11 @@ import {
 import { walletAuthApi } from '../api/walletAuth'
 import type { PositionState } from '../api/position'
 import DataStatusTag from '../components/DataStatusTag'
-import EnvelopeStatusBanner, { humanStaleMessage } from '../components/EnvelopeStatusBanner'
+import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
+import {
+  formatAgeLabel,
+  resolveAgeSeconds,
+} from '../components/FreshnessTag'
 import { humanizeFetchError } from '../components/humanizeError'
 import {
   OBSERVATION_STATUS_LABELS,
@@ -142,13 +146,14 @@ function formatOfficialScore(score: number | null): string {
 }
 
 /**
- * Simplified canary copy: claim personal verification only when the indexer
+ * Stakeout Findings (canary probe): claim verification only when the indexer
  * has observed a reward path (status active / dataStatus verified).
  */
 function canaryVerificationCopy(probe: {
   status: 'not-configured' | 'pending' | 'active'
   dataStatus: 'insufficient' | 'verified' | 'unavailable'
 }): {
+  /** Optional summary meta next to “Stakeout Findings”; empty when still waiting. */
   summaryLabel: string
   headline: string
   body: string
@@ -159,15 +164,15 @@ function canaryVerificationCopy(probe: {
   if (verified) {
     return {
       summaryLabel: 'Verified',
-      headline: 'Personally verified',
+      headline: 'Rewards reached our stake',
       body: 'Steakout has observed that rewards reach our own stake on this validator as expected.',
       verified: true,
     }
   }
   return {
-    summaryLabel: 'Watching',
-    headline: 'Watching our stake',
-    body: 'Steakout has a small stake on this validator and is waiting for the first reward observation.',
+    summaryLabel: '',
+    headline: 'Waiting for first reward observation',
+    body: 'Steakout has a small stake on this validator and is watching for the first reward to reach that address.',
     verified: false,
   }
 }
@@ -647,27 +652,27 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
     ? canaryVerificationCopy(profile.canaryProbe)
     : null
 
+  const ageSeconds = resolveAgeSeconds(
+    envelope.dataFreshness.ageSeconds,
+    envelope.updatedAt,
+  )
+  const lastUpdatedLabel =
+    ageSeconds != null ? `Last updated ${formatAgeLabel(ageSeconds)}` : null
+
   return (
     <div className="profile">
-      <EnvelopeStatusBanner
-        status={envelope.status}
-        onRetry={retry}
-        ageSeconds={envelope.dataFreshness.ageSeconds}
-        updatedAt={envelope.updatedAt}
-        message={
-          envelope.status === 'stale'
-            ? humanStaleMessage(
-                envelope.dataFreshness.ageSeconds,
-                envelope.updatedAt,
-                'This profile',
-              )
-            : undefined
-        }
-      />
+      <EnvelopeStatusBanner status={envelope.status} onRetry={retry} />
       <header className="shell-header page-header">
-        <a className="profile-back nq-arrow-back" href="#/validators">
-          Validators
-        </a>
+        <div className="profile-topbar">
+          <a className="profile-back nq-arrow-back" href="#/validators">
+            Validators
+          </a>
+          {lastUpdatedLabel ? (
+            <p className="profile-last-updated" role="status">
+              {lastUpdatedLabel}
+            </p>
+          ) : null}
+        </div>
         <p className="eyebrow">
           {profile.isListed ? 'Listed validator' : 'Observable validator'}
         </p>
@@ -845,13 +850,19 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           data-canary-verified={canaryCopy.verified ? 'true' : 'false'}
         >
           <summary className="profile-disclosure-summary">
-            <span className="profile-disclosure-title">Personal check</span>
-            <span
-              className="profile-disclosure-meta"
-              data-testid="canary-status"
-            >
-              {canaryCopy.summaryLabel}
-            </span>
+            <span className="profile-disclosure-title">Stakeout Findings</span>
+            {canaryCopy.summaryLabel ? (
+              <span
+                className="profile-disclosure-meta"
+                data-testid="canary-status"
+              >
+                {canaryCopy.summaryLabel}
+              </span>
+            ) : (
+              <span className="visually-hidden" data-testid="canary-status">
+                Pending observation
+              </span>
+            )}
           </summary>
           <div className="profile-disclosure-body">
             <div
