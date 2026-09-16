@@ -25,6 +25,13 @@ const IS_TESTNET =
   (import.meta.env.VITE_NIMIQ_NETWORK ?? 'mainnet').trim().toLowerCase() === 'testnet' ||
   (import.meta.env.VITE_NIMIQ_NETWORK ?? 'mainnet').trim().toLowerCase() === 'test'
 
+function formatCountdown(totalSeconds: number): string {
+  const safeSeconds = Math.max(0, totalSeconds)
+  const minutes = Math.floor(safeSeconds / 60)
+  const seconds = safeSeconds % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
 export interface OpenInNimiqPayQrProps {
   appUrl?: string
   compact?: boolean
@@ -77,36 +84,68 @@ export default function OpenInNimiqPayQr({
 }: OpenInNimiqPayQrProps) {
   const [copied, setCopied] = useState(false)
   const [pairId, setPairId] = useState<string | null>(null)
+  const [pairExpiresAt, setPairExpiresAt] = useState<number | null>(null)
+  const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null)
   const [pairStatus, setPairStatus] = useState<string | null>(null)
   const [pairError, setPairError] = useState<string | null>(null)
   const [linking, setLinking] = useState(false)
   const claimedRef = useRef(false)
+  const creatingPairRef = useRef(false)
+  const autoRefreshedPairRef = useRef<string | null>(null)
+  const mountedRef = useRef(true)
   const onLinkedRef = useRef(onDesktopLinked)
   onLinkedRef.current = onDesktopLinked
 
-  // Create pairing slot once when linking desktop session.
-  useEffect(() => {
-    if (!linkDesktopSession) return
+  const refreshPair = useCallback(async () => {
+    if (!linkDesktopSession || creatingPairRef.current) return
     if (typeof window !== 'undefined' && isNimiqPayHost()) return
-    let cancelled = false
-    void (async () => {
-      try {
-        const created = await createDesktopPair()
-        if (!cancelled) {
-          setPairId(created.pairId)
-          setPairStatus('waiting')
-          setPairError(null)
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setPairError(err instanceof Error ? err.message : 'Could not start desktop link.')
-        }
+    creatingPairRef.current = true
+    setPairError(null)
+    setPairStatus('preparing')
+    setPairExpiresAt(null)
+    setSecondsRemaining(null)
+    try {
+      const created = await createDesktopPair()
+      if (!mountedRef.current) return
+      const expiresAt = Date.parse(created.expiresAt)
+      claimedRef.current = false
+      autoRefreshedPairRef.current = null
+      setPairId(created.pairId)
+      setPairExpiresAt(Number.isFinite(expiresAt) ? expiresAt : null)
+      setPairStatus('waiting')
+    } catch (err) {
+      if (mountedRef.current) {
+        setPairStatus('expired')
+        setPairError(err instanceof Error ? err.message : 'Could not refresh the QR code.')
       }
-    })()
-    return () => {
-      cancelled = true
+    } finally {
+      creatingPairRef.current = false
     }
   }, [linkDesktopSession])
+
+  useEffect(() => {
+    mountedRef.current = true
+    void refreshPair()
+    return () => {
+      mountedRef.current = false
+    }
+  }, [refreshPair])
+
+  // Keep the short-lived login QR fresh without making the user reload the page.
+  useEffect(() => {
+    if (!pairId || pairExpiresAt == null || pairStatus === 'claimed') return
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((pairExpiresAt - Date.now()) / 1000))
+      setSecondsRemaining(remaining)
+      if (remaining === 0 && autoRefreshedPairRef.current !== pairId) {
+        autoRefreshedPairRef.current = pairId
+        void refreshPair()
+      }
+    }
+    tick()
+    const timer = window.setInterval(tick, 1000)
+    return () => window.clearInterval(timer)
+  }, [pairExpiresAt, pairId, pairStatus, refreshPair])
 
   // Poll until phone approves, then claim cookie on this origin.
   useEffect(() => {
@@ -247,12 +286,29 @@ export default function OpenInNimiqPayQr({
         <button type="button" className="nq-pill-secondary open-in-pay-qr-btn" onClick={() => void copy()}>
           {copied ? 'Copied' : 'Copy link'}
         </button>
+        {linkDesktopSession ? (
+          <button
+            type="button"
+            className="nq-ghost-btn open-in-pay-qr-btn"
+            onClick={() => void refreshPair()}
+            disabled={pairStatus === 'preparing'}
+          >
+            {pairStatus === 'preparing' ? 'Refreshing…' : 'Refresh QR'}
+          </button>
+        ) : null}
       </div>
 
       {linkDesktopSession ? (
-        <p className="open-in-pay-qr-pair-status" role="status">
-          {pairStatusText}
-        </p>
+        <div className="open-in-pay-qr-pair-meta">
+          <p className="open-in-pay-qr-pair-status" role="status">
+            {pairStatusText}
+          </p>
+          {pairStatus === 'waiting' && secondsRemaining != null ? (
+            <p className="open-in-pay-qr-countdown">
+              QR refreshes in <span>{formatCountdown(secondsRemaining)}</span>
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="open-in-pay-qr-stores">

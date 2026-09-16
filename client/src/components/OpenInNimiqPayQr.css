@@ -5,7 +5,7 @@
   flex-direction: column;
   gap: var(--so-space-3);
   margin-top: 0;
-  padding: var(--so-space-4);
+  padding: var(--so-space-5);
   border-radius: var(--so-radius-md, 12px);
   border: 1px solid color-mix(in srgb, var(--so-border, #d0d4e0) 80%, transparent);
   background: color-mix(in srgb, var(--so-surface, #fff) 92%, var(--so-accent, #d9573f) 4%);
@@ -64,6 +64,25 @@
   font-size: var(--so-text-sm, 0.85rem);
   color: var(--so-muted, #5c637a);
   font-weight: 500;
+}
+
+.open-in-pay-qr-pair-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--so-space-1);
+}
+
+.open-in-pay-qr-countdown {
+  margin: 0;
+  color: var(--so-muted, #5c637a);
+  font-size: var(--so-text-sm, 0.8rem);
+  text-align: center;
+}
+
+.open-in-pay-qr-countdown span {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .open-in-pay-qr-grid {
@@ -157,4 +176,10 @@
 
 .open-in-pay-qr-hint {
   font-size: var(--so-text-sm, 0.8rem);
+}
+
+@media (min-width: 600px) {
+  .open-in-pay-qr:not(.open-in-pay-qr--compact) {
+    padding: var(--so-space-6);
+  }
 }
