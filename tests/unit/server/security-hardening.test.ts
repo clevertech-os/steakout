@@ -55,6 +55,8 @@ describe('production security boundaries', () => {
     expect(response.headers.get('access-control-allow-origin')).toBeNull()
     expect(response.headers.get('content-security-policy')).toContain("default-src 'self'")
     expect(response.headers.get('content-security-policy')).toContain('https://hub.nimiq.com')
+    expect(response.headers.get('content-security-policy')).toContain("'wasm-unsafe-eval'")
+    expect(response.headers.get('content-security-policy')).not.toMatch(/(?:^|\s)'unsafe-eval'(?:\s|;|$)/)
   })
 
   it('does not allow spoofed forwarded headers to rotate rate-limit identity', async () => {

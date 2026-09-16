@@ -38,7 +38,9 @@ const spaSecurityHeaders: RequestHandler = (_req, res, next) => {
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self'",
+      // @nimiq/core initializes its bundled WebAssembly at startup. Chromium
+      // requires the narrow wasm evaluator source; keep general unsafe-eval off.
+      "script-src 'self' 'wasm-unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
