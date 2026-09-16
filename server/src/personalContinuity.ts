@@ -5,7 +5,7 @@
  *
  * Direct-payout: last observed payment, consecutive windows including the address,
  * windows observed, time since last payment, known-staker-set membership.
- * Restake: Observed position growth pointer from staker_snapshots (never payout claims).
+ * Restake: multi-snapshot Observed position growth from staker_snapshots (never payout claims).
  * Not staked: clean payload, HTTP 200 — not an error.
  *
  * Every continuity field is independently nullable. Language is neutral
@@ -25,6 +25,7 @@ import {
   getStakerByAddress,
   isStakerNotFoundError,
   type NimiqStaker,
+  type NimiqTransaction,
   RpcError,
   toRpcApiError,
 } from './nimiq-rpc.js'
@@ -39,6 +40,7 @@ import {
   type PositionState,
 } from './stakingState.js'
 import { normalizePayoutType, type NormalizedPayoutType } from './validators-api.js'
+import { syncStakerHistory } from './stakerHistory.js'
 
 export type ContinuityMode = 'not-staked' | 'direct-payout' | 'restake' | 'unknown-payout'
 
@@ -49,12 +51,73 @@ export type ContinuitySource = 'indexer' | 'rpc' | 'cache'
 /** Fixed label — METHODOLOGY.md §5. Never "Validator payout verified". */
 export const OBSERVED_POSITION_GROWTH_LABEL = 'Observed position growth' as const
 
+export const OBSERVED_POSITION_GROWTH_STATUS = {
+  OBSERVED: 'observed',
+  INSUFFICIENT_DATA: 'insufficient-data',
+} as const
+
+/**
+ * These are deliberately broad, presentation-only assumptions. They are not
+ * live network data, validator-specific estimates, APY, or a promise of
+ * return. Keep them versioned so a copy/calculation change is auditable.
+ */
+export const ILLUSTRATIVE_GROWTH_RANGE = {
+  version: 'illustrative-v1',
+  annualRateLowPercent: 2,
+  annualRateHighPercent: 5,
+  assumptions:
+    'Illustrative network-wide range of roughly a few percent per year; not live network data, validator-specific, predictive, or guaranteed.',
+} as const
+
+export type PositionGrowthStatus =
+  (typeof OBSERVED_POSITION_GROWTH_STATUS)[keyof typeof OBSERVED_POSITION_GROWTH_STATUS]
+
+export interface GrowthSnapshot {
+  at: string
+  totalLuna: number
+  sourceBlock: number | null
+  validatorAddress: string | null
+}
+
+export interface GrowthInterval {
+  from: GrowthSnapshot
+  to: GrowthSnapshot
+  deltaLuna: number
+  status: 'observed' | 'confounded'
+  /** Why this interval is excluded from the aggregate, when applicable. */
+  confoundedBy:
+    | 'staking-intent'
+    | 'delegation-change'
+    | 'chain-staking-action'
+    | 'chain-history-unavailable'
+    | null
+}
+
+export interface IllustrativeGrowthRange {
+  version: typeof ILLUSTRATIVE_GROWTH_RANGE.version
+  lowerLuna: number
+  upperLuna: number
+  annualRateLowPercent: typeof ILLUSTRATIVE_GROWTH_RANGE.annualRateLowPercent
+  annualRateHighPercent: typeof ILLUSTRATIVE_GROWTH_RANGE.annualRateHighPercent
+  assumptions: typeof ILLUSTRATIVE_GROWTH_RANGE.assumptions
+  status: 'inferred'
+  methodologyUrl: '#/learn/methodology'
+}
+
 export interface ObservedPositionGrowth {
   label: typeof OBSERVED_POSITION_GROWTH_LABEL
-  latest: { at: string; totalLuna: number } | null
-  previous: { at: string; totalLuna: number } | null
+  definition: 'Change in this staker position between indexed snapshots.'
+  status: PositionGrowthStatus
+  latest: GrowthSnapshot | null
+  previous: GrowthSnapshot | null
   /** latest.totalLuna − previous.totalLuna when both present; otherwise null. */
   deltaLuna: number | null
+  /** Aggregate of usable intervals; null when history is insufficient. */
+  totalDeltaLuna: number | null
+  window: { from: string; to: string; durationDays: number } | null
+  intervals: GrowthInterval[]
+  expectedRange: IllustrativeGrowthRange | null
+  freshness: { at: string; ageSeconds: number; sourceBlock: number | null } | null
 }
 
 /**
@@ -80,7 +143,7 @@ export interface PersonalContinuityData {
    */
   currentlyInKnownStakerSet: boolean | null
   /**
-   * Restake-only pointer into snapshot history. Null for direct-payout / not-staked.
+   * Restake-only history into snapshot observations. Null for direct-payout / not-staked.
    * Never implies payout verification.
    */
   observedPositionGrowth: ObservedPositionGrowth | null
@@ -108,6 +171,12 @@ export interface ReadPersonalContinuityOptions {
   knownStakerSet?: Set<string> | null
   /** Skip RPC and use this staker (or null = no staker). */
   stakerOverride?: NimiqStaker | null
+  /** Inject address-history pagination (unit tests). */
+  fetchHistoryPage?: (
+    address: string,
+    max: number,
+    startAt: string | null,
+  ) => Promise<NimiqTransaction[]>
 }
 
 export class ContinuityReadError extends Error {
@@ -325,46 +394,213 @@ export function loadKnownStakerSetFromDb(
 export function readObservedPositionGrowth(
   database: Database.Database,
   userAddress: string,
+  nowMs = Date.now(),
 ): ObservedPositionGrowth {
   const user = normalizeAddress(userAddress)
   const rows = database
     .prepare(
-      `SELECT observed_at, total_balance_luna
+      `SELECT id, observed_at, total_balance_luna, source_block, validator_address
        FROM staker_snapshots
        WHERE replace(upper(user_address), ' ', '') = ?
        ORDER BY observed_at DESC, id DESC
-       LIMIT 2`,
+       LIMIT 100`,
     )
-    .all(user) as Array<{ observed_at: string; total_balance_luna: number }>
+    .all(user) as Array<{
+    id: number
+    observed_at: string
+    total_balance_luna: number
+    source_block: number | null
+    validator_address: string | null
+  }>
+
+  const oldestFirst = [...rows].reverse()
+  const toSnapshot = (row: (typeof rows)[number]): GrowthSnapshot => ({
+    at: row.observed_at,
+    totalLuna: row.total_balance_luna,
+    sourceBlock: typeof row.source_block === 'number' ? row.source_block : null,
+    validatorAddress:
+      typeof row.validator_address === 'string' && row.validator_address.trim() !== ''
+        ? normalizeAddress(row.validator_address)
+        : null,
+  })
 
   const latestRow = rows[0]
   const previousRow = rows[1]
 
-  const latest =
-    latestRow != null
-      ? {
-          at: latestRow.observed_at,
-          totalLuna: latestRow.total_balance_luna,
-        }
-      : null
-  const previous =
-    previousRow != null
-      ? {
-          at: previousRow.observed_at,
-          totalLuna: previousRow.total_balance_luna,
-        }
-      : null
+  const latest = latestRow != null ? toSnapshot(latestRow) : null
+  const previous = previousRow != null ? toSnapshot(previousRow) : null
 
   const deltaLuna =
     latest != null && previous != null
       ? latest.totalLuna - previous.totalLuna
       : null
 
+  const intentRows = database
+    .prepare(
+      `SELECT created_at, confirmed_at, expires_at, status
+       FROM staking_intents
+       WHERE replace(upper(user_address), ' ', '') = ?
+         AND status != 'failed'`,
+    )
+    .all(user) as Array<{
+    created_at: string
+    confirmed_at: string | null
+    expires_at: string
+    status: string
+  }>
+
+  const hasIntentBetween = (from: string, to: string): boolean => {
+    const fromMs = Date.parse(from)
+    const toMs = Date.parse(to)
+    if (Number.isNaN(fromMs) || Number.isNaN(toMs)) return false
+    return intentRows.some((intent) => {
+      const createdMs = Date.parse(intent.created_at)
+      if (Number.isNaN(createdMs) || createdMs > toMs) return false
+
+      // A confirmed intent is confounding from creation until confirmation.
+      // Pending and other unresolved intents remain confounding through their
+      // expiry, or through the end of this interval when no usable expiry is
+      // recorded. Inclusive bounds are intentional: this fails closed when a
+      // snapshot and an intent boundary share a timestamp.
+      const confirmedMs =
+        intent.status === 'confirmed' && intent.confirmed_at
+          ? Date.parse(intent.confirmed_at)
+          : Number.NaN
+      const expiresMs = Date.parse(intent.expires_at)
+      const endMs = Number.isFinite(confirmedMs)
+        ? confirmedMs
+        : Number.isFinite(expiresMs)
+          ? expiresMs
+          : toMs
+      return endMs >= fromMs
+    })
+  }
+
+  const chainActions = database.prepare(
+    `SELECT observed_at FROM user_staking_actions
+     WHERE user_address = ? ORDER BY observed_at`,
+  ).all(user) as Array<{ observed_at: string }>
+  const scan = database.prepare(
+    `SELECT covered_from, scanned_at FROM user_staking_history_scans
+     WHERE user_address = ?`,
+  ).get(user) as { covered_from: string; scanned_at: string } | undefined
+  const chainEvidenceFor = (from: string, to: string):
+    'chain-staking-action' | 'chain-history-unavailable' | null => {
+    const fromMs = Date.parse(from)
+    const toMs = Date.parse(to)
+    const coveredFromMs = scan ? Date.parse(scan.covered_from) : Number.NaN
+    const scannedAtMs = scan ? Date.parse(scan.scanned_at) : Number.NaN
+    if (
+      Number.isNaN(fromMs) || Number.isNaN(toMs) ||
+      Number.isNaN(coveredFromMs) || Number.isNaN(scannedAtMs) ||
+      coveredFromMs > fromMs || scannedAtMs < toMs
+    ) return 'chain-history-unavailable'
+    return chainActions.some((action) => {
+      const actionMs = Date.parse(action.observed_at)
+      return Number.isFinite(actionMs) && actionMs >= fromMs && actionMs <= toMs
+    }) ? 'chain-staking-action' : null
+  }
+
+  const intervals: GrowthInterval[] = []
+  for (let index = 1; index < oldestFirst.length; index += 1) {
+    const fromRow = oldestFirst[index - 1]
+    const toRow = oldestFirst[index]
+    if (!fromRow || !toRow) continue
+    const from = toSnapshot(fromRow)
+    const to = toSnapshot(toRow)
+    const fromDelegation = normalizeAddress(fromRow.validator_address ?? '')
+    const toDelegation = normalizeAddress(toRow.validator_address ?? '')
+    const delegationChanged = fromDelegation !== toDelegation
+    const confoundedBy = delegationChanged
+      ? 'delegation-change'
+      : hasIntentBetween(from.at, to.at)
+        ? 'staking-intent'
+        : chainEvidenceFor(from.at, to.at)
+    intervals.push({
+      from,
+      to,
+      deltaLuna: to.totalLuna - from.totalLuna,
+      status: confoundedBy == null ? 'observed' : 'confounded',
+      confoundedBy,
+    })
+  }
+
+  const observedIntervals = intervals.filter((interval) => interval.status === 'observed')
+  const usableIntervals = observedIntervals.filter((interval) => {
+    const fromMs = Date.parse(interval.from.at)
+    const toMs = Date.parse(interval.to.at)
+    return !Number.isNaN(fromMs) && !Number.isNaN(toMs) && toMs > fromMs
+  })
+  const totalDeltaLuna =
+    usableIntervals.length > 0
+      ? usableIntervals.reduce((sum, interval) => sum + interval.deltaLuna, 0)
+      : null
+  const firstObserved = usableIntervals[0]
+  const lastObserved = usableIntervals[usableIntervals.length - 1]
+  const window =
+    firstObserved && lastObserved
+      ? (() => {
+          const fromMs = Date.parse(firstObserved.from.at)
+          const toMs = Date.parse(lastObserved.to.at)
+          if (Number.isNaN(fromMs) || Number.isNaN(toMs) || toMs < fromMs) return null
+          return {
+            from: firstObserved.from.at,
+            to: lastObserved.to.at,
+            durationDays: Math.floor(((toMs - fromMs) / 86_400_000) * 10) / 10,
+          }
+        })()
+      : null
+  const expectedRange =
+    usableIntervals.length > 0
+      ? (() => {
+          let lowerLuna = 0
+          let upperLuna = 0
+          for (const interval of usableIntervals) {
+            const fromMs = Date.parse(interval.from.at)
+            const toMs = Date.parse(interval.to.at)
+            if (Number.isNaN(fromMs) || Number.isNaN(toMs) || toMs <= fromMs) continue
+            const years = (toMs - fromMs) / (365.25 * 86_400_000)
+            lowerLuna += interval.from.totalLuna * (ILLUSTRATIVE_GROWTH_RANGE.annualRateLowPercent / 100) * years
+            upperLuna += interval.from.totalLuna * (ILLUSTRATIVE_GROWTH_RANGE.annualRateHighPercent / 100) * years
+          }
+          return {
+            version: ILLUSTRATIVE_GROWTH_RANGE.version,
+            lowerLuna: Math.floor(lowerLuna),
+            upperLuna: Math.ceil(upperLuna),
+            annualRateLowPercent: ILLUSTRATIVE_GROWTH_RANGE.annualRateLowPercent,
+            annualRateHighPercent: ILLUSTRATIVE_GROWTH_RANGE.annualRateHighPercent,
+            assumptions: ILLUSTRATIVE_GROWTH_RANGE.assumptions,
+            status: 'inferred' as const,
+            methodologyUrl: '#/learn/methodology' as const,
+          }
+        })()
+      : null
+  const freshness =
+    latest != null
+      ? {
+          at: latest.at,
+          ageSeconds: Number.isFinite(Date.parse(latest.at))
+            ? Math.max(0, Math.floor((nowMs - Date.parse(latest.at)) / 1000))
+            : 0,
+          sourceBlock: latest.sourceBlock,
+        }
+      : null
+
   return {
     label: OBSERVED_POSITION_GROWTH_LABEL,
+    definition: 'Change in this staker position between indexed snapshots.',
+    status:
+      rows.length >= 2 && usableIntervals.length > 0
+        ? OBSERVED_POSITION_GROWTH_STATUS.OBSERVED
+        : OBSERVED_POSITION_GROWTH_STATUS.INSUFFICIENT_DATA,
     latest,
     previous,
     deltaLuna,
+    totalDeltaLuna,
+    window,
+    intervals,
+    expectedRange,
+    freshness,
   }
 }
 
@@ -509,12 +745,30 @@ export async function readPersonalContinuity(
 
   // Restake: Observed position growth only — no direct-payout claims.
   if (payoutType === 'restake') {
-    const growth = readObservedPositionGrowth(options.database, address)
+    let growth = readObservedPositionGrowth(options.database, address, nowMs)
+    const earliest = growth.intervals[0]?.from.at
+    if (earliest != null) {
+      try {
+        await syncStakerHistory({
+          database: options.database,
+          userAddress: address,
+          requiredFrom: earliest,
+          requiredThrough: growth.latest?.at ?? earliest,
+          rpcUrl: options.rpcUrl,
+          fetchPage: options.fetchHistoryPage,
+          now: options.now,
+        })
+      } catch {
+        // Persisted coverage is read below. Missing live history fails closed
+        // as a confounded interval instead of making an attribution guess.
+      }
+      growth = readObservedPositionGrowth(options.database, address, nowMs)
+    }
     const hasSnapshots = growth.latest != null
     return continuityEnvelope({
       updatedAt,
       source: hasSnapshots ? 'indexer' : 'rpc',
-      baseStatus: hasSnapshots ? 'ok' : 'partial',
+      baseStatus: growth.status === 'observed' ? 'ok' : 'partial',
       data: {
         ...emptyContinuityData(
           'restake',
@@ -525,7 +779,7 @@ export async function readPersonalContinuity(
         observedPositionGrowth: growth,
       },
       nowMs,
-      historyDepthDays: null,
+      historyDepthDays: growth.window?.durationDays ?? null,
       database: options.database,
     })
   }

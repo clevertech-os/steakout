@@ -14,11 +14,11 @@ interface Bucket {
 const buckets = new Map<string, Bucket>()
 
 function defaultClientKey(req: Request): string {
-  const forwarded = req.headers['x-forwarded-for']
-  if (typeof forwarded === 'string' && forwarded.length > 0) {
-    return `ip:${forwarded.split(',')[0]?.trim()}`
-  }
-  return `ip:${req.socket.remoteAddress ?? 'unknown'}`
+  // Express only considers forwarded headers when `trust proxy` is enabled.
+  // Reading x-forwarded-for directly lets a caller rotate the rate-limit key
+  // by sending a spoofed header. Deployments behind a trusted proxy can set
+  // Express's trust policy explicitly and `req.ip` will then be proxy-aware.
+  return `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`
 }
 
 export interface RateLimitOptions {

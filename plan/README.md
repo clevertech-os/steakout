@@ -102,7 +102,7 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 | ID | Task | Team | Depends on | Status |
 |---|---|---|---|---|
 | P3-01 | Retire + remove flows | Implementation | P0-03, P2-11 | done 2026-08-03 |
-| P3-02 | Restake position-growth analytics | Implementation | P0-04, P2-10 | backlog (conditional on P0-04) |
+| P3-02 | Restake position-growth analytics | Implementation | P0-04, P2-10 | done 2026-09-15 |
 | P3-03 | RPC fallback / graceful degraded mode | Implementation | P2-13 | done 2026-08-03 (pragmatic) |
 | P3-04 | Telemetry (aggregate, disclosed) | Implementation | P2-16 | done 2026-08-03 |
 | P3-05 | Design polish pass (nimiq-css tokens, type, status colors) | Polishing | P1-08, P2-09 | done 2026-08-03 (pragmatic) |
@@ -110,8 +110,8 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 | P3-07 | Accessibility pass | Polishing | P3-05 | done 2026-08-03 (pragmatic) |
 | P3-08 | Loading/empty/offline/skeleton/stale states | Polishing | P3-05 | done (2026-08-03, pragmatic) |
 | P3-09 | Copy pass (first-run, errors, methodology) | Polishing | P2-12 | partial (2026-08-03) |
-| P3-10 | Security review | Testing | P1-02, P1-06, P2-13 | backlog |
-| P3-11 | Failure-mode matrix | Testing | P1-16, P2-16 | backlog (human-assisted) |
+| P3-10 | Security review | Testing | P1-02, P1-06, P2-13 | in-progress |
+| P3-11 | Failure-mode matrix | Testing | P1-16, P2-16 | in-progress (automation; device-assisted rows pending) |
 | P3-12 | Marketing assets (video script, screenshots, thread, post) | Polishing | P3-05 | backlog |
 | P3-13 | Public beta triage: top-5 fixes in 48h | All | P3-05, P3-06, P3-07, P3-08 | backlog |
 
@@ -119,9 +119,9 @@ Rules: cards are self-contained (an agent with repo access needs no other briefi
 
 | ID | Task | Team | Depends on | Status |
 |---|---|---|---|---|
-| P4-01 | Reliability freeze checklist | Testing | P3-10, P3-11 | backlog |
+| P4-01 | Reliability freeze checklist | Testing | P3-10, P3-11 | in-progress (automated checks; owner/device verification pending) |
 | P4-02 | README, submission description (≤250 words), build story | Polishing | P3-12 | partial 2026-08-03 (README + description draft; owner approval + build story + screenshots residual) |
-| P4-03 | Final QA sweep | Testing | P4-01 | backlog (human-assisted) |
+| P4-03 | Final QA sweep | Testing | P4-01 | in-progress (automated checks; production/device rows pending) |
 | P4-04 | Launch metrics report | Implementation | P3-04 | backlog |
 | P4-05 | Submission packaging + submit | Owner | P4-02, P4-03 | backlog (owner) |
 

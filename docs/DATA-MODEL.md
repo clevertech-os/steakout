@@ -73,6 +73,26 @@ CREATE TABLE IF NOT EXISTS staker_snapshots (
 );
 CREATE INDEX IF NOT EXISTS idx_snap_user ON staker_snapshots(user_address, observed_at);
 
+-- Protocol staking actions observed in authenticated address history, including
+-- actions made outside Steakout. Used to exclude growth intervals, not to label rewards.
+CREATE TABLE IF NOT EXISTS user_staking_actions (
+  user_address  TEXT NOT NULL,
+  tx_hash       TEXT NOT NULL,
+  operation     TEXT NOT NULL,
+  observed_at   TEXT NOT NULL,
+  block_number  INTEGER,
+  PRIMARY KEY (user_address, tx_hash)
+);
+
+-- Coverage watermark. An interval is usable only when covered_from <= its start
+-- and scanned_at >= its end; incomplete scans therefore fail closed.
+CREATE TABLE IF NOT EXISTS user_staking_history_scans (
+  user_address TEXT PRIMARY KEY,
+  covered_from TEXT NOT NULL,
+  scanned_at   TEXT NOT NULL,
+  complete     INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS index_cursors (
   source       TEXT NOT NULL,        -- e.g. 'rpc:main' (allows a second source later)
   address      TEXT NOT NULL,        -- reward address being indexed
@@ -122,6 +142,34 @@ CREATE TABLE IF NOT EXISTS payment_floors (
   status              TEXT NOT NULL,      -- inferred | insufficient | unavailable
   computed_at         TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS validator_watchlist (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_address      TEXT NOT NULL,
+  validator_address TEXT NOT NULL REFERENCES validators(address),
+  created_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  last_observation_status TEXT,
+  last_observation_id INTEGER,
+  UNIQUE (user_address, validator_address)
+);
+CREATE INDEX IF NOT EXISTS idx_watchlist_user ON validator_watchlist(user_address, created_at);
+
+CREATE TABLE IF NOT EXISTS user_alerts (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_address      TEXT NOT NULL,
+  event_key         TEXT NOT NULL,
+  alert_type        TEXT NOT NULL,
+  title             TEXT NOT NULL,
+  message           TEXT NOT NULL,
+  observed_at       TEXT NOT NULL,
+  created_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  read_at           TEXT,
+  validator_address TEXT,
+  tx_hash           TEXT,
+  amount_luna       INTEGER,
+  UNIQUE (user_address, event_key)
+);
+CREATE INDEX IF NOT EXISTS idx_alerts_user ON user_alerts(user_address, observed_at, id);
 ```
 
 Sessions: signed httpOnly cookie (no table needed for v1 volume); if server-side sessions become necessary, add a `sessions` table additively.
@@ -182,6 +230,11 @@ Disable with `PAYMENT_FLOOR_REFRESH_ENABLED=false`.
 - `transactions`, `validator_observations`: append-only, no deletion in v1.
 - `auth_challenges`, expired `staking_intents`: daily cleanup job (delete where `expires_at < now - 7 days`).
 - `staker_snapshots`: keep all in v1 (volume is bounded by active users × read frequency).
+- `validator_watchlist`: retained while the user watches a validator; duplicate
+  watches are prevented by `(user_address, validator_address)`.
+- `user_alerts`: append-only source events plus nullable `read_at`; duplicate
+  derivation is prevented by `(user_address, event_key)`. Read state is user
+  state and never changes the underlying indexed observation.
 
 ## 4. Fixture policy
 

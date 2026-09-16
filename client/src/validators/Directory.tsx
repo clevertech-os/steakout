@@ -9,10 +9,12 @@ import FreshnessTag from '../components/FreshnessTag'
 import { humanizeFetchError } from '../components/humanizeError'
 import {
   fetchValidators,
+  fetchNetworkSummary,
   peekValidatorsList,
   VALIDATOR_SORTS,
   type ValidatorListItem,
   type ValidatorSort,
+  type CanaryCoverageSummary,
 } from './api'
 import ValidatorCard from './ValidatorCard'
 import './Directory.css'
@@ -60,6 +62,12 @@ export default function Directory() {
   const sortId = useId()
   const [sort, setSort] = useState<ValidatorSort>('recommended')
   const [state, setState] = useState<LoadState>({ kind: 'loading' })
+  const [canaryCoverage, setCanaryCoverage] = useState<CanaryCoverageSummary | null>(null)
+  const [canaryCoverageFreshness, setCanaryCoverageFreshness] = useState<{
+    updatedAt: string
+    ageSeconds: number
+    status: string
+  } | null>(null)
   const [reloadToken, setReloadToken] = useState(0)
 
   const retry = useCallback(() => {
@@ -129,6 +137,25 @@ export default function Directory() {
     return () => controller.abort()
   }, [sort, reloadToken])
 
+  useEffect(() => {
+    const controller = new AbortController()
+    void fetchNetworkSummary({ signal: controller.signal, force: reloadToken > 0 })
+      .then((envelope) => {
+        if (controller.signal.aborted) return
+        setCanaryCoverage(envelope.data.canary)
+        setCanaryCoverageFreshness({
+          updatedAt: envelope.updatedAt,
+          ageSeconds: envelope.dataFreshness?.ageSeconds ?? 0,
+          status: envelope.status,
+        })
+      })
+      .catch(() => {
+        // Coverage is supplemental. Keep the directory usable if its summary is unavailable.
+        if (!controller.signal.aborted) setCanaryCoverage(null)
+      })
+    return () => controller.abort()
+  }, [reloadToken])
+
   return (
     <div className="directory">
       <header className="shell-header page-header">
@@ -138,6 +165,62 @@ export default function Directory() {
           wallet connection required.
         </p>
       </header>
+
+      {canaryCoverage ? (
+        <section
+          className="directory-canary-coverage nq-card shell-card"
+          aria-labelledby="directory-canary-title"
+          data-testid="canary-network-coverage"
+        >
+          <div className="directory-canary-heading">
+            <div>
+              <h2 id="directory-canary-title">Steakout canary network</h2>
+              <p>
+                Small controlled stakes that let Steakout check payout paths directly.
+                Counts use indexed chain evidence, not validator declarations.
+              </p>
+            </div>
+            <span className="directory-canary-count mono">
+              {canaryCoverage.configuredCount.toLocaleString('en-US')} configured
+            </span>
+          </div>
+          <dl className="directory-canary-stats">
+            <div>
+              <dt>Observed</dt>
+              <dd className="mono">{canaryCoverage.statuses.observed}</dd>
+            </div>
+            <div>
+              <dt>Pending</dt>
+              <dd className="mono">{canaryCoverage.statuses.pending}</dd>
+            </div>
+            <div>
+              <dt>Unavailable</dt>
+              <dd className="mono">{canaryCoverage.statuses.unavailable}</dd>
+            </div>
+          </dl>
+          <p className="directory-canary-footnote">
+            Payout paths: {canaryCoverage.payoutTypes.direct} direct ·{' '}
+            {canaryCoverage.payoutTypes.restake} restake
+            {canaryCoverage.payoutTypes.unknown > 0
+              ? ` · ${canaryCoverage.payoutTypes.unknown} unknown`
+              : ''}
+            {canaryCoverageFreshness ? (
+              <>
+                {' · '}
+                <FreshnessTag
+                  updatedAt={canaryCoverageFreshness.updatedAt}
+                  ageSeconds={canaryCoverageFreshness.ageSeconds}
+                />
+              </>
+            ) : null}
+          </p>
+          {canaryCoverageFreshness?.status === 'stale' ? (
+            <p className="directory-canary-stale" role="status">
+              Indexer data is stale. Pending and unavailable counts may change after the next successful sync.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="directory-controls" aria-label="Directory filters">
         <label className="directory-field" htmlFor={sortId}>

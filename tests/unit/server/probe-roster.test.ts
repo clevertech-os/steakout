@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { openDatabase } from '../../../server/src/db.js'
 import {
   buildCanaryProbeSummary,
+  buildCanaryCoverageSummary,
   canaryConfiguredForValidator,
   loadProbeRoster,
   resetProbeRosterCache,
@@ -155,5 +156,45 @@ describe('probeRoster', () => {
     )
     expect(summary.configured).toBe(false)
     expect(summary.status).toBe('not-configured')
+  })
+
+  it('aggregates configured probes by payout type and indexed evidence state', () => {
+    const directValidator = 'NQ15 5JNS U7CE RAH5 3T02 F8A9 JCT6 QMG9 7TSV'
+    const restakeValidator = 'NQ32 1U9X 7P3X B2H5 XA00 5LC2 5KFE VBQE X3BU'
+    const unknownValidator = 'NQ38 VK34 DRBL S3CN M9KM 8UJN 9JY2 2KFN VQQH'
+    const directProbe = 'NQ87 C59A QLHE 8E2K 2N3G MAMY SV8P SKY6 BKL3'
+    const restakeProbe = 'NQ35 8D30 B07F L1CY UJ3C FE0J 80XV G40M 9FV8'
+    const unknownProbe = 'NQ27 MJ19 11DG 522N RN4D BP9H 623S QRJM EVT4'
+    const path = writeRoster([
+      { probeId: 'direct', probeAddress: directProbe, validatorAddress: directValidator, payoutType: 'direct' },
+      { probeId: 'restake', probeAddress: restakeProbe, validatorAddress: restakeValidator, payoutType: 'restake' },
+      { probeId: 'unknown', probeAddress: unknownProbe, validatorAddress: unknownValidator, payoutType: 'unknown' },
+    ])
+    loadProbeRoster({ path, reload: true })
+
+    const directory = mkdtempSync(join(tmpdir(), 'steakout-probe-coverage-'))
+    tempDirs.push(directory)
+    const database = openDatabase(join(directory, 'test.sqlite'))
+    databases.push(database)
+    database.prepare(
+      'INSERT INTO validators (address, reward_address, is_listed) VALUES (?, ?, 1)',
+    ).run(directValidator, directValidator)
+    database.prepare(
+      'INSERT INTO validators (address, reward_address, is_listed) VALUES (?, ?, 1)',
+    ).run(restakeValidator, null)
+    database.prepare(`
+      INSERT INTO transactions (
+        hash, from_address, to_address, value_luna, fee_luna,
+        block_number, timestamp, execution_result, raw_json
+      ) VALUES (?, ?, ?, ?, 0, 1, ?, 'ok', '{}')
+    `).run(
+      'cc'.repeat(32), directValidator, directProbe, 1_000,
+      '2026-08-10T12:00:00.000Z',
+    )
+
+    const summary = buildCanaryCoverageSummary(database)
+    expect(summary.configuredCount).toBe(3)
+    expect(summary.payoutTypes).toEqual({ direct: 1, restake: 1, unknown: 1 })
+    expect(summary.statuses).toEqual({ pending: 1, observed: 1, unavailable: 1 })
   })
 })

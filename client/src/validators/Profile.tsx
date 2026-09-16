@@ -118,6 +118,10 @@ interface ValidatorProfileData {
     lastPaymentExplorerUrl: string | null
     lastStakerBalanceLuna: number | null
     lastStakerBalanceAt: string | null
+    observationCount: number
+    firstObservedAt: string | null
+    lastObservedAt: string | null
+    historyDepthDays: number
     note: string
     dataStatus: 'insufficient' | 'verified' | 'unavailable'
   }
@@ -152,6 +156,7 @@ function formatOfficialScore(score: number | null): string {
 function canaryVerificationCopy(probe: {
   status: 'not-configured' | 'pending' | 'active'
   dataStatus: 'insufficient' | 'verified' | 'unavailable'
+  payoutType?: DeclaredPayoutType | null
 }): {
   /** Optional summary meta next to “Stakeout Findings”; empty when still waiting. */
   summaryLabel: string
@@ -164,17 +169,42 @@ function canaryVerificationCopy(probe: {
   if (verified) {
     return {
       summaryLabel: 'Verified',
-      headline: 'Rewards reached our stake',
-      body: 'Steakout has observed that rewards reach our own stake on this validator as expected.',
+      headline:
+        probe.payoutType === 'restake'
+          ? 'Our staked position has been observed'
+          : 'Rewards reached our stake',
+      body:
+        probe.payoutType === 'restake'
+          ? 'Steakout has indexed a staker-position observation for its canary stake on this validator.'
+          : 'Steakout has observed a successful reward transfer to its canary stake on this validator.',
       verified: true,
     }
   }
   return {
     summaryLabel: '',
-    headline: 'Waiting for first reward observation',
-    body: 'Steakout has a small stake on this validator and is watching for the first reward to reach that address.',
+    headline: 'Waiting for first indexed observation',
+    body:
+      probe.payoutType === 'restake'
+        ? 'Steakout has a small stake on this validator and is watching for an indexed position observation.'
+        : 'Steakout has a small stake on this validator and is watching for the first indexed reward to reach that address.',
     verified: false,
   }
+}
+
+function canaryHistoryCaption(days: number): string {
+  if (!Number.isFinite(days) || days <= 0) return 'Insufficient history'
+  if (days < 1) return '< 1 day indexed'
+  const rounded = Math.floor(days)
+  return `${rounded} ${rounded === 1 ? 'day' : 'days'} indexed`
+}
+
+function canaryObservedLabel(iso: string | null): string {
+  if (!iso || !Number.isFinite(Date.parse(iso))) return 'Not observed'
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 function formatFreshness(ageSeconds: number, updatedAt: string): string {
@@ -871,6 +901,25 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
             >
               <p className="profile-canary-headline">{canaryCopy.headline}</p>
               <p className="profile-canary-body">{canaryCopy.body}</p>
+              <dl className="profile-canary-observation-meta">
+                <div>
+                  <dt>State</dt>
+                  <dd>{profile.canaryProbe.statusLabel}</dd>
+                </div>
+                <div>
+                  <dt>Indexed observations</dt>
+                  <dd className="mono">{profile.canaryProbe.observationCount}</dd>
+                </div>
+                <div>
+                  <dt>History</dt>
+                  <dd>{canaryHistoryCaption(profile.canaryProbe.historyDepthDays)}</dd>
+                </div>
+                <div>
+                  <dt>Last observed</dt>
+                  <dd>{canaryObservedLabel(profile.canaryProbe.lastObservedAt)}</dd>
+                </div>
+              </dl>
+              <p className="profile-canary-note">{profile.canaryProbe.note}</p>
               <details className="profile-canary-how">
                 <summary className="profile-canary-how-summary">
                   How we check

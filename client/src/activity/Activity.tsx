@@ -13,6 +13,17 @@ import {
   type ActivityItem,
 } from '../api/activity'
 import { ApiError } from '../api/http'
+import {
+  fetchAlerts,
+  fetchWatchlist,
+  markAlertRead,
+  markAllAlertsRead,
+  unwatchValidator,
+  watchValidator,
+  type UserAlert,
+  type WatchlistItem,
+} from '../api/alerts'
+import { fetchValidators, type ValidatorListItem } from '../validators/api'
 import { walletAuthApi } from '../api/walletAuth'
 import Amount from '../components/Amount'
 import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
@@ -186,6 +197,152 @@ function TimelineList({
   )
 }
 
+function AlertInbox({ onRefresh }: { onRefresh: () => void }) {
+  const [alerts, setAlerts] = useState<UserAlert[]>([])
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([])
+  const [validators, setValidators] = useState<ValidatorListItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selected, setSelected] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(() => {
+    setLoading(true)
+    setError(null)
+    void Promise.all([fetchAlerts(), fetchWatchlist(), fetchValidators({ listed: false })])
+      .then(([alertsEnvelope, watchEnvelope, validatorEnvelope]) => {
+        setAlerts(alertsEnvelope.data.alerts)
+        setWatchlist(watchEnvelope.data.validators)
+        setValidators(validatorEnvelope.data.validators)
+      })
+      .catch((err: unknown) => {
+        setError(humanizeFetchError(err, 'Could not load alerts and watched validators.'))
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const handleWatch = useCallback(() => {
+    if (!selected || busy) return
+    setBusy(true)
+    void watchValidator(selected)
+      .then((envelope) => {
+        setWatchlist(envelope.data.validators)
+        setSelected('')
+      })
+      .catch((err: unknown) => setError(humanizeFetchError(err, 'Could not watch this validator.')))
+      .finally(() => setBusy(false))
+  }, [busy, selected])
+
+  const handleUnwatch = useCallback((address: string) => {
+    if (busy) return
+    setBusy(true)
+    void unwatchValidator(address)
+      .then((envelope) => setWatchlist(envelope.data.validators))
+      .catch((err: unknown) => setError(humanizeFetchError(err, 'Could not update your watchlist.')))
+      .finally(() => setBusy(false))
+  }, [busy])
+
+  const handleRead = useCallback((id: number) => {
+    void markAlertRead(id)
+      .then((envelope) => setAlerts(envelope.data.alerts))
+      .catch((err: unknown) => setError(humanizeFetchError(err, 'Could not mark this alert read.')))
+  }, [])
+
+  const handleReadAll = useCallback(() => {
+    void markAllAlertsRead()
+      .then((envelope) => setAlerts(envelope.data.alerts))
+      .catch((err: unknown) => setError(humanizeFetchError(err, 'Could not mark alerts read.')))
+  }, [])
+
+  const watchedAddresses = new Set(watchlist.map((item) => item.validatorAddress.replace(/\s+/g, '').toUpperCase()))
+  const unread = alerts.filter((alert) => !alert.isRead).length
+
+  return (
+    <section className="shell-card activity-card activity-monitor" aria-labelledby="activity-monitor-title">
+      <div className="activity-monitor-head">
+        <div>
+          <p className="card-kicker">Personal monitoring</p>
+          <h2 id="activity-monitor-title">Alerts and watched validators</h2>
+        </div>
+        {unread > 0 ? <span className="activity-unread">{unread} unread</span> : null}
+      </div>
+      <p className="activity-copy">
+        Steakout checks indexed chain observations when you open Activity. Alerts
+        are informational; a missing observation does not prove a missed payment.
+      </p>
+      {error ? <p className="activity-error" role="alert">{error}</p> : null}
+      {loading ? <p className="activity-status">Loading monitoring…</p> : null}
+      {!loading ? (
+        <>
+          <div className="activity-watch-add">
+            <label className="activity-watch-field" htmlFor="activity-watch-validator">
+              <span className="nq-label">Watch a validator</span>
+              <select
+                id="activity-watch-validator"
+                className="directory-select nq-input-box"
+                value={selected}
+                onChange={(event) => setSelected(event.target.value)}
+                disabled={busy || validators.length === 0}
+              >
+                <option value="">Choose a validator…</option>
+                {validators.map((validator) => {
+                  const key = validator.address.replace(/\s+/g, '').toUpperCase()
+                  return (
+                    <option key={validator.address} value={validator.address} disabled={watchedAddresses.has(key)}>
+                      {validator.name?.trim() || 'Unnamed validator'}{watchedAddresses.has(key) ? ' (watched)' : ''}
+                    </option>
+                  )
+                })}
+              </select>
+            </label>
+            <button type="button" className="nq-pill-secondary activity-watch-button" onClick={handleWatch} disabled={!selected || busy}>
+              Watch
+            </button>
+          </div>
+          {watchlist.length > 0 ? (
+            <ul className="activity-watch-list" aria-label="Watched validators">
+              {watchlist.map((item) => (
+                <li key={item.id}>
+                  <a href={`#/validators/${encodeURIComponent(item.validatorAddress)}`}>
+                    {item.validatorName?.trim() || 'Validator'}
+                  </a>
+                  <button type="button" className="activity-inline-button" onClick={() => handleUnwatch(item.validatorAddress)} disabled={busy}>
+                    Stop watching
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="activity-monitor-empty">Watch a validator to see its payout windows and observation status changes here.</p>}
+          <div className="activity-alert-head">
+            <h3>Recent alerts</h3>
+            {unread > 0 ? <button type="button" className="activity-inline-button" onClick={handleReadAll}>Mark all read</button> : null}
+          </div>
+          {alerts.length > 0 ? (
+            <ul className="activity-alert-list" aria-label="Alert inbox">
+              {alerts.map((alert) => (
+                <li key={alert.id} className={alert.isRead ? 'activity-alert activity-alert--read' : 'activity-alert'}>
+                  <div className="activity-alert-top">
+                    <strong>{alert.title}</strong>
+                    <time dateTime={alert.observedAt}>{formatWhen(alert.observedAt)}</time>
+                  </div>
+                  <p>{alert.message}</p>
+                  {alert.amountLuna != null ? <Amount luna={alert.amountLuna} label="Observed amount" /> : null}
+                  {!alert.isRead ? <button type="button" className="activity-inline-button" onClick={() => handleRead(alert.id)}>Mark read</button> : <span className="activity-alert-read-label">Read</span>}
+                </li>
+              ))}
+            </ul>
+          ) : <p className="activity-monitor-empty">No alerts have been observed yet. Indexed events will appear here as history accumulates.</p>}
+          <button type="button" className="nq-ghost-btn activity-monitor-refresh" onClick={() => { load(); onRefresh() }} disabled={loading}>Refresh monitoring</button>
+        </>
+      ) : null}
+    </section>
+  )
+}
+
 export default function Activity() {
   const wallet = useWallet({ auth: walletAuthApi })
   const connected =
@@ -301,6 +458,8 @@ export default function Activity() {
           chain data, labeled observed / not observed / insufficient data.
         </p>
       </header>
+
+      {connected ? <AlertInbox onRefresh={refresh} /> : null}
 
       <div className="activity-tabs" role="tablist" aria-label="Activity views">
         <button

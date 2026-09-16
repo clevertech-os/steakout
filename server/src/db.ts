@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import { mkdirSync } from 'node:fs'
+import { chmodSync, mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 
 const schema = `
@@ -71,6 +71,27 @@ const schema = `
   );
   CREATE INDEX IF NOT EXISTS idx_snap_user ON staker_snapshots(user_address, observed_at);
 
+  -- Authenticated-address staking actions observed directly in chain history.
+  -- This includes actions created outside Steakout and is used only to exclude
+  -- confounded restake-growth intervals; it never identifies rewards.
+  CREATE TABLE IF NOT EXISTS user_staking_actions (
+    user_address  TEXT NOT NULL,
+    tx_hash       TEXT NOT NULL,
+    operation     TEXT NOT NULL,
+    observed_at   TEXT NOT NULL,
+    block_number  INTEGER,
+    PRIMARY KEY (user_address, tx_hash)
+  );
+  CREATE INDEX IF NOT EXISTS idx_user_staking_actions_time
+    ON user_staking_actions(user_address, observed_at);
+
+  CREATE TABLE IF NOT EXISTS user_staking_history_scans (
+    user_address TEXT PRIMARY KEY,
+    covered_from TEXT NOT NULL,
+    scanned_at   TEXT NOT NULL,
+    complete     INTEGER NOT NULL DEFAULT 0
+  );
+
   CREATE TABLE IF NOT EXISTS index_cursors (
     source       TEXT NOT NULL,
     address      TEXT NOT NULL,
@@ -130,6 +151,37 @@ const schema = `
     status              TEXT NOT NULL DEFAULT 'unavailable',
     computed_at         TEXT NOT NULL
   );
+
+  -- Authenticated validator watchlist and durable, idempotent in-app alerts.
+  -- Addresses are normalized before writes; alert event_key is the source event
+  -- identity so refreshes never duplicate an alert.
+  CREATE TABLE IF NOT EXISTS validator_watchlist (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_address      TEXT NOT NULL,
+    validator_address TEXT NOT NULL REFERENCES validators(address),
+    created_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    last_observation_status TEXT,
+    last_observation_id INTEGER,
+    UNIQUE (user_address, validator_address)
+  );
+  CREATE INDEX IF NOT EXISTS idx_watchlist_user ON validator_watchlist(user_address, created_at);
+
+  CREATE TABLE IF NOT EXISTS user_alerts (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_address      TEXT NOT NULL,
+    event_key         TEXT NOT NULL,
+    alert_type        TEXT NOT NULL,
+    title             TEXT NOT NULL,
+    message           TEXT NOT NULL,
+    observed_at       TEXT NOT NULL,
+    created_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    read_at           TEXT,
+    validator_address TEXT,
+    tx_hash           TEXT,
+    amount_luna       INTEGER,
+    UNIQUE (user_address, event_key)
+  );
+  CREATE INDEX IF NOT EXISTS idx_alerts_user ON user_alerts(user_address, observed_at, id);
 `
 
 const requiredColumns: Record<string, readonly string[]> = {
@@ -153,6 +205,12 @@ const requiredColumns: Record<string, readonly string[]> = {
     'inactive_balance_luna', 'retired_balance_luna', 'total_balance_luna',
     'observed_at', 'source_block',
   ],
+  user_staking_actions: [
+    'user_address', 'tx_hash', 'operation', 'observed_at', 'block_number',
+  ],
+  user_staking_history_scans: [
+    'user_address', 'covered_from', 'scanned_at', 'complete',
+  ],
   index_cursors: ['source', 'address', 'last_block', 'last_tx_hash', 'updated_at'],
   staking_intents: [
     'id', 'user_address', 'operation', 'params_json', 'status', 'tx_hash',
@@ -166,6 +224,15 @@ const requiredColumns: Record<string, readonly string[]> = {
   payment_floors: [
     'validator_address', 'min_nim', 'p5_nim', 'sample_size', 'recipient_count',
     'history_depth_days', 'status', 'computed_at',
+  ],
+  validator_watchlist: [
+    'id', 'user_address', 'validator_address', 'created_at',
+    'last_observation_status', 'last_observation_id',
+  ],
+  user_alerts: [
+    'id', 'user_address', 'event_key', 'alert_type', 'title', 'message',
+    'observed_at', 'created_at', 'read_at', 'validator_address', 'tx_hash',
+    'amount_luna',
   ],
 }
 
@@ -234,6 +301,26 @@ const additiveColumnDefinitions: Record<string, Record<string, string>> = {
     status: "TEXT NOT NULL DEFAULT 'unavailable'",
     computed_at: "TEXT NOT NULL DEFAULT ''",
   },
+  validator_watchlist: {
+    user_address: "TEXT NOT NULL DEFAULT ''",
+    validator_address: "TEXT NOT NULL DEFAULT ''",
+    created_at: "TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+    last_observation_status: 'TEXT',
+    last_observation_id: 'INTEGER',
+  },
+  user_alerts: {
+    user_address: "TEXT NOT NULL DEFAULT ''",
+    event_key: "TEXT NOT NULL DEFAULT ''",
+    alert_type: "TEXT NOT NULL DEFAULT 'observation'",
+    title: "TEXT NOT NULL DEFAULT ''",
+    message: "TEXT NOT NULL DEFAULT ''",
+    observed_at: "TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+    created_at: "TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+    read_at: 'TEXT',
+    validator_address: 'TEXT',
+    tx_hash: 'TEXT',
+    amount_luna: 'INTEGER',
+  },
 }
 
 function migrateAdditive(database: Database.Database): void {
@@ -255,8 +342,15 @@ function migrateAdditive(database: Database.Database): void {
 }
 
 export function openDatabase(filename = resolve(process.cwd(), 'data/steakout.sqlite')): Database.Database {
-  mkdirSync(dirname(filename), { recursive: true })
+  const isInMemory = filename === ':memory:'
+  if (!isInMemory) {
+    mkdirSync(dirname(filename), { recursive: true })
+    // Session challenges, intents, and wallet addresses are not public data.
+    // Keep the SQLite directory and file private on local/volume-backed hosts.
+    chmodSync(dirname(filename), 0o700)
+  }
   const database = new Database(filename)
+  if (!isInMemory) chmodSync(filename, 0o600)
 
   database.pragma('journal_mode = WAL')
   database.pragma('foreign_keys = ON')

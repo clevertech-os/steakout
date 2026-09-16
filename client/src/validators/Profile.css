@@ -295,6 +295,34 @@
   color: var(--so-ink);
 }
 
+.profile-canary-observation-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--so-space-3);
+  margin: var(--so-space-4) 0 var(--so-space-2);
+  padding-top: var(--so-space-3);
+  border-top: 1px solid var(--so-rule);
+}
+
+.profile-canary-observation-meta dt {
+  color: var(--so-muted);
+  font-size: var(--so-text-xs);
+}
+
+.profile-canary-observation-meta dd {
+  margin: 0.2rem 0 0;
+  color: var(--so-ink);
+  font-size: var(--so-text-sm);
+  line-height: 1.35;
+}
+
+.profile-canary-note {
+  margin: var(--so-space-3) 0 0;
+  color: var(--so-muted);
+  font-size: var(--so-text-sm);
+  line-height: 1.45;
+}
+
 .profile-canary-how {
   margin: var(--so-space-1) 0 0;
   border-top: 1px solid var(--so-rule);

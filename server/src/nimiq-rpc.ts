@@ -619,7 +619,11 @@ export interface NimiqTransaction {
   value: number
   fee: number
   executionResult: boolean
+  fromType?: number
+  toType?: number
+  senderData?: string
   recipientData?: string
+  proof?: string
   validityStartHeight?: number
   [key: string]: unknown
 }

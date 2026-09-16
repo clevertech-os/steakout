@@ -151,9 +151,18 @@ Full profile: everything from the list item plus `description`, `rewardAddress` 
   "lastPaymentExplorerUrl": null,
   "lastStakerBalanceLuna": null,           // pending until staker snapshots exist
   "lastStakerBalanceAt": null,
+  "observationCount": 0,                  // indexed successful payments and/or snapshots
+  "firstObservedAt": null,                 // earliest indexed probe evidence
+  "lastObservedAt": null,                  // latest indexed probe evidence
+  "historyDepthDays": 0,                   // elapsed time from first evidence to response time
   "note": "…",
   "dataStatus": "insufficient" | "verified" | "unavailable"
 }
+
+The `canaryProbe` fields are evidence metadata for Steakout's own public
+addresses. `status: "active"` and `dataStatus: "verified"` are used only when
+the indexer has a successful reward-to-probe transaction or a staker snapshot.
+Pending is not a verified observation.
 ```
 
 Roster source: `server/config/probe-roster.public.json` (public addresses only; override with `PROBE_ROSTER_PATH`).
@@ -179,6 +188,15 @@ Every run links to `GET /api/explorer/transaction/:hash` (or the external explor
 
 ### `GET /api/network/summary`
 Aggregate network view: total stake, validator count (listed vs observable), dominance distribution buckets, % stake with normalizable payout schedules, indexer coverage. Used by the network/decentralization view.
+
+The response also includes `data.canary`, an aggregate of the configured public
+probe roster. It contains `configuredCount`, a `payoutTypes` split (`direct`,
+`restake`, `unknown`), and `statuses` (`observed`, `pending`, `unavailable`).
+`observed` counts only probes with indexed successful payment or staker-snapshot
+evidence. `pending` means the evidence path is checkable but no evidence is
+indexed yet. `unavailable` means the current registry/roster data cannot support
+that check. These counts do not imply that a missing observation proves a payout
+failure.
 
 ### `GET /api/explorer/transaction/:hash`
 302 redirect to the canonical explorer URL for the active network, or JSON `{ url }` with `?format=json`.
@@ -250,8 +268,6 @@ Each item:
 }
 ```
 
-Restake increases use type `observed-position-growth` and the fixed label **Observed position growth** — never "payout". Empty timeline is HTTP 200 with `items: []` (not an error).
-
 ### `GET /api/activity/network`
 Public recent payout-run summaries across validators (indexer-backed). Query: optional `limit` (default 25, max 100). Envelope per §1; each item uses `type: "payout-run"` with `txCount` / `recipientCount` when present. No auth required — disconnected users can browse the network feed.
 
@@ -271,13 +287,72 @@ Personal continuity for the authenticated wallet (METHODOLOGY.md §4.4 / §5). A
   "windowsObserved": 0,              // total runs including this address; null if no runs
   "timeSinceLastPaymentSeconds": 0,  // null when lastPaymentAt is null
   "currentlyInKnownStakerSet": true, // null when known-staker set is unavailable (never invent false)
-  // Restake only: snapshot pointer. Null for direct-payout / not-staked. Never a payout claim.
+  // Restake only: multi-snapshot history. Null for direct-payout / not-staked. Never a payout claim.
   "observedPositionGrowth": {
     "label": "Observed position growth",
-    "latest": { "at": "ISO", "totalLuna": 0 } | null,
-    "previous": { "at": "ISO", "totalLuna": 0 } | null,
-    "deltaLuna": 0                       // null unless both snapshots present
+    "definition": "Change in this staker position between indexed snapshots.",
+    "status": "observed" | "insufficient-data",
+    "latest": { "at": "ISO", "totalLuna": 0, "sourceBlock": 0 | null, "validatorAddress": "NQ.. | null" } | null,
+    "previous": { "at": "ISO", "totalLuna": 0, "sourceBlock": 0 | null, "validatorAddress": "NQ.. | null" } | null,
+    "deltaLuna": 0,                       // latest − previous; null unless both snapshots present
+    "totalDeltaLuna": 0,                  // sum of usable intervals; null when insufficient
+    "window": { "from": "ISO", "to": "ISO", "durationDays": 0 } | null,
+    "intervals": [{
+      "from": { "at": "ISO", "totalLuna": 0, "sourceBlock": 0 | null, "validatorAddress": "NQ.. | null" },
+      "to": { "at": "ISO", "totalLuna": 0, "sourceBlock": 0 | null, "validatorAddress": "NQ.. | null" },
+      "deltaLuna": 0,
+      "status": "observed" | "confounded",
+      "confoundedBy": "staking-intent" | "delegation-change" | "chain-staking-action" | "chain-history-unavailable" | null
+    }],
+    "expectedRange": {
+      "version": "illustrative-v1",
+      "lowerLuna": 0, "upperLuna": 0,
+      "annualRateLowPercent": 2, "annualRateHighPercent": 5,
+      "assumptions": "string",
+      "status": "inferred",
+      "methodologyUrl": "#/learn/methodology"
+    } | null,
+    "freshness": { "at": "ISO", "ageSeconds": 0, "sourceBlock": 0 | null } | null
   } | null
+}
+```
+
+Restake increases use type `observed-position-growth` and the fixed label **Observed position growth** — never "payout". Growth intervals containing a known non-failed Steakout intent, an observed protocol staking action from the authenticated address's chain history, or a delegation change are returned as `confounded` and excluded from `totalDeltaLuna`. An interval is also excluded as `chain-history-unavailable` unless its complete time range is covered by a successful address-history scan. Fewer than two snapshots, or no usable intervals, is `insufficient-data`; it is never represented as zero growth. Empty timeline is HTTP 200 with `items: []` (not an error).
+
+### Authenticated monitoring: `/api/me/watchlist` and `/api/me/alerts`
+
+The watchlist and alert inbox require the wallet session cookie. Watchlist
+entries are validator addresses only; no keys or seed material are accepted.
+
+- `GET /api/me/watchlist` → `{ data: { validators: [{ id, validatorAddress, validatorName, createdAt }] } }`
+- `POST /api/me/watchlist` body `{ "validatorAddress": "NQ.." }` adds an observable validator idempotently.
+- `DELETE /api/me/watchlist/:address` removes that validator from the caller's watchlist.
+- `GET /api/me/alerts?limit=50` → `{ data: { alerts, unreadCount, nextCursor } }`.
+- `POST /api/me/alerts/:id/read` marks one caller-owned alert read.
+- `POST /api/me/alerts/read-all` marks all caller-owned alerts read.
+
+Alert items are persisted with a per-user source `eventKey`, so reloading or
+polling the inbox does not duplicate them. The server derives alerts from
+indexed direct payouts to the authenticated address, staking intents, staker
+snapshot position changes / retired-only withdrawable state, and new payout
+runs or schedule-observation status changes for watched validators. These are
+neutral observations: a missing alert or payout observation never proves a
+missed payment or wrongdoing. Alert items have this shape:
+
+```jsonc
+{
+  "id": 1,
+  "type": "direct-payout" | "position-change" | "withdrawable" | "staking-intent" | "validator-status" | "payout-run",
+  "title": "Observed direct payout",
+  "message": "An indexed transaction to your address was observed from a validator reward address.",
+  "observedAt": "ISO",
+  "createdAt": "ISO",
+  "readAt": "ISO | null",
+  "isRead": false,
+  "validatorAddress": "NQ.. | null",
+  "validatorName": "string | null",
+  "txHash": "hex | null",
+  "amountLuna": 0
 }
 ```
 

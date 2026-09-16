@@ -829,7 +829,7 @@ describe('HTTP POST /api/staking/intent|confirm', () => {
 
     const app = createApp({
       database,
-      auth: { sessionSecret: TEST_SESSION_SECRET },
+      auth: { sessionSecret: TEST_SESSION_SECRET, now: () => FIXED_NOW },
       staking: {
         now: () => FIXED_NOW,
         readPosition: async () => positionImpl(),

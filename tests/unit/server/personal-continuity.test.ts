@@ -23,6 +23,7 @@ import {
   findLastPaymentToUser,
   membershipInKnownStakerSet,
   OBSERVED_POSITION_GROWTH_LABEL,
+  readObservedPositionGrowth,
   readPersonalContinuity,
 } from '../../../server/src/personalContinuity.js'
 import { makeStakerFixture } from '../../../server/src/stakingState.js'
@@ -39,6 +40,14 @@ const BASE = Date.parse('2026-08-01T00:00:00.000Z')
 
 function iso(msOffset: number): string {
   return new Date(BASE + msOffset).toISOString()
+}
+
+function markChainHistoryCovered(database: ReturnType<typeof openDatabase>): void {
+  database.prepare(
+    `INSERT INTO user_staking_history_scans
+       (user_address, covered_from, scanned_at, complete)
+     VALUES (?, ?, ?, 1)`,
+  ).run(USER, '1970-01-01T00:00:00.000Z', new Date(BASE + 365 * 86_400_000).toISOString())
 }
 
 function insertValidator(
@@ -398,6 +407,7 @@ describe('readPersonalContinuity', () => {
         balance: 1_050_000,
         delegation: VALIDATOR_SPACED,
       }),
+      fetchHistoryPage: async () => [],
     })
 
     expect(envelope.data.mode).toBe('restake')
@@ -407,11 +417,196 @@ describe('readPersonalContinuity', () => {
     expect(envelope.data.currentlyInKnownStakerSet).toBeNull()
     expect(envelope.data.observedPositionGrowth).toEqual({
       label: OBSERVED_POSITION_GROWTH_LABEL,
-      latest: { at: iso(3_600_000), totalLuna: 1_050_000 },
-      previous: { at: iso(0), totalLuna: 1_000_000 },
+      definition: 'Change in this staker position between indexed snapshots.',
+      status: 'observed',
+      latest: {
+        at: iso(3_600_000),
+        totalLuna: 1_050_000,
+        sourceBlock: 200,
+        validatorAddress: VALIDATOR,
+      },
+      previous: {
+        at: iso(0),
+        totalLuna: 1_000_000,
+        sourceBlock: 100,
+        validatorAddress: VALIDATOR,
+      },
       deltaLuna: 50_000,
+      totalDeltaLuna: 50_000,
+      window: {
+        from: iso(0),
+        to: iso(3_600_000),
+        durationDays: 0,
+      },
+      intervals: [
+        {
+          from: {
+            at: iso(0),
+            totalLuna: 1_000_000,
+            sourceBlock: 100,
+            validatorAddress: VALIDATOR,
+          },
+          to: {
+            at: iso(3_600_000),
+            totalLuna: 1_050_000,
+            sourceBlock: 200,
+            validatorAddress: VALIDATOR,
+          },
+          deltaLuna: 50_000,
+          status: 'observed',
+          confoundedBy: null,
+        },
+      ],
+      expectedRange: {
+        version: 'illustrative-v1',
+        lowerLuna: 2,
+        upperLuna: 6,
+        annualRateLowPercent: 2,
+        annualRateHighPercent: 5,
+        assumptions:
+          'Illustrative network-wide range of roughly a few percent per year; not live network data, validator-specific, predictive, or guaranteed.',
+        status: 'inferred',
+        methodologyUrl: '#/learn/methodology',
+      },
+      freshness: {
+        at: iso(3_600_000),
+        ageSeconds: Math.floor((clock.now - (BASE + 3_600_000)) / 1000),
+        sourceBlock: 200,
+      },
     })
     expect(OBSERVED_POSITION_GROWTH_LABEL).toBe('Observed position growth')
+  })
+
+  it('marks intent-confounded intervals and aggregates only usable history', () => {
+    markChainHistoryCovered(database)
+    const addSnapshot = (totalLuna: number, at: string, validator: string) => {
+      database
+        .prepare(
+          `INSERT INTO staker_snapshots (
+             user_address, validator_address, active_balance_luna,
+             total_balance_luna, observed_at, source_block
+           ) VALUES (?, ?, ?, ?, ?, ?)` ,
+        )
+        .run(USER, validator, totalLuna, totalLuna, at, totalLuna)
+    }
+    addSnapshot(1_000_000, iso(0), VALIDATOR)
+    addSnapshot(1_100_000, iso(3_600_000), VALIDATOR)
+    addSnapshot(1_150_000, iso(7_200_000), VALIDATOR)
+    database
+      .prepare(
+        `INSERT INTO staking_intents (
+           id, user_address, operation, params_json, status,
+           created_at, expires_at
+         ) VALUES (?, ?, 'stake', '{}', 'confirmed', ?, ?)` ,
+      )
+      .run('growth-intent', USER, iso(1_800_000), iso(3_000_000))
+
+    const growth = readObservedPositionGrowth(database, USER, clock.now)
+    expect(growth.status).toBe('observed')
+    expect(growth.totalDeltaLuna).toBe(50_000)
+    expect(growth.intervals[0]?.status).toBe('confounded')
+    expect(growth.intervals[0]?.confoundedBy).toBe('staking-intent')
+    expect(growth.intervals[1]?.status).toBe('observed')
+  })
+
+  it('returns insufficient-data without implying zero growth', () => {
+    database
+      .prepare(
+        `INSERT INTO staker_snapshots (
+           user_address, validator_address, active_balance_luna,
+           total_balance_luna, observed_at, source_block
+         ) VALUES (?, ?, ?, ?, ?, ?)` ,
+      )
+      .run(USER, VALIDATOR, 1_000_000, 1_000_000, iso(0), 100)
+
+    const growth = readObservedPositionGrowth(database, USER, clock.now)
+    expect(growth.status).toBe('insufficient-data')
+    expect(growth.totalDeltaLuna).toBeNull()
+    expect(growth.expectedRange).toBeNull()
+    expect(growth.deltaLuna).toBeNull()
+  })
+
+  it('excludes externally observed staking actions and incomplete chain history', () => {
+    const addSnapshot = (totalLuna: number, at: string) => database.prepare(
+      `INSERT INTO staker_snapshots (
+         user_address, validator_address, active_balance_luna,
+         total_balance_luna, observed_at, source_block
+       ) VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(USER, VALIDATOR, totalLuna, totalLuna, at, totalLuna)
+    addSnapshot(1_000_000, iso(0))
+    addSnapshot(1_100_000, iso(3_600_000))
+
+    let growth = readObservedPositionGrowth(database, USER, clock.now)
+    expect(growth.intervals[0]?.confoundedBy).toBe('chain-history-unavailable')
+
+    markChainHistoryCovered(database)
+    database.prepare(
+      `INSERT INTO user_staking_actions
+         (user_address, tx_hash, operation, observed_at, block_number)
+       VALUES (?, ?, 'add-stake', ?, 150)`,
+    ).run(USER, 'e'.repeat(64), iso(1_800_000))
+    growth = readObservedPositionGrowth(database, USER, clock.now)
+    expect(growth.status).toBe('insufficient-data')
+    expect(growth.intervals[0]).toMatchObject({
+      status: 'confounded',
+      confoundedBy: 'chain-staking-action',
+    })
+  })
+
+  it('confounds an interval when a confirmed intent spans it after delayed confirmation', () => {
+    const addSnapshot = (totalLuna: number, at: string) => {
+      database
+        .prepare(
+          `INSERT INTO staker_snapshots (
+             user_address, validator_address, active_balance_luna,
+             total_balance_luna, observed_at, source_block
+           ) VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .run(USER, VALIDATOR, totalLuna, totalLuna, at, totalLuna)
+    }
+    addSnapshot(1_000_000, iso(3_600_000))
+    addSnapshot(1_100_000, iso(10_800_000))
+    database
+      .prepare(
+        `INSERT INTO staking_intents (
+           id, user_address, operation, params_json, status,
+           created_at, expires_at, confirmed_at
+         ) VALUES (?, ?, 'stake', '{}', 'confirmed', ?, ?, ?)`,
+      )
+      .run('delayed-confirm', USER, iso(0), iso(86_400_000), iso(14_400_000))
+
+    const growth = readObservedPositionGrowth(database, USER, clock.now)
+    expect(growth.intervals[0]?.confoundedBy).toBe('staking-intent')
+    expect(growth.totalDeltaLuna).toBeNull()
+    expect(growth.status).toBe('insufficient-data')
+  })
+
+  it('confounds an interval overlapped by a pending intent lifetime', () => {
+    const addSnapshot = (totalLuna: number, at: string) => {
+      database
+        .prepare(
+          `INSERT INTO staker_snapshots (
+             user_address, validator_address, active_balance_luna,
+             total_balance_luna, observed_at, source_block
+           ) VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .run(USER, VALIDATOR, totalLuna, totalLuna, at, totalLuna)
+    }
+    addSnapshot(1_000_000, iso(3_600_000))
+    addSnapshot(1_100_000, iso(10_800_000))
+    database
+      .prepare(
+        `INSERT INTO staking_intents (
+           id, user_address, operation, params_json, status,
+           created_at, expires_at
+         ) VALUES (?, ?, 'stake', '{}', 'pending', ?, ?)`,
+      )
+      .run('pending-overlap', USER, iso(0), iso(14_400_000))
+
+    const growth = readObservedPositionGrowth(database, USER, clock.now)
+    expect(growth.intervals[0]?.confoundedBy).toBe('staking-intent')
+    expect(growth.totalDeltaLuna).toBeNull()
+    expect(growth.status).toBe('insufficient-data')
   })
 
   it('loads known staker set from recipient-coverage payload when present', async () => {

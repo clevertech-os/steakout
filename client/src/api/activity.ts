@@ -13,6 +13,7 @@ export type PersonalActivityType =
 export type NetworkActivityType = 'payout-run'
 
 export interface ActivityItem {
+  id?: string
   type: PersonalActivityType | NetworkActivityType | string
   at: string
   txHash: string | null

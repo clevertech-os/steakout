@@ -713,7 +713,7 @@ export function toListItem(
 export function toProfile(
   row: ValidatorRow,
   observation?: ObservationSummary | null,
-  options?: { database?: Database.Database },
+  options?: { database?: Database.Database; nowMs?: number },
 ): ValidatorProfile {
   const paymentFloor = options?.database
     ? getObservedPaymentFloor(options.database, row.address)
@@ -729,6 +729,7 @@ export function toProfile(
     canaryProbe: buildCanaryProbeSummary(row.address, {
       database: options?.database,
       rewardAddress,
+      nowMs: options?.nowMs,
     }),
   }
 }
@@ -833,7 +834,7 @@ export function buildValidatorProfileEnvelope(
   const nowMs = options?.nowMs ?? Date.now()
   const watermarkIso = getIndexerWatermarkIso(database)
   const summaries = loadObservationSummaries(database, { nowMs })
-  const profile = toProfile(row, observationForRow(row, summaries), { database })
+  const profile = toProfile(row, observationForRow(row, summaries), { database, nowMs })
   const updatedAt = row.registry_updated_at ?? new Date(0).toISOString()
   const status = applyIndexerStaleStatus('ok', { nowMs, watermarkIso })
   return {

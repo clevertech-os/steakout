@@ -64,7 +64,12 @@ Rewards are not necessarily sent as direct payments. v1 model:
 
 - Track the user's staker account state over time (`staker_snapshots`).
 - Show **"Observed position growth"** — never "Validator payout verified".
-- Compare growth only against an **illustrative expected range**, clearly labeled as illustrative.
+- Show a multi-snapshot window with each interval, source block when available, freshness, and the aggregate delta from usable intervals.
+- Steakout scans the authenticated staker address's cursor-paginated chain history and decodes protocol staking-contract payloads. This detects staking actions made through another wallet or app, including third-party additions directed to the staker.
+- Intervals containing a known non-failed Steakout intent, an observed on-chain staking action, or a delegation change are marked `confounded` and excluded from the aggregate. If the RPC scan does not cover the interval's full time range, it is conservatively excluded as `chain-history-unavailable`. Excluded intervals remain visible.
+- This chain evidence distinguishes observed balance changes from known protocol staking actions; it still does **not** identify the remaining growth as a validator reward or payout.
+- Compare usable changes only against an **illustrative expected range**, clearly labeled as illustrative. The current `illustrative-v1` presentation assumption is a broad 2–5% annual network-wide range (“roughly a few percent per year”). It is not live network data, validator-specific, predictive, APY, or guaranteed. The range is unavailable when there is insufficient usable history.
+- The illustrative estimate carries the status label **Inferred** and links to this methodology. It is never presented under the `Verified observation` status for indexed balances.
 - If P0-04 shows staker state reads are unreliable, ship direct-payout monitoring first and label restake analytics as an explicit limitation ([SPEC.md §7.3](SPEC.md)).
 
 ## 6. Excluded in v1 (hard bans)

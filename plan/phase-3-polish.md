@@ -54,14 +54,16 @@ Board: [README.md](README.md#phase-3--polish--public-beta-aug-2430)
 - Explicit labels: `Observed position growth`, illustrative-range caption
 
 **Acceptance criteria:**
-- [ ] No "validator payout verified" semantics anywhere
-- [ ] Insufficient snapshots → `insufficient-data`, not a zero-growth implication
-- [ ] Cut-path: limitation note renders for restake delegators (verified by Testing)
+- [x] No "validator payout verified" semantics anywhere
+- [x] Insufficient snapshots → `insufficient-data`, not a zero-growth implication
+- [x] Cut-path: limitation note renders for restake delegators (verified by Testing)
 
 **Verification:** unit tests on growth calc; dictionary grep.
 
 **Notes:**
--
+- 2026-09-15 — Implemented multi-snapshot restake growth history in `GET /api/me/observations`; intervals with non-failed staking intents or delegation changes are marked `confounded` and excluded from totals. Added source-block/freshness metadata and versioned illustrative 2–5% annual range (not live/predictive/guaranteed). Added the `Observed position growth` panel to the staked home experience and neutral Activity handling. Focused continuity/activity tests and production build pass.
+- 2026-09-16 — Closed the external-action attribution gap: authenticated address history is cursor-scanned and staking-contract payloads are decoded so actions made outside Steakout confound the affected interval. Incomplete or unavailable history fails closed as `chain-history-unavailable`; no remaining growth is called a reward or payout.
+- 2026-08-03 partial: first-run DisconnectedHome (SPEC headline kept; methodology disclaimer added); empty Activity personal/network; `humanizeFetchError` for RPC/session/rate-limit/offline/network. Full error-code table + Learn re-read still open.
 
 ---
 
@@ -281,7 +283,12 @@ Board: [README.md](README.md#phase-3--polish--public-beta-aug-2430)
 **Verification:** owner reviews the report; fixes verified by re-run.
 
 **Notes:**
--
+- 2026-09-15 automated review completed in `docs/security-review-2026-08.md`.
+  Fixed production CORS reflection, spoofable forwarded-IP rate-limit keys,
+  production spike route exposure, missing SPA CSP, and SQLite file modes.
+  Node 22 build and all 490 unit/integration tests pass; `npm audit --omit=dev`
+  is clean. Full audit retains the moderate dev-only Vitest advisory pending a
+  major upgrade assessment. Owner review and deployed HTTPS verification remain.
 
 ---
 
@@ -307,7 +314,11 @@ Board: [README.md](README.md#phase-3--polish--public-beta-aug-2430)
 **Verification:** matrix complete; owner signs.
 
 **Notes:**
--
+- 2026-09-15 automated matrix recorded in `tests/manual/failure-matrix.md`.
+  RPC, malformed data, transaction, indexer, schedule, position, duplicate,
+  and production-route cases pass with fixture/test evidence. Wallet rejection,
+  provider rejection/unavailability, and account-switch rows remain **Pending
+  device** because P1-16 has not been run; no device rows are claimed passed.
 
 ---
 

@@ -15,6 +15,8 @@ dist-*/
 server/data/
 *.sqlite
 *.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 *.db
 *.db-journal
 
@@ -30,6 +32,7 @@ npm-debug.log*
 # Local notes and spike scratch
 tmp/
 docs/spikes/local/
+
 
 # Probe-stakes ops output (may contain private keys)
 probe-data/

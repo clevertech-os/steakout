@@ -46,6 +46,7 @@ import {
   schedulePublicRevalidate,
   setCachedPublicResponse,
 } from './responseCache.js'
+import { buildCanaryCoverageSummary, type CanaryCoverageSummary } from './probeRoster.js'
 import { getValidatorRowByAddress, listValidatorRows, type ValidatorRow } from './validatorSync.js'
 
 /** Default page size for paginated payout runs. */
@@ -122,6 +123,8 @@ export interface NetworkSummaryPayload {
     newestCursorUpdatedAt: string | null
     oldestCursorUpdatedAt: string | null
   }
+  /** Public roster coverage, classified only from indexed probe evidence. */
+  canary: CanaryCoverageSummary
 }
 
 interface CursorPayload {
@@ -515,6 +518,7 @@ export function buildNetworkSummary(
       newestCursorUpdatedAt: cursorStats.newest,
       oldestCursorUpdatedAt: cursorStats.oldest,
     },
+    canary: buildCanaryCoverageSummary(database),
   }
 
   const watermarkIso = cursorStats.newest

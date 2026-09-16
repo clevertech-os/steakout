@@ -19,7 +19,10 @@ import {
   PAYOUT_RUN_OBSERVATION_TYPE,
   type PayoutRunPayload,
 } from './payoutClassifier.js'
-import { OBSERVED_POSITION_GROWTH_LABEL } from './personalContinuity.js'
+import {
+  OBSERVED_POSITION_GROWTH_LABEL,
+  readObservedPositionGrowth,
+} from './personalContinuity.js'
 
 /** Default max items returned after merge + sort. */
 export const DEFAULT_ACTIVITY_LIMIT = 50
@@ -42,6 +45,8 @@ export type ActivityItemStatus =
   | 'expired'
 
 export interface ActivityItem {
+  /** Stable source identity for derived consumers such as the alert inbox. */
+  id?: string
   type: PersonalActivityType | 'payout-run'
   at: string
   txHash: string | null
@@ -144,10 +149,10 @@ function sortByAtDesc(a: ActivityItem, b: ActivityItem): number {
 export function listDirectPayoutItems(
   database: Database.Database,
   userAddress: string,
-  limit: number,
+  limit: number | null,
 ): ActivityItem[] {
   const user = normalizeAddress(userAddress)
-  if (user === '' || limit < 1) return []
+  if (user === '' || (limit != null && limit < 1)) return []
 
   // Map reward/self address → validator row (prefer listed when duplicates).
   const validators = database
@@ -188,17 +193,18 @@ export function listDirectPayoutItems(
   const fromKeys = [...fromToValidator.keys()]
   // SQLite has a bind limit; reward-address set is small (~24–100).
   const placeholders = fromKeys.map(() => '?').join(', ')
-  const rows = database
-    .prepare(
+  const limitClause = limit == null ? '' : 'LIMIT ?'
+  const statement = database.prepare(
       `SELECT hash, timestamp, value_luna, from_address
        FROM transactions
        WHERE replace(upper(to_address), ' ', '') = ?
          AND replace(upper(from_address), ' ', '') IN (${placeholders})
          AND execution_result = 'ok'
        ORDER BY timestamp DESC, block_number DESC, hash DESC
-       LIMIT ?`,
+       ${limitClause}`,
     )
-    .all(user, ...fromKeys, limit) as Array<{
+  const params = limit == null ? [user, ...fromKeys] : [user, ...fromKeys, limit]
+  const rows = statement.all(...params) as Array<{
     hash: string
     timestamp: string
     value_luna: number
@@ -223,13 +229,6 @@ export function listDirectPayoutItems(
   return items
 }
 
-interface SnapshotRow {
-  id: number
-  observed_at: string
-  total_balance_luna: number
-  validator_address: string | null
-}
-
 /**
  * Consecutive staker_snapshot deltas for the user.
  * Positive total delta → `observed-position-growth` with fixed growth label.
@@ -244,35 +243,42 @@ export function listSnapshotChangeItems(
   const user = normalizeAddress(userAddress)
   if (user === '' || limit < 1) return []
 
-  const rows = database
-    .prepare(
-      `SELECT id, observed_at, total_balance_luna, validator_address
-       FROM staker_snapshots
-       WHERE replace(upper(user_address), ' ', '') = ?
-       ORDER BY observed_at ASC, id ASC`,
-    )
-    .all(user) as SnapshotRow[]
-
-  if (rows.length < 2) return []
+  const growth = readObservedPositionGrowth(database, user)
+  if (growth.intervals.length === 0) return []
 
   const items: ActivityItem[] = []
-  for (let i = 1; i < rows.length; i += 1) {
-    const prev = rows[i - 1]
-    const curr = rows[i]
-    if (!prev || !curr) continue
-    const delta = curr.total_balance_luna - prev.total_balance_luna
+  for (const interval of growth.intervals) {
+    const delta = interval.deltaLuna
     if (delta === 0) continue
 
-    const validatorAddress =
-      typeof curr.validator_address === 'string' &&
-      curr.validator_address.trim() !== ''
-        ? curr.validator_address
-        : null
+    const validatorAddress = interval.to.validatorAddress
+
+    // The timeline keeps a known staking/delegation-confounded interval
+    // visible as a neutral position change, but never treats it as growth.
+    if (interval.status === 'confounded') {
+      items.push({
+        type: 'position-change',
+        at: interval.to.at,
+        txHash: null,
+        amountLuna: delta,
+        validatorAddress,
+        status: 'observed',
+        label:
+          interval.confoundedBy === 'delegation-change'
+            ? 'Observed position change (delegation changed)'
+            : interval.confoundedBy === 'chain-history-unavailable'
+              ? 'Observed position change (chain history incomplete)'
+              : interval.confoundedBy === 'chain-staking-action'
+                ? 'Observed position change (on-chain staking activity)'
+                : 'Observed position change (staking activity known)',
+      })
+      continue
+    }
 
     if (delta > 0) {
       items.push({
         type: 'observed-position-growth',
-        at: curr.observed_at,
+        at: interval.to.at,
         txHash: null,
         amountLuna: delta,
         validatorAddress,
@@ -283,7 +289,7 @@ export function listSnapshotChangeItems(
     } else {
       items.push({
         type: 'position-change',
-        at: curr.observed_at,
+        at: interval.to.at,
         txHash: null,
         amountLuna: delta,
         validatorAddress,
@@ -357,20 +363,21 @@ function mapIntentStatus(status: string): ActivityItemStatus {
 export function listStakingIntentItems(
   database: Database.Database,
   userAddress: string,
-  limit: number,
+  limit: number | null,
 ): ActivityItem[] {
   const user = normalizeAddress(userAddress)
-  if (user === '' || limit < 1) return []
+  if (user === '' || (limit != null && limit < 1)) return []
 
-  const rows = database
-    .prepare(
-      `SELECT operation, status, tx_hash, created_at, confirmed_at, params_json
+  const limitClause = limit == null ? '' : 'LIMIT ?'
+  const statement = database.prepare(
+      `SELECT id, operation, status, tx_hash, created_at, confirmed_at, params_json
        FROM staking_intents
        WHERE replace(upper(user_address), ' ', '') = ?
        ORDER BY COALESCE(confirmed_at, created_at) DESC, created_at DESC
-       LIMIT ?`,
+       ${limitClause}`,
     )
-    .all(user, limit) as Array<{
+  const rows = statement.all(...(limit == null ? [user] : [user, limit])) as Array<{
+    id: string
     operation: string
     status: string
     tx_hash: string | null
@@ -397,6 +404,7 @@ export function listStakingIntentItems(
     }
 
     return {
+      id: row.id,
       type: 'staking-intent' as const,
       at,
       txHash:

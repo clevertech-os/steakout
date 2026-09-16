@@ -244,6 +244,11 @@ describe('listSnapshotChangeItems', () => {
   })
 
   it('labels positive deltas as Observed position growth, never payout', () => {
+    database.prepare(
+      `INSERT INTO user_staking_history_scans
+         (user_address, covered_from, scanned_at, complete)
+       VALUES (?, '1970-01-01T00:00:00.000Z', ?, 1)`,
+    ).run(USER, iso(10_800_000))
     insertSnapshot(database, {
       user: USER_SPACED,
       totalLuna: 1_000_000,
@@ -354,7 +359,7 @@ describe('listStakingIntentItems + merge', () => {
 
     const types = envelope.data.items.map((i) => i.type)
     expect(types).toContain('direct-payout')
-    expect(types).toContain('observed-position-growth')
+    expect(types).toContain('position-change')
     expect(types).toContain('staking-intent')
 
     // Newest first

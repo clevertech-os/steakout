@@ -30,6 +30,25 @@ const apiSecurityHeaders: RequestHandler = helmet({
 const spaSecurityHeaders: RequestHandler = (_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  // Keep the SPA executable only from its own build while allowing the two
+  // Nimiq Hub hosts used by wallet sign-in and the public RPC/registry hosts
+  // used by the read-only fallback paths. Hub popups still work because this
+  // policy governs the SPA document, not the separately navigated Hub page.
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://hub.nimiq.com https://hub.nimiq-testnet.com https://rpc.nimiqwatch.com https://rpc.testnet.nimiqwatch.com https://validators-api-main.je-cf9.workers.dev https://validators-api-test.je-cf9.workers.dev https://faucet.pos.nimiq-testnet.com https://api.qrserver.com",
+      "frame-src 'self' https://hub.nimiq.com https://hub.nimiq-testnet.com",
+      "form-action 'self' https://hub.nimiq.com https://hub.nimiq-testnet.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+    ].join('; '),
+  )
   next()
 }
 

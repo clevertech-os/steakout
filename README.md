@@ -63,10 +63,9 @@ Reflects the current codebase and task board (not a product promise of completio
 
 | Area | Notes |
 |---|---|
-| **Native stake writes in production UI** | Provider methods are exercised only under guarded `/spike` harnesses. Device verification on Nimiq Pay (Android/iOS) is still required before shipping stake CTAs. |
-| **Intent / confirm API + end-to-end stake flow** | Server matching and client review flow (P1-06 / P1-12) are not finished. Profile stake CTA is a stub until then. |
-| Change delegation / retire / remove flows | Depend on device-proven methods + intent path. |
-| Public beta polish, freeze, submission packaging | Phase 3–4 board items still open. |
+| **Production device verification** | The provider methods, server intent/confirm matcher, client review flow, and guarded CTAs are implemented. Nimiq Pay Android/iOS and Hub fallback verification is still required before calling native writes production-ready. |
+| Restake position-growth analytics | Direct-payout observations are implemented; restake growth parity remains conditional on deeper RPC coverage (P3-02). |
+| Public beta polish, freeze, submission packaging | Security review and automated freeze checks are in progress; device-assisted failure matrix and final QA rows remain pending. |
 
 Spike evidence: [docs/spikes/](docs/spikes/).
 

@@ -52,6 +52,82 @@
   color: inherit;
 }
 
+.directory-canary-coverage {
+  margin: 0 0 var(--so-space-4);
+  padding: var(--so-space-4) var(--so-space-4) var(--so-space-3);
+}
+
+.directory-canary-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--so-space-3);
+}
+
+.directory-canary-heading h2 {
+  margin: 0 0 0.35rem;
+  font-size: var(--so-text-lg);
+  letter-spacing: -0.02em;
+}
+
+.directory-canary-heading p {
+  max-width: 50ch;
+  margin: 0;
+  color: var(--so-muted);
+  font-size: var(--so-text-sm);
+  line-height: 1.45;
+}
+
+.directory-canary-count {
+  flex: 0 0 auto;
+  color: var(--so-ink);
+  font-size: var(--so-text-sm);
+  white-space: nowrap;
+}
+
+.directory-canary-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--so-space-3);
+  margin: var(--so-space-4) 0 var(--so-space-3);
+  padding: var(--so-space-3) 0 0;
+  border-top: 1px solid var(--so-rule);
+}
+
+.directory-canary-stats dt {
+  color: var(--so-muted);
+  font-size: var(--so-text-xs);
+}
+
+.directory-canary-stats dd {
+  margin: 0.2rem 0 0;
+  color: var(--so-ink);
+  font-size: var(--so-text-lg);
+}
+
+.directory-canary-footnote,
+.directory-canary-stale {
+  margin: 0;
+  color: var(--so-muted);
+  font-size: var(--so-text-xs);
+  line-height: 1.45;
+}
+
+.directory-canary-stale {
+  margin-top: var(--so-space-2);
+  color: var(--so-warning-text, var(--so-muted));
+}
+
+@media (max-width: 359px) {
+  .directory-canary-heading {
+    flex-direction: column;
+  }
+
+  .directory-canary-stats {
+    gap: var(--so-space-2);
+  }
+}
+
 .directory-list {
   display: flex;
   flex-direction: column;

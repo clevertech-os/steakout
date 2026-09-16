@@ -351,11 +351,38 @@ export function persistScheduleAdherence(
     || existing.observed_at !== observedAt
     || existing.payload_json !== payloadJson
   ) {
-    database.prepare(`
-      UPDATE validator_observations
-      SET status = ?, observed_at = ?, payload_json = ?
-      WHERE id = ?
-    `).run(status, observedAt, payloadJson, existing.id)
+    database.transaction(() => {
+      if (existing.status !== status) {
+        const eventKey = [
+          'validator-status',
+          validatorAddress.replaceAll(' ', '').toUpperCase(),
+          existing.id,
+          observedAt,
+          status,
+        ].join(':')
+        database.prepare(`
+          INSERT OR IGNORE INTO user_alerts (
+            user_address, event_key, alert_type, title, message, observed_at,
+            validator_address
+          )
+          SELECT user_address, ?, 'validator-status',
+                 'Validator observation status changed', ?, ?, validator_address
+          FROM validator_watchlist
+          WHERE validator_address = ? AND created_at <= ?
+        `).run(
+          eventKey,
+          `The latest Steakout observation is labeled “${status}”.`,
+          observedAt,
+          validatorAddress,
+          observedAt,
+        )
+      }
+      database.prepare(`
+        UPDATE validator_observations
+        SET status = ?, observed_at = ?, payload_json = ?
+        WHERE id = ?
+      `).run(status, observedAt, payloadJson, existing.id)
+    })()
     return { inserted: 0, updated: 1, unchanged: 0 }
   }
 

@@ -2,8 +2,9 @@
  * Home — connected with a staked position (SPEC §6.1, P3-01 retire/remove).
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { NimiqProvider } from '@nimiq/mini-app-sdk'
+import { fetchPersonalContinuity, type PersonalContinuityEnvelope } from '../api/continuity'
 import Amount from '../components/Amount'
 import EnvelopeStatusBanner from '../components/EnvelopeStatusBanner'
 import FreshnessTag from '../components/FreshnessTag'
@@ -20,6 +21,8 @@ import { maxRemoveLuna, maxRetireLuna } from '../staking/amounts'
 import DisconnectButton from './DisconnectButton'
 import TestnetFaucetButton from './TestnetFaucetButton'
 import WalletBalance from './WalletBalance'
+import RestakeGrowthPanel from './RestakeGrowthPanel'
+import { humanizeFetchError } from '../components/humanizeError'
 
 export interface StakedHomeProps {
   address: string
@@ -46,6 +49,33 @@ export default function StakedHome({
   const monitoring = monitoringCopy(envelopeStatus, lastRewardObservation)
 
   const [flowMode, setFlowMode] = useState<StakeFlowMode | null>(null)
+  const [continuity, setContinuity] = useState<PersonalContinuityEnvelope | null>(null)
+  const [continuityLoading, setContinuityLoading] = useState(true)
+  const [continuityError, setContinuityError] = useState<string | null>(null)
+  const [continuityRetryToken, setContinuityRetryToken] = useState(0)
+
+  useEffect(() => {
+    let mounted = true
+    setContinuityLoading(true)
+    setContinuityError(null)
+    void fetchPersonalContinuity()
+      .then((next) => {
+        if (!mounted) return
+        setContinuity(next)
+      })
+      .catch((error: unknown) => {
+        if (!mounted) return
+        setContinuityError(
+          humanizeFetchError(error, 'Position history is temporarily unavailable.'),
+        )
+      })
+      .finally(() => {
+        if (mounted) setContinuityLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [address, envelope.updatedAt, continuityRetryToken])
 
   const retirableLuna = maxRetireLuna(staker)
   const removableLuna = maxRemoveLuna(staker.retiredLuna)
@@ -195,6 +225,27 @@ export default function StakedHome({
           <p className="nq-label">Personal monitoring</p>
           <p className="home-copy">{monitoring}</p>
         </div>
+
+        {continuity?.data.mode === 'restake' ? (
+          <RestakeGrowthPanel
+            growth={continuity.data.observedPositionGrowth}
+            loading={continuityLoading}
+            error={continuityError}
+            onRetry={() => setContinuityRetryToken((token) => token + 1)}
+          />
+        ) : continuityError ? (
+          <section className="home-continuity-error" role="alert" aria-label="Personal continuity error">
+            <p className="nq-label">Personal monitoring</p>
+            <p className="home-copy home-copy--muted">{continuityError}</p>
+            <button
+              type="button"
+              className="nq-ghost-btn"
+              onClick={() => setContinuityRetryToken((token) => token + 1)}
+            >
+              Retry personal monitoring
+            </button>
+          </section>
+        ) : null}
 
         <div className="home-actions">
           {actions.primary.kind === 'link' ? (

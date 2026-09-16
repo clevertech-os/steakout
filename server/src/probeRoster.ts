@@ -81,10 +81,34 @@ export interface CanaryProbeSummary {
    */
   lastStakerBalanceLuna: number | null
   lastStakerBalanceAt: string | null
+  /** Number of indexed probe observations (payments and/or snapshots). */
+  observationCount: number
+  /** Earliest indexed probe observation, when history exists. */
+  firstObservedAt: string | null
+  /** Latest indexed probe observation, when history exists. */
+  lastObservedAt: string | null
+  /** Elapsed indexed observation history in days, relative to `nowMs`. */
+  historyDepthDays: number
   /** One-line operator-facing note for empty fields. */
   note: string
   /** Data status for the observation metrics group. */
   dataStatus: 'insufficient' | 'verified' | 'unavailable'
+}
+
+export type CanaryCoverageStatus = 'pending' | 'observed' | 'unavailable'
+
+export interface CanaryCoverageSummary {
+  configuredCount: number
+  payoutTypes: {
+    direct: number
+    restake: number
+    unknown: number
+  }
+  statuses: {
+    pending: number
+    observed: number
+    unavailable: number
+  }
 }
 
 const NOT_CONFIGURED: CanaryProbeSummary = {
@@ -105,6 +129,10 @@ const NOT_CONFIGURED: CanaryProbeSummary = {
   lastPaymentExplorerUrl: null,
   lastStakerBalanceLuna: null,
   lastStakerBalanceAt: null,
+  observationCount: 0,
+  firstObservedAt: null,
+  lastObservedAt: null,
+  historyDepthDays: 0,
   note: 'No Steakout canary probe is configured for this validator.',
   dataStatus: 'unavailable',
 }
@@ -273,6 +301,12 @@ interface LastPaymentRow {
   hash: string
 }
 
+interface ProbeObservationHistory {
+  count: number
+  firstAt: string | null
+  lastAt: string | null
+}
+
 /**
  * Latest successful inbound tx to the probe from the validator reward address
  * (when both are known and the indexer has the row).
@@ -328,11 +362,86 @@ export function findLastProbeStakerSnapshot(
   return row ?? null
 }
 
+/**
+ * Count indexed evidence for one probe. Transactions are restricted to an
+ * execution-successful reward→probe path; snapshots are chain reads stored by
+ * the indexer. This is evidence metadata only, never a payout-rate claim.
+ */
+function findProbeObservationHistory(
+  database: Database.Database,
+  options: {
+    probeAddress: string
+    rewardAddress?: string | null
+    payoutType: ProbePayoutType
+  },
+): ProbeObservationHistory {
+  const probe = normalizeAddress(options.probeAddress)
+  let paymentCount = 0
+  let paymentFirst: string | null = null
+  let paymentLast: string | null = null
+  if (options.payoutType !== 'restake' && options.rewardAddress) {
+    const reward = normalizeAddress(options.rewardAddress)
+    const row = database
+      .prepare(
+        `
+        SELECT COUNT(*) AS count, MIN(timestamp) AS first_at, MAX(timestamp) AS last_at
+        FROM transactions
+        WHERE execution_result = 'ok'
+          AND REPLACE(UPPER(to_address), ' ', '') = ?
+          AND REPLACE(UPPER(from_address), ' ', '') = ?
+        `,
+      )
+      .get(probe, reward) as {
+      count: number
+      first_at: string | null
+      last_at: string | null
+    }
+    paymentCount = Number.isFinite(row?.count) ? row.count : 0
+    paymentFirst = row?.first_at ?? null
+    paymentLast = row?.last_at ?? null
+  }
+
+  const snapshot = options.payoutType === 'direct'
+    ? { count: 0, first_at: null, last_at: null }
+    : database
+    .prepare(
+      `
+      SELECT COUNT(*) AS count, MIN(observed_at) AS first_at, MAX(observed_at) AS last_at
+      FROM staker_snapshots
+      WHERE REPLACE(UPPER(user_address), ' ', '') = ?
+      `,
+    )
+    .get(probe) as {
+    count: number
+    first_at: string | null
+    last_at: string | null
+  }
+  const snapshotCount = Number.isFinite(snapshot?.count) ? snapshot.count : 0
+  const firstCandidates = [paymentFirst, snapshot?.first_at].filter(
+    (value): value is string => Boolean(value),
+  )
+  const lastCandidates = [paymentLast, snapshot?.last_at].filter(
+    (value): value is string => Boolean(value),
+  )
+  return {
+    count: paymentCount + snapshotCount,
+    firstAt:
+      firstCandidates.length > 0
+        ? firstCandidates.reduce((a, b) => (Date.parse(a) <= Date.parse(b) ? a : b))
+        : null,
+    lastAt:
+      lastCandidates.length > 0
+        ? lastCandidates.reduce((a, b) => (Date.parse(a) >= Date.parse(b) ? a : b))
+        : null,
+  }
+}
+
 export function buildCanaryProbeSummary(
   validatorAddress: string,
   options?: {
     database?: Database.Database
     rewardAddress?: string | null
+    nowMs?: number
   },
 ): CanaryProbeSummary {
   const entry = getProbeForValidator(validatorAddress)
@@ -343,6 +452,9 @@ export function buildCanaryProbeSummary(
   let lastPaymentTxHash: string | null = null
   let lastStakerBalanceLuna: number | null = null
   let lastStakerBalanceAt: string | null = null
+  let observationCount = 0
+  let firstObservedAt: string | null = null
+  let lastObservedAt: string | null = null
 
   if (options?.database) {
     const payment = findLastProbePayment(options.database, {
@@ -362,10 +474,21 @@ export function buildCanaryProbeSummary(
       lastStakerBalanceLuna = snap.total_balance_luna
       lastStakerBalanceAt = snap.observed_at
     }
+    const history = findProbeObservationHistory(options.database, {
+      probeAddress: entry.probeAddress,
+      rewardAddress: options.rewardAddress ?? null,
+      payoutType: entry.payoutType,
+    })
+    observationCount = history.count
+    firstObservedAt = history.firstAt
+    lastObservedAt = history.lastAt
   }
 
-  const hasObservation =
-    lastPaymentAt != null || lastStakerBalanceAt != null
+  const hasObservation = entry.payoutType === 'direct'
+    ? lastPaymentAt != null
+    : entry.payoutType === 'restake'
+      ? lastStakerBalanceAt != null
+      : lastPaymentAt != null || lastStakerBalanceAt != null
 
   const status: CanaryProbeSummary['status'] = hasObservation
     ? 'active'
@@ -374,6 +497,13 @@ export function buildCanaryProbeSummary(
   const note = hasObservation
     ? 'Canary probe observations are partial; more history improves reliability.'
     : 'Canary probe is staked. Payout and position fields stay pending until Steakout indexes enough history (typically days to weeks).'
+  const historyDepthDays =
+    firstObservedAt && Number.isFinite(Date.parse(firstObservedAt))
+      ? Math.max(
+        0,
+        ((options?.nowMs ?? Date.now()) - Date.parse(firstObservedAt)) / 86_400_000,
+      )
+      : 0
 
   return {
     configured: true,
@@ -397,9 +527,71 @@ export function buildCanaryProbeSummary(
       : null,
     lastStakerBalanceLuna,
     lastStakerBalanceAt,
+    observationCount,
+    firstObservedAt,
+    lastObservedAt,
+    historyDepthDays,
     note,
     dataStatus: hasObservation ? 'verified' : 'insufficient',
   }
+}
+
+/**
+ * Aggregate configured canaries and classify each from indexed evidence.
+ * `pending` means the evidence path is checkable but no evidence is indexed;
+ * `unavailable` means the roster/registry cannot currently support that check.
+ */
+export function buildCanaryCoverageSummary(
+  database?: Database.Database,
+): CanaryCoverageSummary {
+  const roster = loadProbeRoster()
+  const summary: CanaryCoverageSummary = {
+    configuredCount: roster.probes.length,
+    payoutTypes: { direct: 0, restake: 0, unknown: 0 },
+    statuses: { pending: 0, observed: 0, unavailable: 0 },
+  }
+  if (!database) {
+    for (const probe of roster.probes) {
+      summary.payoutTypes[probe.payoutType] += 1
+      summary.statuses.unavailable += 1
+    }
+    return summary
+  }
+
+  const rewardRows = database.prepare(`
+    SELECT address, reward_address FROM validators
+  `).all() as Array<{ address: string; reward_address: string | null }>
+  const rewardByValidator = new Map<string, string | null>()
+  for (const row of rewardRows) {
+    rewardByValidator.set(normalizeAddress(row.address), row.reward_address)
+  }
+
+  for (const probe of roster.probes) {
+    summary.payoutTypes[probe.payoutType] += 1
+    const rewardAddress = rewardByValidator.get(normalizeAddress(probe.validatorAddress)) ?? null
+    const payment = database && rewardAddress
+      ? findLastProbePayment(database, {
+        probeAddress: probe.probeAddress,
+        rewardAddress,
+      })
+      : null
+    const snapshot = database
+      ? findLastProbeStakerSnapshot(database, probe.probeAddress)
+      : null
+    const observed = probe.payoutType === 'direct'
+      ? payment != null
+      : probe.payoutType === 'restake'
+        ? snapshot != null
+        : payment != null || snapshot != null
+    if (observed) {
+      summary.statuses.observed += 1
+      continue
+    }
+    const checkable = probe.payoutType === 'restake'
+      || (probe.payoutType === 'direct' && rewardAddress != null)
+    summary.statuses[checkable ? 'pending' : 'unavailable'] += 1
+  }
+  return summary
 }
 
 /** List-level compact flag (no DB observation fan-out). */

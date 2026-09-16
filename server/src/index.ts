@@ -158,9 +158,13 @@ app.use(
     },
   }),
 )
-app.get(['/spike', '/spike/', '/spike/staking-methods', '/spike/staking-methods/'], (_request, response) => {
-  response.sendFile(clientIndexHtml)
-})
+// Development-only harnesses. Production must return 404 instead of serving
+// the SPA for these paths, even if the client-side feature flag is disabled.
+if (process.env.NODE_ENV !== 'production') {
+  app.get(['/spike', '/spike/', '/spike/staking-methods', '/spike/staking-methods/'], (_request, response) => {
+    response.sendFile(clientIndexHtml)
+  })
+}
 
 function warmPublicValidatorsCache(): void {
   try {

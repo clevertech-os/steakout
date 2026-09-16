@@ -5,6 +5,7 @@ import {
   handlePersonalActivity,
   mountNetworkActivityApi,
 } from './activity.js'
+import { mountAlertsApi } from './alerts.js'
 import { mountAuth, type AuthOptions } from './auth.js'
 import { mountDiagnostics } from './diagnostics.js'
 import { applySecurityHeaders } from './http-headers.js'
@@ -30,6 +31,8 @@ import { mountValidatorsApi } from './validatorSync.js'
 
 export interface AppOptions {
   database: Database.Database
+  /** Environment override for isolated tests; production reads NODE_ENV. */
+  isProduction?: boolean
   getIndexerHealth?: () => IndexerHealth
   /** Auth overrides (tests). Merged with `{ database }`. */
   auth?: Omit<AuthOptions, 'database'>
@@ -49,13 +52,23 @@ export interface AppOptions {
  */
 export function createApp(options: AppOptions) {
   const app = express()
-  const configuredOrigins = process.env.CORS_ORIGIN?.split(',').map((origin) => origin.trim())
+  const isProduction = options.isProduction ?? process.env.NODE_ENV === 'production'
+  const configuredOrigins = process.env.CORS_ORIGIN
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
 
   applySecurityHeaders(app)
   app.use(
     cors({
       credentials: true,
-      origin: configuredOrigins?.length ? configuredOrigins : true,
+      // Same-origin production deployments do not need CORS. Never fall back
+      // to reflecting arbitrary origins when a production env is misconfigured.
+      origin: configuredOrigins?.length
+        ? configuredOrigins
+        : isProduction
+          ? false
+          : true,
     }),
   )
   app.use(express.json({ limit: '32kb' }))
@@ -84,6 +97,10 @@ export function createApp(options: AppOptions) {
 
   // P2-10 — public network activity feed (recent payout runs).
   mountNetworkActivityApi(app, options.database)
+
+  // Authenticated watchlist + durable in-app alert inbox.
+  // mountAuth has already installed the `/api/me/` session guard.
+  mountAlertsApi(app, options.database)
 
   // P2-13 — token-gated operator diagnostics (excluded from public API docs).
   mountDiagnostics(app, {
@@ -135,7 +152,7 @@ export function createApp(options: AppOptions) {
     }
   })
 
-  // P2-05 — personal continuity (direct-payout windows + restake growth pointer).
+  // P2-05/P3-02 — personal continuity (direct-payout windows + restake growth history).
   app.get('/api/me/observations', async (_request, response) => {
     const address = response.locals.address as string | undefined
     if (!address) {
@@ -218,22 +235,26 @@ export function createApp(options: AppOptions) {
     })
   })
 
-  app.get('/api/spike/block-number', async (_request, response) => {
-    try {
-      const blockNumber = await getBlockNumber()
+  // Development-only probe. Keep the route out of production entirely so a
+  // disabled client harness cannot be reached by guessing its API path.
+  if (!isProduction) {
+    app.get('/api/spike/block-number', async (_request, response) => {
+      try {
+        const blockNumber = await getBlockNumber()
 
-      response.json({
-        updatedAt: new Date().toISOString(),
-        source: 'rpc',
-        status: 'ok',
-        dataFreshness: { ageSeconds: 0 },
-        data: { blockNumber },
-      })
-    } catch (error) {
-      const apiError = toRpcApiError(error)
-      response.status(503).json({ error: apiError })
-    }
-  })
+        response.json({
+          updatedAt: new Date().toISOString(),
+          source: 'rpc',
+          status: 'ok',
+          dataFreshness: { ageSeconds: 0 },
+          data: { blockNumber },
+        })
+      } catch (error) {
+        const apiError = toRpcApiError(error)
+        response.status(503).json({ error: apiError })
+      }
+    })
+  }
 
   return app
 }

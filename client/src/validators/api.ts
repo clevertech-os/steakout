@@ -109,8 +109,28 @@ export interface CanaryProbeSummary {
   lastPaymentExplorerUrl: string | null
   lastStakerBalanceLuna: number | null
   lastStakerBalanceAt: string | null
+  observationCount: number
+  firstObservedAt: string | null
+  lastObservedAt: string | null
+  historyDepthDays: number
   note: string
   dataStatus: 'insufficient' | 'verified' | 'unavailable'
+}
+
+export interface CanaryCoverageSummary {
+  configuredCount: number
+  payoutTypes: { direct: number; restake: number; unknown: number }
+  statuses: { pending: number; observed: number; unavailable: number }
+}
+
+export interface NetworkSummaryEnvelope {
+  updatedAt: string
+  source: string
+  status: 'ok' | 'stale' | 'partial' | 'unavailable' | string
+  dataFreshness: { ageSeconds: number; historyDepthDays?: number }
+  data: {
+    canary: CanaryCoverageSummary
+  }
 }
 
 export interface ValidatorsListEnvelope {
@@ -271,6 +291,10 @@ function observationsCacheKey(
   ])
 }
 
+function networkSummaryCacheKey(): string {
+  return publicCacheKey(['network-summary'])
+}
+
 /** Sync peek for directory SWR (fresh or slightly stale). */
 export function peekValidatorsList(
   sort: ValidatorSort = 'recommended',
@@ -413,6 +437,36 @@ export async function fetchValidatorObservations(
     force: options.force,
     preferCache: !options.force,
   })
+}
+
+/** Public aggregate canary coverage, backed by the indexed network summary. */
+export async function fetchNetworkSummary(options: {
+  signal?: AbortSignal
+  force?: boolean
+} = {}): Promise<NetworkSummaryEnvelope> {
+  const key = networkSummaryCacheKey()
+  return withPublicCache(
+    key,
+    async () => {
+      const res = await fetch('/api/network/summary', {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: options.signal,
+      })
+      const body = await parseJsonBody(res)
+      throwIfError(res, body)
+      const envelope = body as NetworkSummaryEnvelope
+      if (!envelope?.data?.canary) {
+        throw new ValidatorsApiError(
+          'VALIDATION',
+          'Network summary was missing canary coverage.',
+          res.status,
+        )
+      }
+      return envelope
+    },
+    { force: options.force, preferCache: !options.force },
+  )
 }
 
 /**
