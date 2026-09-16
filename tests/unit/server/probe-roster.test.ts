@@ -44,6 +44,35 @@ function writeRoster(probes: unknown[]) {
 }
 
 describe('probeRoster', () => {
+  it('uses compact-address indexes for canary evidence lookups', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'steakout-probe-plan-'))
+    tempDirs.push(directory)
+    const database = openDatabase(join(directory, 'test.sqlite'))
+    databases.push(database)
+
+    const transactionPlan = database.prepare(`
+      EXPLAIN QUERY PLAN
+      SELECT COUNT(*) AS count, MIN(timestamp) AS first_at, MAX(timestamp) AS last_at
+      FROM transactions
+      WHERE execution_result = 'ok'
+        AND REPLACE(UPPER(to_address), ' ', '') = ?
+        AND REPLACE(UPPER(from_address), ' ', '') = ?
+    `).all('NQ87C59AQLHE8E2K2N3GMAMYSV8PSKY6BKL3', 'NQ155JNSU7CERAH53T02F8A9JCT6QMG97TSV') as Array<{ detail: string }>
+    const transactionPlanDetail = transactionPlan.map((row) => row.detail).join('\n')
+    expect(transactionPlanDetail).toContain('INDEX idx_tx_probe_path')
+    expect(transactionPlanDetail).not.toContain('SCAN transactions')
+
+    const snapshotPlan = database.prepare(`
+      EXPLAIN QUERY PLAN
+      SELECT COUNT(*) AS count, MIN(observed_at) AS first_at, MAX(observed_at) AS last_at
+      FROM staker_snapshots
+      WHERE REPLACE(UPPER(user_address), ' ', '') = ?
+    `).all('NQ87C59AQLHE8E2K2N3GMAMYSV8PSKY6BKL3') as Array<{ detail: string }>
+    const snapshotPlanDetail = snapshotPlan.map((row) => row.detail).join('\n')
+    expect(snapshotPlanDetail).toContain('INDEX idx_snap_probe_user')
+    expect(snapshotPlanDetail).not.toContain('SCAN staker_snapshots')
+  })
+
   it('loads public roster and indexes by validator', () => {
     const path = writeRoster([
       {

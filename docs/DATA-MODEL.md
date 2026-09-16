@@ -46,6 +46,13 @@ CREATE TABLE IF NOT EXISTS transactions (
 );
 CREATE INDEX IF NOT EXISTS idx_tx_from_block ON transactions(from_address, block_number);
 CREATE INDEX IF NOT EXISTS idx_tx_to_block   ON transactions(to_address, block_number);
+-- Supports compact-address canary payment lookups without table scans.
+CREATE INDEX IF NOT EXISTS idx_tx_probe_path ON transactions(
+  REPLACE(UPPER(to_address), ' ', ''),
+  REPLACE(UPPER(from_address), ' ', ''),
+  execution_result,
+  timestamp DESC
+);
 
 CREATE TABLE IF NOT EXISTS validator_observations (
   id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,6 +79,11 @@ CREATE TABLE IF NOT EXISTS staker_snapshots (
   source_block         INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_snap_user ON staker_snapshots(user_address, observed_at);
+-- Supports compact-address canary snapshot lookups without table scans.
+CREATE INDEX IF NOT EXISTS idx_snap_probe_user ON staker_snapshots(
+  REPLACE(UPPER(user_address), ' ', ''),
+  observed_at DESC
+);
 
 -- Protocol staking actions observed in authenticated address history, including
 -- actions made outside Steakout. Used to exclude growth intervals, not to label rewards.

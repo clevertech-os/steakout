@@ -44,6 +44,15 @@ const schema = `
   );
   CREATE INDEX IF NOT EXISTS idx_tx_from_block ON transactions(from_address, block_number);
   CREATE INDEX IF NOT EXISTS idx_tx_to_block   ON transactions(to_address, block_number);
+  -- Probe addresses may be stored in compact or user-facing spaced form. These
+  -- expression indexes keep canary summaries from scanning the transaction
+  -- table once per configured probe.
+  CREATE INDEX IF NOT EXISTS idx_tx_probe_path ON transactions(
+    REPLACE(UPPER(to_address), ' ', ''),
+    REPLACE(UPPER(from_address), ' ', ''),
+    execution_result,
+    timestamp DESC
+  );
 
   CREATE TABLE IF NOT EXISTS validator_observations (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,6 +79,10 @@ const schema = `
     source_block         INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_snap_user ON staker_snapshots(user_address, observed_at);
+  CREATE INDEX IF NOT EXISTS idx_snap_probe_user ON staker_snapshots(
+    REPLACE(UPPER(user_address), ' ', ''),
+    observed_at DESC
+  );
 
   -- Authenticated-address staking actions observed directly in chain history.
   -- This includes actions created outside Steakout and is used only to exclude

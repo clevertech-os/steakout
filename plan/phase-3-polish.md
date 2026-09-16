@@ -286,7 +286,7 @@ Board: [README.md](README.md#phase-3--polish--public-beta-aug-2430)
 - 2026-09-15 automated review completed in `docs/security-review-2026-08.md`.
   Fixed production CORS reflection, spoofable forwarded-IP rate-limit keys,
   production spike route exposure, missing SPA CSP, and SQLite file modes.
-  Node 22 build and all 490 unit/integration tests pass; `npm audit --omit=dev`
+  Node 22 build and all 491 unit/integration tests pass; `npm audit --omit=dev`
   is clean. Full audit retains the moderate dev-only Vitest advisory pending a
   major upgrade assessment. Owner review and deployed HTTPS verification remain.
 

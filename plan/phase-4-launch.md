@@ -93,7 +93,7 @@ Board: [README.md](README.md#phase-4--launch--submission-aug-31--sep-4)
 
 **Notes:**
 - 2026-09-15 automated checklist recorded in `tests/manual/final-qa.md`.
-  Node 22 build, 490 tests, and disposable-production smoke pass. Device-only
+  Node 22 build, 491 tests, and disposable-production smoke pass. Device-only
   wallet/provider/account-switch rows plus live URL, mobile visual, evidence
   click, screenshots, and owner submission rows remain pending; this card is
   not signed off.

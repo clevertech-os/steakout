@@ -40,7 +40,7 @@ Environment: Node 22.23.2, production build, local disposable SQLite, no live wa
 
 ```text
 PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run build       # pass
-PATH=/opt/homebrew/opt/node@22/bin:$PATH npm test            # 490 tests pass
+PATH=/opt/homebrew/opt/node@22/bin:$PATH npm test            # 491 tests pass
 PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run smoke      # pass: SPA, health, profile, evidence, spike disabled
 PATH=/opt/homebrew/opt/node@22/bin:$PATH npm audit --omit=dev # 0 vulnerabilities
 ```

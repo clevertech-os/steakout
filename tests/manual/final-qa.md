@@ -78,7 +78,7 @@ device and production rows remain pending owner verification.
 
 ```text
 PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run build  # pass
-PATH=/opt/homebrew/opt/node@22/bin:$PATH npm test       # 490 tests pass
+PATH=/opt/homebrew/opt/node@22/bin:$PATH npm test       # 491 tests pass
 PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run smoke # pass: SPA, health, list, profile, evidence, spike 404
 ```
 
