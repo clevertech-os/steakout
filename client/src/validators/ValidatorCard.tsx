@@ -23,6 +23,8 @@ import './ValidatorCard.css'
 
 export interface ValidatorCardProps {
   validator: ValidatorListItem
+  /** Compact directory row lives inside one list surface (not its own card). */
+  layout?: 'card' | 'row'
 }
 
 /** http(s) only — reject javascript: / relative junk from registry. */
@@ -78,9 +80,13 @@ function ExternalLinkIcon() {
   )
 }
 
-export default function ValidatorCard({ validator }: ValidatorCardProps) {
+export default function ValidatorCard({
+  validator,
+  layout = 'card',
+}: ValidatorCardProps) {
   const compact = normalizeAddress(validator.address)
   const profileHref = `#/validators/${compact}`
+  const isRow = layout === 'row'
   const displayName = validator.name?.trim() || shortAddress(validator.address)
   const websiteUrl = safeHttpUrl(validator.website)
   const logoUrl = validator.logoUrl || faviconUrlFromWebsite(validator.website, validator.address)
@@ -109,7 +115,12 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
 
   return (
     <a
-      className="validator-card nq-card shell-card nq-hoverable nq-hoverable-cta nq-focusable"
+      id={`validator-${compact}`}
+      className={
+        isRow
+          ? 'validator-card validator-card--row nq-hoverable nq-focusable'
+          : 'validator-card nq-card shell-card nq-hoverable nq-hoverable-cta nq-focusable'
+      }
       href={profileHref}
       aria-label={`View record for ${displayName}`}
       onPointerEnter={() => prefetchValidatorProfile(validator.address)}
@@ -122,8 +133,8 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
               className="validator-card-logo"
               src={logoUrl}
               alt=""
-              width={40}
-              height={40}
+              width={isRow ? 32 : 40}
+              height={isRow ? 32 : 40}
               loading="lazy"
               decoding="async"
               onError={(e) => {
@@ -144,7 +155,7 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
           <div className="validator-card-titles">
             <div className="validator-card-name-row">
               <h2 className="validator-card-name">{displayName}</h2>
-              {websiteUrl ? (
+              {websiteUrl && !isRow ? (
                 <span
                   className="validator-card-website"
                   role="link"
@@ -160,115 +171,128 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
                 </span>
               ) : null}
             </div>
-            <p className="validator-card-address">{shortAddress(validator.address)}</p>
+            {isRow ? null : (
+              <p className="validator-card-address">{shortAddress(validator.address)}</p>
+            )}
           </div>
         </div>
-      </div>
-
-      <dl className="validator-card-metrics">
-        <div className="validator-card-metric validator-card-metric--official">
-          <dt className="nq-label">Nimiq Validator Trust Score</dt>
-          <dd
-            className={
-              scoreIsPresent
-                ? 'validator-card-value'
-                : 'validator-card-value validator-card-value--muted'
-            }
-            title="Official Nimiq Validator Trust Score from the public registry. Steakout never replaces or blends it with observation status."
-          >
-            {scoreLabel}
-          </dd>
-        </div>
-        <div className="validator-card-metric">
-          <dt className="nq-label">Stake</dt>
-          <dd
-            className={
-              stakeLabel === 'Insufficient data'
-                ? 'validator-card-value validator-card-value--muted'
-                : 'validator-card-value validator-card-value--mono'
-            }
-          >
-            {stakeLabel}
-          </dd>
-        </div>
-        <div className="validator-card-metric">
-          <dt className="nq-label">Dominance</dt>
-          <dd
-            className={
-              dominanceLabel === 'Insufficient data'
-                ? 'validator-card-value validator-card-value--muted'
-                : 'validator-card-value validator-card-value--mono'
-            }
-          >
-            {dominanceLabel}
-          </dd>
-        </div>
-        <div className="validator-card-metric">
-          <dt className="nq-label">Stakers</dt>
-          <dd
-            className={
-              stakersLabel === 'Insufficient data'
-                ? 'validator-card-value validator-card-value--muted'
-                : 'validator-card-value validator-card-value--mono'
-            }
-          >
-            {stakersLabel}
-          </dd>
-        </div>
-      </dl>
-
-      <div className="validator-card-declared">
-        <p className="nq-label">Registry declaration</p>
-        <p className="validator-card-declared-line">
-          <span>{payoutLabel}</span>
-          <span className="validator-card-sep" aria-hidden="true">
-            ·
-          </span>
-          <span>Fee {feeLabel}</span>
-          <span className="validator-card-sep" aria-hidden="true">
-            ·
-          </span>
-          <span
-            className={
-              minPayoutMuted ? 'validator-card-value--muted' : undefined
-            }
-            title={minPayoutTitle}
-          >
-            Min payout {minPayoutLabel}
-          </span>
-        </p>
-        {scheduleLabel ? (
-          <p className="validator-card-schedule">{scheduleLabel}</p>
-        ) : (
-          <p className="validator-card-schedule validator-card-value--muted">
-            Schedule: Insufficient data
-          </p>
-        )}
-      </div>
-
-      <div className="validator-card-footer">
-        <div className="validator-card-observation">
-          <span className="nq-label validator-card-observation-caption">
-            Steakout observation
-          </span>
-          {/* Live status from list API (schedule-adherence when indexed; else insufficient-data). */}
-          <StatusChip
-            status={validator.observation.status}
-            definition={
-              validator.observation.status === 'insufficient-data' &&
-              validator.observation.historyDepthDays >= 7
-                ? 'Declared schedule cannot be normalized for adherence grading, or not enough expected windows; raw observations may still be available.'
-                : undefined
-            }
-          />
-          {validator.observation.historyDepthDays > 0 ? (
-            <span className="validator-card-depth">
-              {Math.floor(validator.observation.historyDepthDays)}d history
+        {isRow ? (
+          <div className="validator-card-row-end">
+            <StatusChip status={validator.observation.status} compact />
+            <span className="validator-card-cta nq-arrow">
+              <span className="visually-hidden">View record</span>
             </span>
-          ) : null}
-        </div>
-        <span className="validator-card-cta nq-arrow">View record</span>
+          </div>
+        ) : null}
       </div>
+
+      {isRow ? null : (
+        <>
+          <dl className="validator-card-metrics">
+            <div className="validator-card-metric validator-card-metric--official">
+              <dt className="nq-label">Nimiq Validator Trust Score</dt>
+              <dd
+                className={
+                  scoreIsPresent
+                    ? 'validator-card-value'
+                    : 'validator-card-value validator-card-value--muted'
+                }
+                title="Official Nimiq Validator Trust Score from the public registry. Steakout never replaces or blends it with observation status."
+              >
+                {scoreLabel}
+              </dd>
+            </div>
+            <div className="validator-card-metric">
+              <dt className="nq-label">Stake</dt>
+              <dd
+                className={
+                  stakeLabel === 'Insufficient data'
+                    ? 'validator-card-value validator-card-value--muted'
+                    : 'validator-card-value validator-card-value--mono'
+                }
+              >
+                {stakeLabel}
+              </dd>
+            </div>
+            <div className="validator-card-metric">
+              <dt className="nq-label">Dominance</dt>
+              <dd
+                className={
+                  dominanceLabel === 'Insufficient data'
+                    ? 'validator-card-value validator-card-value--muted'
+                    : 'validator-card-value validator-card-value--mono'
+                }
+              >
+                {dominanceLabel}
+              </dd>
+            </div>
+            <div className="validator-card-metric">
+              <dt className="nq-label">Stakers</dt>
+              <dd
+                className={
+                  stakersLabel === 'Insufficient data'
+                    ? 'validator-card-value validator-card-value--muted'
+                    : 'validator-card-value validator-card-value--mono'
+                }
+              >
+                {stakersLabel}
+              </dd>
+            </div>
+          </dl>
+
+          <div className="validator-card-declared">
+            <p className="nq-label">Registry declaration</p>
+            <p className="validator-card-declared-line">
+              <span>{payoutLabel}</span>
+              <span className="validator-card-sep" aria-hidden="true">
+                ·
+              </span>
+              <span>Fee {feeLabel}</span>
+              <span className="validator-card-sep" aria-hidden="true">
+                ·
+              </span>
+              <span
+                className={
+                  minPayoutMuted ? 'validator-card-value--muted' : undefined
+                }
+                title={minPayoutTitle}
+              >
+                Min payout {minPayoutLabel}
+              </span>
+            </p>
+            {scheduleLabel ? (
+              <p className="validator-card-schedule">{scheduleLabel}</p>
+            ) : (
+              <p className="validator-card-schedule validator-card-value--muted">
+                Schedule: Insufficient data
+              </p>
+            )}
+          </div>
+
+          <div className="validator-card-footer">
+            <div className="validator-card-observation">
+              <span className="nq-label validator-card-observation-caption">
+                Steakout observation
+              </span>
+              <StatusChip
+                status={validator.observation.status}
+                definition={
+                  validator.observation.status === 'insufficient-data' &&
+                  validator.observation.historyDepthDays >= 7
+                    ? 'Declared schedule cannot be normalized for adherence grading, or not enough expected windows; raw observations may still be available.'
+                    : undefined
+                }
+              />
+              {validator.observation.historyDepthDays > 0 ? (
+                <span className="validator-card-depth">
+                  {Math.floor(validator.observation.historyDepthDays)}d history
+                </span>
+              ) : null}
+            </div>
+            <span className="validator-card-cta nq-arrow">View record</span>
+          </div>
+        </>
+      )}
     </a>
   )
 }

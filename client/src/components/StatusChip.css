@@ -28,6 +28,18 @@
   min-width: 0;
 }
 
+.status-chip--compact {
+  max-width: 9.5rem;
+  padding: 0.2rem 0.45rem;
+  font-size: var(--so-text-2xs);
+}
+
+.status-chip--compact .status-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .status-chip-info {
   flex: 0 0 auto;
   display: inline-flex;

@@ -73,7 +73,7 @@ export default function NotStakedHome({
         ) : null}
 
         <div className="home-estimate">
-          <p className="nq-label">Illustrative network estimate</p>
+          <p className="nq-label">What staking has looked like</p>
           <p className="home-copy">
             If you stake, network rewards have historically been {ILLUSTRATIVE_RANGE}. This is{' '}
             <strong>not a prediction</strong> for any validator or for your wallet.

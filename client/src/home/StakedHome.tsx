@@ -100,9 +100,9 @@ export default function StakedHome({
         onRetry={onRetry}
         message={
           envelopeStatus === 'partial'
-            ? 'Position data is partial. Some fields may be incomplete.'
+            ? 'Some of your position details are incomplete.'
             : envelopeStatus === 'unavailable'
-              ? 'Some position data is unavailable from the network right now.'
+              ? 'Some of your position details are unavailable from the network right now.'
               : undefined
         }
       />
@@ -164,7 +164,7 @@ export default function StakedHome({
                 {formatWhen(updatedAt)}
               </time>
               {dataFreshness.ageSeconds != null
-                ? ` · snapshot age ${Math.max(0, Math.floor(dataFreshness.ageSeconds))}s`
+                ? ` · ${Math.max(0, Math.floor(dataFreshness.ageSeconds))}s ago`
                 : null}
             </p>
           </div>
@@ -185,12 +185,12 @@ export default function StakedHome({
               </a>
             </>
           ) : (
-            <p className="nq-subline home-copy">No delegation observed on this position.</p>
+            <p className="nq-subline home-copy">No validator chosen for this stake yet.</p>
           )}
         </div>
 
         <div className="home-reward">
-          <p className="nq-label">Last reward observation</p>
+          <p className="nq-label">Last reward seen</p>
           {lastRewardObservation ? (
             <>
               <p className="home-copy">
@@ -216,13 +216,13 @@ export default function StakedHome({
             </>
           ) : (
             <p className="nq-subline home-copy">
-              Insufficient data. No personal reward observation yet.
+              No reward seen for this wallet yet.
             </p>
           )}
         </div>
 
         <div className="home-monitoring">
-          <p className="nq-label">Personal monitoring</p>
+          <p className="nq-label">What we can see</p>
           <p className="home-copy">{monitoring}</p>
         </div>
 
@@ -235,7 +235,7 @@ export default function StakedHome({
           />
         ) : continuityError ? (
           <section className="home-continuity-error" role="alert" aria-label="Personal continuity error">
-            <p className="nq-label">Personal monitoring</p>
+            <p className="nq-label">What we can see</p>
             <p className="home-copy home-copy--muted">{continuityError}</p>
             <button
               type="button"
@@ -469,15 +469,15 @@ function monitoringCopy(
   lastReward: StakingPositionEnvelope['data']['lastRewardObservation'],
 ): string {
   if (envelopeStatus === 'unavailable') {
-    return 'Monitoring status unavailable while chain data cannot be read.'
+    return 'We cannot read the network right now, so monitoring is paused.'
   }
   if (envelopeStatus === 'stale') {
-    return 'Watching this position from a stale snapshot. Reconnect or refresh when the network is reachable.'
+    return 'This view may be out of date. Refresh when the network is reachable.'
   }
   if (!lastReward) {
-    return 'Watching this position. No personal reward events observed yet. Insufficient data for continuity claims.'
+    return 'We are watching this stake. No personal reward has shown up yet.'
   }
-  return 'Watching this position. Observations are limited to confirmed chain data; gaps never prove wrongdoing.'
+  return 'We only show rewards we can confirm on the network. A gap is not proof that something went wrong.'
 }
 
 function formatWhen(iso: string): string {

@@ -10,6 +10,7 @@
   text-decoration: none;
   color: inherit;
   overflow-wrap: anywhere;
+  scroll-margin-top: 4.75rem;
 }
 
 .validator-card:hover,
@@ -253,5 +254,52 @@
   font-size: var(--so-text-sm);
   font-weight: 600;
   white-space: nowrap;
+  align-self: center;
+}
+
+/* Compact row: identity + observation only. Full metrics live on the profile. */
+.validator-card--row {
+  gap: 0;
+  min-height: var(--so-touch);
+  padding: 0.55rem 0.75rem;
+  border-radius: 0;
+}
+
+.validator-card--row:hover,
+.validator-card--row:focus-visible {
+  background: color-mix(in srgb, var(--so-info-soft) 55%, transparent);
+  border-color: transparent;
+}
+
+.validator-card--row .validator-card-top {
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  gap: var(--so-space-2);
+}
+
+.validator-card--row .validator-card-logo,
+.validator-card--row .validator-card-initials {
+  flex-basis: 2rem;
+  width: 2rem;
+  height: 2rem;
+}
+
+.validator-card--row .validator-card-name {
+  -webkit-line-clamp: 1;
+  font-size: var(--so-text-md);
+}
+
+.validator-card-row-end {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.validator-card--row .validator-card-cta {
+  flex: 0 0 auto;
   align-self: center;
 }

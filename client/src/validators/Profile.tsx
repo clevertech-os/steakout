@@ -150,7 +150,7 @@ function formatOfficialScore(score: number | null): string {
 }
 
 /**
- * Stakeout Findings (canary probe): claim verification only when the indexer
+ * Our check (canary probe): claim verification only when the indexer
  * has observed a reward path (status active / dataStatus verified).
  */
 function canaryVerificationCopy(probe: {
@@ -158,7 +158,7 @@ function canaryVerificationCopy(probe: {
   dataStatus: 'insufficient' | 'verified' | 'unavailable'
   payoutType?: DeclaredPayoutType | null
 }): {
-  /** Optional summary meta next to “Stakeout Findings”; empty when still waiting. */
+  /** Optional summary meta next to “Our check”; empty when still waiting. */
   summaryLabel: string
   headline: string
   body: string
@@ -171,31 +171,31 @@ function canaryVerificationCopy(probe: {
       summaryLabel: 'Verified',
       headline:
         probe.payoutType === 'restake'
-          ? 'Our staked position has been observed'
+          ? 'Our stake is being watched'
           : 'Rewards reached our stake',
       body:
         probe.payoutType === 'restake'
-          ? 'Steakout has indexed a staker-position observation for its canary stake on this validator.'
-          : 'Steakout has observed a successful reward transfer to its canary stake on this validator.',
+          ? 'Steakout has a small stake here and has seen that position on chain.'
+          : 'Steakout has a small stake here and has seen a reward arrive.',
       verified: true,
     }
   }
   return {
     summaryLabel: '',
-    headline: 'Waiting for first indexed observation',
+    headline: 'Waiting for the first check',
     body:
       probe.payoutType === 'restake'
-        ? 'Steakout has a small stake on this validator and is watching for an indexed position observation.'
-        : 'Steakout has a small stake on this validator and is watching for the first indexed reward to reach that address.',
+        ? 'Steakout has a small stake here and is watching whether that position grows over time.'
+        : 'Steakout has a small stake here and is waiting to see a reward arrive.',
     verified: false,
   }
 }
 
 function canaryHistoryCaption(days: number): string {
   if (!Number.isFinite(days) || days <= 0) return 'Insufficient history'
-  if (days < 1) return '< 1 day indexed'
+  if (days < 1) return 'Less than a day'
   const rounded = Math.floor(days)
-  return `${rounded} ${rounded === 1 ? 'day' : 'days'} indexed`
+  return `${rounded} ${rounded === 1 ? 'day' : 'days'}`
 }
 
 function canaryObservedLabel(iso: string | null): string {
@@ -867,7 +867,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
             />
           ) : (
             <p className="nq-subline profile-section-note">
-              Open to load indexed payout runs and explorer links.
+              Open to see payout batches and explorer links.
             </p>
           )}
         </div>
@@ -880,7 +880,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
           data-canary-verified={canaryCopy.verified ? 'true' : 'false'}
         >
           <summary className="profile-disclosure-summary">
-            <span className="profile-disclosure-title">Stakeout Findings</span>
+            <span className="profile-disclosure-title">Our check</span>
             {canaryCopy.summaryLabel ? (
               <span
                 className="profile-disclosure-meta"
@@ -903,11 +903,11 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
               <p className="profile-canary-body">{canaryCopy.body}</p>
               <dl className="profile-canary-observation-meta">
                 <div>
-                  <dt>State</dt>
+                  <dt>Status</dt>
                   <dd>{profile.canaryProbe.statusLabel}</dd>
                 </div>
                 <div>
-                  <dt>Indexed observations</dt>
+                  <dt>Checks recorded</dt>
                   <dd className="mono">{profile.canaryProbe.observationCount}</dd>
                 </div>
                 <div>
@@ -915,7 +915,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
                   <dd>{canaryHistoryCaption(profile.canaryProbe.historyDepthDays)}</dd>
                 </div>
                 <div>
-                  <dt>Last observed</dt>
+                  <dt>Last seen</dt>
                   <dd>{canaryObservedLabel(profile.canaryProbe.lastObservedAt)}</dd>
                 </div>
               </dl>
@@ -927,8 +927,8 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
                 <p className="profile-canary-how-body">
                   Steakout stakes a small amount of our own NIM with this
                   validator and watches whether rewards reach that address. A
-                  successful observation confirms payouts reached our position —
-                  it is not a fee rating and not proof of how every staker is
+                  successful observation confirms payouts reached our position.
+                  It is not a fee rating and not proof of how every staker is
                   treated.
                 </p>
                 <p className="profile-limitations-link">
@@ -1018,7 +1018,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
             />
             <MetricRow
               label="Observed payment floor"
-              definition="5th percentile of indexed outflows from the validator’s reward address (excludes self-transfers). Inferred upper bound on a fixed min threshold only if these are reward payouts—not an operator declaration. Prefer this over the absolute minimum, which can be dust."
+              definition="Typical smallest outgoing payment we have seen from this validator, ignoring tiny dust amounts. An estimate, not the operator’s stated policy."
               value={formatObservedPaymentFloor(profile.observedPaymentFloor)}
               status={
                 profile.observedPaymentFloor?.status === 'inferred'
@@ -1101,7 +1101,7 @@ export default function Profile({ address: rawAddress }: ProfileProps) {
             </>
           ) : (
             <>
-              <p className="nq-subline">No reward address in the registry snapshot.</p>
+              <p className="nq-subline">The registry does not list a payout address.</p>
               <DataStatusTag status="unavailable" />
             </>
           )}

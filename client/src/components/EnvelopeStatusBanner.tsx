@@ -18,9 +18,9 @@ export interface EnvelopeStatusBannerProps {
 }
 
 const DEFAULT_COPY: Record<'partial' | 'unavailable', string> = {
-  partial: 'Some fields are incomplete. What is shown is still readable; missing pieces are labeled.',
+  partial: 'Some details are missing. What you see is still from the registry and chain.',
   unavailable:
-    'Live network data is temporarily unavailable. Public content may still be shown from cache when available.',
+    'Live network data is temporarily unavailable. Cached information may still appear.',
 }
 
 /**

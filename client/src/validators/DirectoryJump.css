@@ -1,0 +1,201 @@
+/* Jump index — portaled above bottom nav. */
+
+.directory-jump-root {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0.75rem 0.75rem
+    calc(var(--bottom-nav-height, 4rem) + env(safe-area-inset-bottom, 0px) + 0.75rem);
+}
+
+.directory-jump-backdrop {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--so-ink) 35%, transparent);
+  cursor: pointer;
+}
+
+.directory-jump-sheet {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 26rem);
+  max-height: min(
+    calc(100dvh - var(--bottom-nav-height, 4rem) - env(safe-area-inset-bottom, 0px) - 2rem),
+    36rem
+  );
+  margin: 0;
+  padding: var(--so-space-4);
+  overflow: hidden;
+  border: 1px solid var(--so-rule);
+  border-radius: var(--so-space-4);
+  background: var(--so-card);
+  color: var(--so-ink);
+  box-shadow: var(--so-shadow);
+}
+
+.directory-jump-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--so-space-3);
+  margin-bottom: var(--so-space-3);
+}
+
+.directory-jump-title {
+  margin: 0;
+  font-size: var(--so-text-lg);
+  letter-spacing: -0.02em;
+}
+
+.directory-jump-close {
+  flex: 0 0 auto;
+  min-height: var(--so-touch);
+  cursor: pointer;
+}
+
+.directory-jump-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: var(--so-space-3);
+}
+
+.directory-jump-field .nq-label {
+  color: var(--so-muted);
+  font-size: var(--so-text-xs);
+  font-weight: 600;
+}
+
+.directory-jump-letters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0 0 var(--so-space-3);
+}
+
+.directory-jump-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  min-height: var(--so-touch);
+  padding: 0 0.35rem;
+  border: 0;
+  border-radius: var(--so-space-2);
+  background: var(--so-disabled-soft);
+  color: var(--so-ink);
+  font-family: var(--so-mono);
+  font-size: var(--so-text-sm);
+  cursor: pointer;
+}
+
+.directory-jump-letter:hover,
+.directory-jump-letter:focus-visible {
+  background: var(--so-info-soft);
+  color: var(--so-info-strong);
+}
+
+.directory-jump-empty {
+  margin: var(--so-space-3) 0 0;
+  color: var(--so-muted);
+  font-size: var(--so-text-sm);
+}
+
+.directory-jump-groups {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.directory-jump-group {
+  margin: 0 0 var(--so-space-3);
+}
+
+.directory-jump-group-title {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 0 0.35rem;
+  padding: 0.35rem 0;
+  background: var(--so-card);
+  color: var(--so-muted);
+  font-size: var(--so-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.directory-jump-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.directory-jump-item {
+  display: flex;
+  align-items: center;
+  gap: var(--so-space-3);
+  width: 100%;
+  min-height: var(--so-touch);
+  margin: 0;
+  padding: 0.45rem 0.35rem;
+  border: 0;
+  border-radius: var(--so-space-2);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.directory-jump-item:hover,
+.directory-jump-item:focus-visible {
+  background: var(--so-info-soft);
+  outline: none;
+}
+
+.directory-jump-item.is-current {
+  background: color-mix(in srgb, var(--so-info-soft) 70%, transparent);
+}
+
+.directory-jump-item-index {
+  flex: 0 0 2rem;
+  color: var(--so-muted);
+  font-size: var(--so-text-xs);
+  text-align: right;
+}
+
+.directory-jump-item-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.directory-jump-item-name {
+  overflow: hidden;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.directory-jump-item-addr {
+  color: var(--so-muted);
+  font-family: var(--so-mono);
+  font-size: var(--so-text-2xs);
+}
+
+@media (min-width: 600px) {
+  .directory-jump-root {
+    align-items: center;
+    padding: 1.5rem;
+  }
+}

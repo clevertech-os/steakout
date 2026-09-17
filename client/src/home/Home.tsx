@@ -126,7 +126,7 @@ export default function Home() {
         </header>
         <section className="nq-card nq-card-lg shell-card home-card" aria-busy="true">
           <p className="home-status" role="status">
-            Reading on-chain staking state…
+            Loading your stake…
           </p>
           <div className="home-skeleton" aria-hidden="true">
             <span className="so-skeleton-line home-skeleton-line home-skeleton-line--amount" />

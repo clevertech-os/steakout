@@ -35,9 +35,9 @@ export const OBSERVATION_STATUS_DEFINITIONS: Record<ObservationStatus, string> =
   irregular:
     'Fewer than 80% of expected payout windows were observed, with a normalizable schedule and enough history to judge.',
   'insufficient-data':
-    'Not enough indexed history or too few windows to judge schedule adherence yet.',
+    'Not enough payout history yet to say whether this validator pays on time.',
   unavailable:
-    'No reward address, indexer gap, or schedule cannot be normalized and no runs are available to show.',
+    'We cannot check payout timing yet. Missing payout details, or not enough history to show.',
 }
 
 /**
@@ -63,6 +63,11 @@ export interface StatusChipProps {
    * When false (default), definition toggles via the info control.
    */
   alwaysShowDefinition?: boolean
+  /**
+   * Directory list rows: label only, no info control (definitions live on the
+   * profile / cards layout).
+   */
+  compact?: boolean
   className?: string
 }
 
@@ -70,6 +75,7 @@ export default function StatusChip({
   status,
   definition,
   alwaysShowDefinition = false,
+  compact = false,
   className = '',
 }: StatusChipProps) {
   const label =
@@ -81,16 +87,16 @@ export default function StatusChip({
     OBSERVATION_STATUS_DEFINITIONS['insufficient-data']
   const defId = useId()
   const [open, setOpen] = useState(false)
-  const showDef = alwaysShowDefinition || open
+  const showDef = !compact && (alwaysShowDefinition || open)
 
   return (
     <span className={`status-chip-wrap ${className}`.trim()} data-status={status}>
       <span
-        className={`status-chip status-chip--${tone}`}
+        className={`status-chip status-chip--${tone}${compact ? ' status-chip--compact' : ''}`}
         data-status={status}
       >
         <span className="status-chip-label">{label}</span>
-        {alwaysShowDefinition ? null : (
+        {compact || alwaysShowDefinition ? null : (
           <button
             type="button"
             className="status-chip-info"

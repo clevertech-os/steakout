@@ -19,7 +19,7 @@ export interface WalletBalanceProps {
 }
 
 const EXPLAINER =
-  'Nimiq Pay may hold NIM in payment contracts (HTLCs) for fast transfers. Wallet total (free + contracts) is used as the stake budget so we can test whether Pay funds stake from contracts. If approve fails, free NIM on-address first.'
+  'Nimiq Pay sometimes holds NIM in payment contracts. Steakout uses your wallet total (available plus contracts) when suggesting a stake amount. If a stake fails, try with the NIM sitting freely in your account first.'
 
 export default function WalletBalance({
   accountBalanceLuna,
@@ -81,7 +81,7 @@ export default function WalletBalance({
 
       {walletBalanceLuna == null && !loading ? (
         <p className="nq-subline home-copy">
-          Balance unavailable from the read layer right now.
+          Wallet balance is temporarily unavailable.
         </p>
       ) : null}
 

@@ -7,6 +7,8 @@
   /* 1.35rem: between space-5 (1.25) and space-6 (1.5); keep one-off (V-09). */
   row-gap: 1.35rem;
   min-width: 0;
+  /* row-gap does not pad after the last card; keep it clear of the bottom nav. */
+  padding-bottom: var(--so-space-8);
 }
 
 .profile-topbar {

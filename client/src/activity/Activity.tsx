@@ -189,9 +189,8 @@ function TimelineList({
         ))}
       </ul>
       <p className="activity-footnote">
-        Observations are based on indexed chain data. A missing entry does not
-        prove wrongdoing. It may mean insufficient history or data not yet
-        indexed.
+        These events come from the chain. A missing one does not mean something
+        went wrong. We may not have enough history yet.
       </p>
     </section>
   )
@@ -265,14 +264,14 @@ function AlertInbox({ onRefresh }: { onRefresh: () => void }) {
     <section className="shell-card activity-card activity-monitor" aria-labelledby="activity-monitor-title">
       <div className="activity-monitor-head">
         <div>
-          <p className="card-kicker">Personal monitoring</p>
+          <p className="card-kicker">Watchlist</p>
           <h2 id="activity-monitor-title">Alerts and watched validators</h2>
         </div>
         {unread > 0 ? <span className="activity-unread">{unread} unread</span> : null}
       </div>
       <p className="activity-copy">
-        Steakout checks indexed chain observations when you open Activity. Alerts
-        are informational; a missing observation does not prove a missed payment.
+        Steakout looks for payouts and position changes when you open this page.
+        A missing alert does not mean a missed payment.
       </p>
       {error ? <p className="activity-error" role="alert">{error}</p> : null}
       {loading ? <p className="activity-status">Loading monitoring…</p> : null}
@@ -316,7 +315,11 @@ function AlertInbox({ onRefresh }: { onRefresh: () => void }) {
                 </li>
               ))}
             </ul>
-          ) : <p className="activity-monitor-empty">Watch a validator to see its payout windows and observation status changes here.</p>}
+          ) : (
+            <p className="activity-monitor-empty">
+              Watch a validator to see payout windows and status changes here.
+            </p>
+          )}
           <div className="activity-alert-head">
             <h3>Recent alerts</h3>
             {unread > 0 ? <button type="button" className="activity-inline-button" onClick={handleReadAll}>Mark all read</button> : null}
@@ -454,8 +457,7 @@ export default function Activity() {
       <header className="shell-header page-header">
         <h1 className="page-title">Activity</h1>
         <p className="page-lede">
-          Personal staking events and network payout observations from indexed
-          chain data, labeled observed / not observed / insufficient data.
+          Your staking events, plus recent payouts Steakout has seen across the network.
         </p>
       </header>
 
@@ -498,9 +500,8 @@ export default function Activity() {
             >
               <h2 id="activity-connect-title">Connect to see personal activity</h2>
               <p className="activity-copy">
-                Connect a wallet to load observed direct payouts, position
-                changes, and staking actions for your address. No private keys
-                leave your device.
+                Connect a wallet to see payouts and staking activity for your
+                address. Keys stay in your wallet.
               </p>
               <div className="activity-actions">
                 <button
@@ -516,7 +517,7 @@ export default function Activity() {
                   className="nq-pill-secondary activity-cta"
                   onClick={() => setTab('network')}
                 >
-                  Browse network feed
+                  Browse network payouts
                 </button>
                 <a className="nq-ghost-btn activity-cta" href="#/validators">
                   Explore validators
@@ -534,8 +535,8 @@ export default function Activity() {
                 items={personal.data.items}
                 envelopeStatus={personal.status}
                 onRetry={refresh}
-                emptyTitle="No personal activity observed yet"
-                emptyBody="Steakout has not indexed direct payouts, observed position growth, or staking actions for this address yet. That is insufficient data, not a claim that rewards were missed or withheld. History may still be accumulating."
+                emptyTitle="Nothing here yet"
+                emptyBody="When Steakout sees payouts, stake changes, or staking actions for this wallet, they will show up here. A quiet feed is not a missed payment."
               />
             ) : (
               <div role="status" aria-busy="true" aria-label="Loading personal timeline">
@@ -579,7 +580,7 @@ export default function Activity() {
                   className="nq-ghost-btn activity-cta"
                   onClick={() => setTab('network')}
                 >
-                  Browse network feed
+                  Browse network payouts
                 </button>
               </div>
             </section>
@@ -588,8 +589,8 @@ export default function Activity() {
               items={personal?.data.items ?? []}
               envelopeStatus={personal?.status}
               onRetry={refresh}
-              emptyTitle="No personal activity observed yet"
-              emptyBody="Steakout has not indexed direct payouts, observed position growth, or staking actions for this address yet. That is insufficient data, not a claim that rewards were missed or withheld. History may still be accumulating."
+              emptyTitle="Nothing here yet"
+              emptyBody="When Steakout sees payouts, stake changes, or staking actions for this wallet, they will show up here. A quiet feed is not a missed payment."
               emptyActions={
                 <>
                   <a className="nq-pill-blue activity-cta" href="#/validators">
@@ -603,7 +604,7 @@ export default function Activity() {
                     className="nq-ghost-btn activity-cta"
                     onClick={() => setTab('network')}
                   >
-                    View network observations
+                    See network payouts
                   </button>
                 </>
               }
@@ -615,12 +616,12 @@ export default function Activity() {
               items={network.data.items}
               envelopeStatus={network.status}
               onRetry={refresh}
-              emptyTitle="No network observations yet"
-              emptyBody="Observed payout runs will appear here once the indexer has classified activity for listed validators. Insufficient data is a valid result, not an error and not a judgment of any validator."
+              emptyTitle="No network payouts yet"
+              emptyBody="Payouts Steakout has seen across listed validators will appear here. An empty list is not a judgment of any validator."
             />
           ) : (
-            <div role="status" aria-busy="true" aria-label="Loading network observations">
-              <p className="activity-status">Loading network observations…</p>
+            <div role="status" aria-busy="true" aria-label="Loading network payouts">
+              <p className="activity-status">Loading network payouts…</p>
               <div className="shell-card activity-skeleton" aria-hidden="true">
                 <span className="so-skeleton-line activity-skeleton-line activity-skeleton-line--wide" />
                 <span className="so-skeleton-line activity-skeleton-line" />
@@ -630,7 +631,7 @@ export default function Activity() {
           )
         ) : networkStatus === 'error' ? (
           <section className="shell-card activity-card" aria-labelledby="activity-net-err">
-            <h2 id="activity-net-err">Could not load network feed</h2>
+            <h2 id="activity-net-err">Could not load network payouts</h2>
             <p className="activity-copy">
               {humanizeFetchError(
                 networkError,
@@ -655,8 +656,8 @@ export default function Activity() {
             items={network?.data.items ?? []}
             envelopeStatus={network?.status}
             onRetry={refresh}
-            emptyTitle="No network observations yet"
-            emptyBody="Observed payout runs will appear here once the indexer has classified activity for listed validators. Insufficient data is a valid result, not an error and not a judgment of any validator."
+            emptyTitle="No network payouts yet"
+            emptyBody="Payouts Steakout has seen across listed validators will appear here. An empty list is not a judgment of any validator."
             emptyActions={
               <>
                 <a className="nq-pill-blue activity-cta" href="#/validators">

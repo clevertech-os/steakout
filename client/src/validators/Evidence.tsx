@@ -498,7 +498,7 @@ function EvidenceOkBody({
         (historyDepthDays < 7 || hasInsufficientHistoryLimitation)
       ? OBSERVATION_STATUS_DEFINITIONS['insufficient-data']
       : showGrade
-        ? 'Observation status compares the declared payout schedule against indexed payout runs. Insufficient history is a valid result, not a negative score.'
+        ? 'Observation status compares the stated payout schedule with payouts we have seen. Not enough history is a valid result, not a negative score.'
         : undefined
 
   const body = (
@@ -531,8 +531,8 @@ function EvidenceOkBody({
 
       <p className="nq-subline profile-section-note">
         {showGrade
-          ? 'Status is based on indexed chain activity against the declared schedule. Every run links to explorer transactions. Insufficient history is a valid result, not a failure.'
-          : 'This validator’s declared schedule is free-text or ambiguous, so Steakout shows raw observed payout runs only. No adherence grade is applied.'}
+          ? 'Status compares the validator’s stated schedule with payouts we have seen. Each run links to explorer transactions. Not enough history is a valid result, not a failing grade.'
+          : 'This validator’s stated schedule is free-text or unclear, so Steakout lists the payouts we have seen and does not grade how regular they are.'}
       </p>
 
       <dl className="evidence-summary">
@@ -632,12 +632,12 @@ function EvidenceOkBody({
         >
           <p className="evidence-empty-label">Insufficient data</p>
           <p className="nq-subline">
-            No payout runs have been indexed for this validator yet. That is a valid
-            result, not a negative score or failure.
+            Steakout has not seen payouts from this validator yet. That is not a
+            negative score.
           </p>
           <StatusChip
             status={status === 'unavailable' ? 'unavailable' : 'insufficient-data'}
-            definition="Empty history means Steakout has not yet observed outbound payout activity from the reward address."
+            definition="Steakout has not yet seen outgoing payouts from this validator."
           />
         </div>
       ) : (

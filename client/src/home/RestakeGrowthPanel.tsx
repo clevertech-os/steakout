@@ -30,8 +30,8 @@ export default function RestakeGrowthPanel({
     <section className="home-growth" aria-labelledby="home-growth-title">
       <div className="home-growth-head">
         <div>
-          <p className="nq-label">Restake observations</p>
-          <h2 id="home-growth-title">Observed position growth</h2>
+          <p className="nq-label">Restake rewards</p>
+          <h2 id="home-growth-title">Change in your stake</h2>
         </div>
         {growth?.status === 'observed' ? (
           <span className="home-growth-status">Verified observation</span>
@@ -43,8 +43,8 @@ export default function RestakeGrowthPanel({
       </div>
 
       <p className="home-copy home-growth-definition">
-        Change in this staker position between indexed snapshots. This is an
-        observation of position balances, not a guaranteed return.
+        How this stake has changed over time. This is what we have seen, not a
+        guaranteed return.
       </p>
 
       {loading ? <p className="home-copy home-copy--muted">Loading position history…</p> : null}
@@ -94,7 +94,7 @@ export default function RestakeGrowthPanel({
 
       {!loading && !error && growth && growth.intervals.length > 0 ? (
         <div className="home-growth-intervals">
-          <p className="nq-label">Snapshot intervals</p>
+          <p className="nq-label">History</p>
           <ul>
             {growth.intervals.map((interval) => (
               <li key={`${interval.from.at}-${interval.to.at}`}>
@@ -123,8 +123,8 @@ export default function RestakeGrowthPanel({
 
       {!loading && !error && growth?.status !== 'observed' ? (
         <p className="home-copy home-copy--muted">
-          More independent snapshots are needed before a position change can
-          be summarized. Known staking or delegation activity is kept separate.
+          We need a few more check-ins before we can summarize how this stake
+          has changed. Extra staking or validator switches are kept separate.
         </p>
       ) : null}
 
@@ -138,9 +138,6 @@ export default function RestakeGrowthPanel({
             updatedAt={growth.freshness.at}
             ageSeconds={growth.freshness.ageSeconds}
           />
-          {growth.freshness.sourceBlock != null
-            ? ` · source block ${growth.freshness.sourceBlock}`
-            : null}
         </p>
       ) : null}
     </section>

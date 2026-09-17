@@ -203,11 +203,11 @@ export const VALIDATOR_SORTS: readonly {
 }[] = [
   { value: 'recommended', label: 'Recommended for transparency' },
   { value: 'score', label: 'Official score' },
-  { value: 'dominance', label: 'Lowest dominance' },
+  { value: 'dominance', label: 'Lowest network share' },
   { value: 'stake', label: 'Largest by stake' },
   { value: 'direct-payout', label: 'Direct payout' },
   { value: 'restake', label: 'Restake' },
-  { value: 'new', label: 'New or insufficient data' },
+  { value: 'new', label: 'Newest or not enough data' },
 ] as const
 
 export interface FetchValidatorsOptions {

@@ -495,8 +495,8 @@ export function buildCanaryProbeSummary(
     : 'pending'
 
   const note = hasObservation
-    ? 'Canary probe observations are partial; more history improves reliability.'
-    : 'Canary probe is staked. Payout and position fields stay pending until Steakout indexes enough history (typically days to weeks).'
+    ? 'More history makes this check more reliable.'
+    : 'Steakout has a small stake here. Payout and position details appear after we have enough history, often days to weeks.'
   const historyDepthDays =
     firstObservedAt && Number.isFinite(Date.parse(firstObservedAt))
       ? Math.max(

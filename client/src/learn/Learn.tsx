@@ -27,13 +27,13 @@ const ARTICLES: {
     id: 'methodology',
     kicker: 'How we measure',
     title: 'Methodology',
-    blurb: 'Declared policy vs observed chain behavior, status labels, and payout runs.',
+    blurb: 'What the registry says versus what we see on chain, and how status labels are chosen.',
   },
   {
     id: 'limitations',
     kicker: 'What we cannot claim',
     title: 'Limitations',
-    blurb: 'History depth, missing data, and the hard bans that keep language honest.',
+    blurb: 'History limits, missing data, and the claims Steakout will not make.',
   },
   {
     id: 'privacy',
@@ -76,7 +76,7 @@ function Hub() {
       <header className="shell-header page-header">
         <h1 className="page-title">Learn</h1>
         <p className="page-lede">
-          Plain-language guides to staking in Nimiq Pay, how Steakout observes
+          Plain-language guides to staking in Nimiq Pay, how Steakout watches
           validators, and what this product cannot claim.
         </p>
       </header>
@@ -294,7 +294,7 @@ function MethodologyArticle() {
           hour-level cron such as <code>0 */6 * * *</code>). Free-text and minute-level
           schedules are shown raw; we never grade a schedule we cannot normalize.{' '}
           <span className="learn-term">insufficient data</span> can mean short history
-          or a non-normalizable schedule — grades need a normalizable schedule and ≥14
+          or a non-normalizable schedule. Grades need a normalizable schedule and ≥14
           days of history.
         </li>
         <li>

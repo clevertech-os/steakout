@@ -221,6 +221,8 @@ export default function ObservationHeroPanel({
         })
       } catch (err) {
         if (signal?.aborted) return
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        if (err instanceof Error && /aborted/i.test(err.message)) return
         setRunsState({
           kind: 'error',
           message: humanizeFetchError(
@@ -411,7 +413,7 @@ export default function ObservationHeroPanel({
 
             {runsState.kind === 'ok' && listRuns.length === 0 ? (
               <p className="profile-obs-hero-timeline-status">
-                No indexed payout runs in this analysis window yet.
+                No payouts in this window yet.
               </p>
             ) : null}
 
@@ -444,12 +446,9 @@ export default function ObservationHeroPanel({
             ) : null}
 
             <p className="profile-obs-hero-footnote">
-              Graph plots indexed payout runs by time. Spike height reflects
-              transaction count in each run
               {historyDepthDays > 0
-                ? ` over about ${Math.floor(historyDepthDays)} days of history`
-                : ''}
-              .
+                ? `Each spike is a payout batch. Taller spikes mean more transactions over about ${Math.floor(historyDepthDays)} days.`
+                : 'Each spike is a payout batch. Taller spikes mean more transactions.'}
             </p>
 
             {onOpenFullEvidence ? (

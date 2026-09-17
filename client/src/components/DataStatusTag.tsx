@@ -32,7 +32,7 @@ export const DATA_STATUS_DEFINITIONS: Record<DataStatus, string> = {
   insufficient:
     'Not enough history, or the declared policy cannot be normalized for grading.',
   unavailable:
-    'RPC, indexer, or registry did not provide the data required for this field.',
+    'The network or registry did not provide the data needed for this field.',
 }
 
 export interface DataStatusTagProps {

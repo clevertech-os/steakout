@@ -39,6 +39,10 @@ export function humanizeFetchError(err: unknown, fallback: string): string {
     }
   }
 
+  if (err instanceof DOMException && err.name === 'AbortError') {
+    return fallback
+  }
+
   if (err instanceof TypeError) {
     // Typical failed fetch / network disconnect
     return 'Could not reach Steakout. Check your connection and try again.'
@@ -49,6 +53,9 @@ export function humanizeFetchError(err: unknown, fallback: string): string {
     // Avoid raw "Failed to fetch" noise
     if (/failed to fetch|networkerror|load failed/i.test(msg)) {
       return 'Could not reach Steakout. Check your connection and try again.'
+    }
+    if (/aborted/i.test(msg)) {
+      return fallback
     }
     return msg
   }

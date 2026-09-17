@@ -22,7 +22,7 @@ const LABELS: Record<PositionState, string> = {
 export default function PositionStateBadge({ state, className = '' }: PositionStateBadgeProps) {
   const modifier = state.toLowerCase()
   const label = LABELS[state]
-  const definition = 'Staker position status from on-chain account state'
+  const definition = 'Current status of this stake, as read from the network.'
   return (
     <span
       className={`so-position-badge so-position-badge--${modifier} ${className}`.trim()}
