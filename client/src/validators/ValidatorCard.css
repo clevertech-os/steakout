@@ -169,7 +169,7 @@
 .validator-card-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.65rem var(--so-space-3);
+  gap: 0.65rem var(--so-space-5);
   margin: 0;
 }
 
