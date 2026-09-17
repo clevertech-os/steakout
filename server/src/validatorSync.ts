@@ -42,6 +42,7 @@ import {
   canaryConfiguredForValidator,
   type CanaryProbeSummary,
 } from './probeRoster.js'
+import { FAVICON_CACHE_TTL_MS, getFavicon } from './favicon.js'
 import {
   fetchValidators,
   type FetchValidatorsOptions,
@@ -963,11 +964,51 @@ export function mountValidatorsApi(app: Express, database: Database.Database): v
     res.json(body)
   })
 
+  app.get('/api/validators/:address/favicon', async (req: Request, res: Response) => {
+    const param = req.params.address
+    const raw = (Array.isArray(param) ? param[0] : param) ?? ''
+    let address: string
+    try {
+      address = decodeURIComponent(raw)
+    } catch {
+      sendApiError(res, 400, 'VALIDATION', 'A valid Nimiq validator address is required.')
+      return
+    }
+    if (!isValidNimiqAddress(address)) {
+      sendApiError(res, 400, 'VALIDATION', 'A valid Nimiq validator address is required.')
+      return
+    }
+
+    const row = getValidatorRowByAddress(database, address)
+    if (!row?.website) {
+      res.status(404).end()
+      return
+    }
+
+    const favicon = await getFavicon(row.website)
+    const maxAge = favicon.cache === 'HIT' ? Math.floor(FAVICON_CACHE_TTL_MS / 1000) : 0
+    res.setHeader('Cache-Control', `public, max-age=${maxAge}, stale-while-revalidate=3600`)
+    res.setHeader('X-Cache', favicon.cache)
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    if (!favicon.body || !favicon.contentType) {
+      res.status(404).end()
+      return
+    }
+    res.type(favicon.contentType)
+    res.send(favicon.body)
+  })
+
   app.get('/api/validators/:address', (req: Request, res: Response) => {
     const param = req.params.address
     const raw = (Array.isArray(param) ? param[0] : param) ?? ''
     // Express may leave encoded spaces; accept spaced or compact NQ addresses.
-    const address = decodeURIComponent(raw)
+    let address: string
+    try {
+      address = decodeURIComponent(raw)
+    } catch {
+      sendApiError(res, 400, 'VALIDATION', 'A valid Nimiq validator address is required.')
+      return
+    }
     if (!isValidNimiqAddress(address)) {
       sendApiError(res, 400, 'VALIDATION', 'A valid Nimiq validator address is required.')
       return

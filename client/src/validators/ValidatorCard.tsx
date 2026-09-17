@@ -39,11 +39,14 @@ export function safeHttpUrl(raw: string | null | undefined): string | null {
   }
 }
 
-/** Use the validator website's conventional favicon as a logo fallback. */
-function faviconUrlFromWebsite(website: string | null | undefined): string | null {
+/** Use the server-cached validator favicon as a logo fallback. */
+export function faviconUrlFromWebsite(
+  website: string | null | undefined,
+  address: string,
+): string | null {
   const safeWebsite = safeHttpUrl(website)
   if (!safeWebsite) return null
-  return new URL('/favicon.ico', safeWebsite).href
+  return `/api/validators/${encodeURIComponent(normalizeAddress(address))}/favicon`
 }
 
 function ExternalLinkIcon() {
@@ -80,7 +83,7 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
   const profileHref = `#/validators/${compact}`
   const displayName = validator.name?.trim() || shortAddress(validator.address)
   const websiteUrl = safeHttpUrl(validator.website)
-  const logoUrl = validator.logoUrl || faviconUrlFromWebsite(validator.website)
+  const logoUrl = validator.logoUrl || faviconUrlFromWebsite(validator.website, validator.address)
   const scoreLabel = formatOfficialScore(validator.officialScore)
   const stakeLabel = formatStakeNim(validator.stakeLuna)
   const dominanceLabel = formatDominance(validator.dominanceRatio)

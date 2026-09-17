@@ -132,6 +132,12 @@ Each item:
 ### `GET /api/validators/:address`
 Full profile: everything from the list item plus `description`, `rewardAddress` (+ explorer link), score components if provided by registry, `registryUpdatedAt`, and `canaryProbe` (`website` is already on the list item).
 
+### `GET /api/validators/:address/favicon`
+Returns the validator website's conventional `/favicon.ico` when available. The
+server caches successful and unavailable lookups for 24 hours, serves a
+last-known icon while refreshing, and returns `404` when no usable icon is
+available. Responses advertise the same 24-hour browser cache window.
+
 ```jsonc
 "canaryProbe": {
   "configured": true,

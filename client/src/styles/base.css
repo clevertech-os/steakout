@@ -68,8 +68,15 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background: var(--so-surface);
+  background-color: var(--so-surface);
+  background-image: url('/assets/paper-texture-neutral-v2.png');
+  background-repeat: repeat;
+  background-size: 1024px 1024px;
   color: var(--so-ink);
+}
+
+#root {
+  min-height: 100vh;
 }
 
 /* Focus defaults for custom interactive elements without nq-focusable. */
