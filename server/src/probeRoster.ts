@@ -76,8 +76,8 @@ export interface CanaryProbeSummary {
   lastPaymentTxHash: string | null
   lastPaymentExplorerUrl: string | null
   /**
-   * Last known staker total balance for the probe (restake path / future snapshots).
-   * Null until snapshotting or a live read is wired.
+   * Last known staker total balance for the probe (restake / unknown path).
+   * Null until the canary snapshot job (or an authenticated position read) writes a row.
    */
   lastStakerBalanceLuna: number | null
   lastStakerBalanceAt: string | null

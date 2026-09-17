@@ -199,10 +199,12 @@ The response also includes `data.canary`, an aggregate of the configured public
 probe roster. It contains `configuredCount`, a `payoutTypes` split (`direct`,
 `restake`, `unknown`), and `statuses` (`observed`, `pending`, `unavailable`).
 `observed` counts only probes with indexed successful payment or staker-snapshot
-evidence. `pending` means the evidence path is checkable but no evidence is
-indexed yet. `unavailable` means the current registry/roster data cannot support
-that check. These counts do not imply that a missing observation proves a payout
-failure.
+evidence. Restake and unknown canaries get snapshots from the background
+`probeSnapshots` job (`CANARY_SNAPSHOT_ENABLED`, default on); direct canaries
+still need a reward→probe transaction. `pending` means the evidence path is
+checkable but no evidence is indexed yet. `unavailable` means the current
+registry/roster data cannot support that check. These counts do not imply that
+a missing observation proves a payout failure.
 
 ### `GET /api/explorer/transaction/:hash`
 302 redirect to the canonical explorer URL for the active network, or JSON `{ url }` with `?format=json`.

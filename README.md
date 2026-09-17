@@ -110,6 +110,7 @@ Copy [`.env.example`](.env.example). Important variables:
 | `NIMIQ_RPC_URL_FALLBACK` | Optional secondary RPC (e.g. public after private primary) |
 | `VALIDATORS_API_URL` | Official validators registry (main vs test workers; auto-picked from `NIMIQ_NETWORK` if unset) |
 | `INDEXER_ENABLED` | Enable reward-address payout indexing (off by default in example) |
+| `CANARY_SNAPSHOT_ENABLED` | Snapshot public canary probe staker accounts for restake coverage (default on; skipped on network mismatch) |
 | `DATA_DIR` | SQLite location |
 | `CORS_ORIGIN` | Browser origin allowed to call the API (dev: `http://localhost:5173`) |
 | `VITE_NIMIQ_NETWORK` | Client network badge + Hub/RPC defaults (`mainnet` hides badge; `testnet` → hub.nimiq-testnet.com) |

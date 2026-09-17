@@ -16,6 +16,10 @@ import {
   PayoutIndexer,
   startPayoutIndexerScheduler,
 } from './payoutIndexer.js'
+import {
+  canarySnapshotIntervalMsFromEnv,
+  startCanarySnapshotScheduler,
+} from './probeSnapshots.js'
 import { getBlockNumber } from './nimiq-rpc.js'
 import {
   isPaymentFloorRefreshDue,
@@ -65,6 +69,7 @@ const app = createApp({
 })
 
 let payoutScheduler: { stop: () => void } | undefined
+let canarySnapshotScheduler: { stop: () => void } | undefined
 if (process.env.INDEXER_ENABLED === 'true') {
   const configuredInterval = Number(process.env.INDEXER_INTERVAL_MINUTES ?? 45)
   // Allow a longer first-cycle window when deep-backfilling many addresses.
@@ -88,6 +93,22 @@ if (process.env.INDEXER_ENABLED === 'true') {
     () => configuredRewardAddresses(database),
     intervalMinutes * 60_000,
   )
+}
+
+// Canary restake/unknown coverage: snapshot public probe staker accounts (hourly throttle).
+// Skips automatically when the roster network does not match NIMIQ_NETWORK.
+if (process.env.CANARY_SNAPSHOT_ENABLED !== 'false') {
+  const intervalMs = canarySnapshotIntervalMsFromEnv()
+  console.log(
+    JSON.stringify({
+      canarySnapshots: 'enabled',
+      intervalMinutes: intervalMs / 60_000,
+    }),
+  )
+  canarySnapshotScheduler = startCanarySnapshotScheduler(database, {
+    intervalMs,
+    rpcUrl: process.env.NIMIQ_RPC_URL,
+  })
 }
 
 // Observed payment floors: weekly full recompute into payment_floors (request path is read-only).
@@ -217,6 +238,7 @@ const server = app.listen(port, () => {
 
 function shutdown() {
   payoutScheduler?.stop()
+  canarySnapshotScheduler?.stop()
   validatorScheduler?.stop()
   paymentFloorScheduler?.stop()
   server.close(() => {

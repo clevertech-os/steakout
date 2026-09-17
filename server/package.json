@@ -11,7 +11,8 @@
     "classify": "tsx scripts/classify.ts",
     "min-payout-inference": "tsx scripts/min-payout-inference.ts",
     "probe:rpc": "tsx scripts/probe-rpc.ts",
-    "audit:rewards": "tsx scripts/audit-reward-addresses.ts"
+    "audit:rewards": "tsx scripts/audit-reward-addresses.ts",
+    "snapshot:canaries": "tsx scripts/snapshot-canaries.ts"
   },
   "engines": {
     "node": ">=22"

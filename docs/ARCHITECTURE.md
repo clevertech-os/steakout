@@ -143,6 +143,7 @@ Nimiq Pay provider ──writes──> Nimiq chain
 - **Indexer** (`payoutIndexer.ts`): per reward address, incremental `getTransactionsByAddress` pages → normalized `transactions` rows (dedup by hash) → cursor advance. Scheduler: 30–60 min cycle, bounded pages, per-address concurrency limit, exponential backoff.
 - **Classifier** (`payoutClassifier.ts`): reads `transactions` → payout runs, schedule adherence, recipient coverage → `validator_observations`.
 - **Position reads** (`stakingState.ts`): on authenticated request, RPC `getStakerByAddress` + `getAccountByAddress` → normalized position → response (+ `staker_snapshots` append for restake growth history).
+- **Canary snapshots** (`probeSnapshots.ts`): hourly `getStakerByAddress` for restake/unknown public probe addresses → same `staker_snapshots` table. This is how directory canary coverage marks restake probes **observed**. Direct canaries still need indexed reward→probe payments. Disable with `CANARY_SNAPSHOT_ENABLED=false`; skipped when the roster network does not match `NIMIQ_NETWORK`.
 
 ## 8. Normalized position states
 

@@ -233,6 +233,10 @@ Observed payment floors (p5 / min from reward-address outflows) are **not** comp
 
 Disable with `PAYMENT_FLOOR_REFRESH_ENABLED=false`.
 
+### Canary probe snapshots
+
+Restake/unknown canary coverage reads `staker_snapshots` for public probe addresses. `startCanarySnapshotScheduler` (hourly, `CANARY_SNAPSHOT_ENABLED`) calls `getStakerByAddress` for those roster probes and writes through the same hourly throttle as authenticated position reads. Direct canaries are not snapshotted here; they still need indexed reward→probe payments.
+
 ### Re-classification
 
 `transactions.raw_json` + `calc_version` allow re-running classification after logic changes without re-fetching the chain. Observation queries filter to the latest `calc_version` per type.
@@ -241,7 +245,7 @@ Disable with `PAYMENT_FLOOR_REFRESH_ENABLED=false`.
 
 - `transactions`, `validator_observations`: append-only, no deletion in v1.
 - `auth_challenges`, expired `staking_intents`: daily cleanup job (delete where `expires_at < now - 7 days`).
-- `staker_snapshots`: keep all in v1 (volume is bounded by active users × read frequency).
+- `staker_snapshots`: keep all in v1 (volume is bounded by active users × read frequency plus ~20 canary probes × hourly job).
 - `validator_watchlist`: retained while the user watches a validator; duplicate
   watches are prevented by `(user_address, validator_address)`.
 - `user_alerts`: append-only source events plus nullable `read_at`; duplicate

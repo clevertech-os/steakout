@@ -62,7 +62,7 @@ Last observed payment to the user's address; consecutive observed windows includ
 
 Rewards are not necessarily sent as direct payments. v1 model:
 
-- Track the user's staker account state over time (`staker_snapshots`).
+- Track the user's staker account state over time (`staker_snapshots`). Steakout's own restake canary probes use the same table, filled by a background snapshot job rather than a wallet session.
 - Show **"Observed position growth"** — never "Validator payout verified".
 - Show a multi-snapshot window with each interval, source block when available, freshness, and the aggregate delta from usable intervals.
 - Steakout scans the authenticated staker address's cursor-paginated chain history and decodes protocol staking-contract payloads. This detects staking actions made through another wallet or app, including third-party additions directed to the staker.
