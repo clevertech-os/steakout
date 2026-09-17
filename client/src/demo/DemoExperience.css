@@ -2,24 +2,13 @@
   position: relative;
   isolation: isolate;
   min-height: 100vh;
-  background: var(--so-surface);
-}
-
-.demo-page-shell--texture-warm {
-  background-color: var(--so-surface);
-  background-image: url('/assets/paper-texture-warm-v1.png');
-  background-repeat: repeat;
-  background-size: 1024px 1024px;
-}
-
-.demo-page-shell--texture-neutral {
   background-color: var(--so-surface);
   background-image: url('/assets/paper-texture-neutral-v2.png');
   background-repeat: repeat;
   background-size: 1024px 1024px;
 }
 
-.demo-page-shell--texture-neutral::before {
+.demo-page-shell::before {
   position: absolute;
   z-index: 0;
   inset: 0;
@@ -29,7 +18,7 @@
   pointer-events: none;
 }
 
-.demo-page-shell--texture-neutral > * {
+.demo-page-shell > * {
   position: relative;
   z-index: 1;
 }
@@ -57,13 +46,6 @@
   justify-content: space-between;
   gap: var(--so-space-4);
   margin-bottom: 3rem;
-}
-
-.demo-topbar-status {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--so-space-2);
 }
 
 .demo-brand {
@@ -95,8 +77,7 @@
   object-fit: contain;
 }
 
-.demo-mode-pill,
-.demo-texture-pill {
+.demo-mode-pill {
   display: inline-flex;
   align-items: center;
   min-height: 2rem;
@@ -108,11 +89,6 @@
   font-size: var(--so-text-xs);
   font-weight: 700;
   white-space: nowrap;
-}
-
-.demo-texture-pill {
-  background: var(--so-card);
-  color: var(--so-muted);
 }
 
 .demo-page-header {

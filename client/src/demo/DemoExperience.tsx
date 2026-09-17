@@ -5,7 +5,6 @@ import StatusChip, { type ObservationStatus } from '../components/StatusChip'
 import './DemoExperience.css'
 
 type DemoTab = 'position' | 'validator' | 'activity'
-export type DemoTextureVariant = 'warm' | 'neutral'
 
 interface DemoMetricProps {
   label: string
@@ -289,23 +288,19 @@ function ReviewPreview({ onClose }: { onClose: () => void }) {
   )
 }
 
-export default function DemoExperience({ texture }: { texture?: DemoTextureVariant } = {}) {
+export default function DemoExperience() {
   const [activeTab, setActiveTab] = useState<DemoTab>('position')
   const [reviewOpen, setReviewOpen] = useState(false)
-  const textureLabel = texture === 'warm' ? 'Warm cotton paper' : 'Neutral vellum paper'
 
   return (
-    <div className={`demo-page-shell${texture ? ` demo-page-shell--texture-${texture}` : ''}`}>
+    <div className="demo-page-shell">
       <main className="demo-page">
         <div className="demo-topbar">
           <a className="demo-brand" href="/" aria-label="Return to Steakout home">
             <img src="/assets/logo-v1.png" alt="" />
             <span>Steakout</span>
           </a>
-          <div className="demo-topbar-status">
-            <span className="demo-mode-pill">Demo mode</span>
-            {texture ? <span className="demo-texture-pill">{textureLabel}</span> : null}
-          </div>
+          <span className="demo-mode-pill">Demo mode</span>
         </div>
 
         <header className="demo-page-header">
