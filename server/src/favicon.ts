@@ -108,6 +108,31 @@ export function publicValidatorIconUrl(address: string): string {
   return `/api/validators/${encodeURIComponent(normalizeAddress(address))}/favicon`
 }
 
+/**
+ * Make a registry/website SVG safe to paint in <img>. PDF/Affinity exports
+ * often include an external DTD, zoomAndPan, or 100% root size — browsers
+ * then fire onError and the directory falls back to initials.
+ */
+export function prepareIconForImg(
+  contentType: string,
+  body: Buffer,
+): { contentType: string; body: Buffer } {
+  const type = contentType.split(';', 1)[0]?.trim().toLowerCase() ?? ''
+  if (type !== 'image/svg+xml') return { contentType: type || contentType, body }
+
+  let text = body.toString('utf8').replace(/^\uFEFF/, '')
+  text = text.replace(/<\?xml-stylesheet[\s\S]*?\?>/gi, '')
+  text = text.replace(/<!DOCTYPE[^>]*>/i, '')
+  text = text.replace(/\szoomAndPan\s*=\s*(['"])[\s\S]*?\1/gi, '')
+  text = text.replace(/<script\b[\s\S]*?<\/script>/gi, '')
+  text = text.replace(/<foreignObject\b[\s\S]*?<\/foreignObject>/gi, '')
+  text = text.replace(/(\s(?:width|height)\s*=\s*)(['"])100%\2/gi, '')
+  if (!/<svg\b[^>]*\sxmlns\s*=/i.test(text)) {
+    text = text.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"')
+  }
+  return { contentType: 'image/svg+xml', body: Buffer.from(text, 'utf8') }
+}
+
 export function safeFaviconSource(website: string | null | undefined): URL | null {
   if (typeof website !== 'string' || website.trim() === '') return null
   const source = safeHttpSource(website.trim())

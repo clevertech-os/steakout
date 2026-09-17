@@ -4,6 +4,7 @@ import {
   decodeDataUrlImage,
   FAVICON_CACHE_TTL_MS,
   getFavicon,
+  prepareIconForImg,
   publicValidatorIconUrl,
   safeFaviconSource,
 } from '../../../server/src/favicon.js'
@@ -40,6 +41,21 @@ describe('favicon cache', () => {
     expect(publicValidatorIconUrl('NQ96 X97C 94M1 6MV3 KJ0G JA5U 6VB4 6Y63 EUH4')).toBe(
       '/api/validators/NQ96X97C94M16MV3KJ0GJA5U6VB46Y63EUH4/favicon',
     )
+  })
+
+  it('strips SVG export attributes that prevent painting in img tags', () => {
+    const raw = Buffer.from(
+      '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">'
+      + '<svg zoomAndPan="magnify" width="100%" height="100%" viewBox="0 0 8 8">'
+      + '<rect width="8" height="8" fill="#ec991c"/></svg>',
+    )
+    const prepared = prepareIconForImg('image/svg+xml', raw)
+    const text = prepared.body.toString('utf8')
+    expect(text).not.toMatch(/DOCTYPE/i)
+    expect(text).not.toMatch(/zoomAndPan/)
+    expect(text).not.toMatch(/100%/)
+    expect(text).toContain('xmlns="http://www.w3.org/2000/svg"')
+    expect(prepareIconForImg('image/png', Buffer.from('png')).body.toString()).toBe('png')
   })
 
   it('serves a cached icon until the 24-hour TTL expires', async () => {

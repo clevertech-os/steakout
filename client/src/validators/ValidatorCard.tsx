@@ -135,7 +135,7 @@ export default function ValidatorCard({
               alt=""
               width={isRow ? 32 : 40}
               height={isRow ? 32 : 40}
-              loading="lazy"
+              loading="eager"
               decoding="async"
               onError={(e) => {
                 // Hide broken logos so the initials fallback can show.

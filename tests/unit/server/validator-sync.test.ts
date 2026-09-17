@@ -585,6 +585,33 @@ describe('GET /api/validators', () => {
     expect(compactBody.data.address).toBe(spaced)
   })
 
+  it('serves registry SVG icons without document CSP so img tags can paint them', async () => {
+    const ctx = await startApp(true)
+    contexts.push(ctx)
+    const spaced = 'NQ96 X97C 94M1 6MV3 KJ0G JA5U 6VB4 6Y63 EUH4'
+    const compact = spaced.replace(/\s+/g, '')
+    const svg = [
+      '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">',
+      '<svg zoomAndPan="magnify" width="100%" height="100%" viewBox="0 0 8 8">',
+      '<rect width="8" height="8" fill="#ec991c"/></svg>',
+    ].join('')
+    ctx.database.prepare('UPDATE validators SET logo_url = ? WHERE address = ?').run(
+      `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`,
+      spaced,
+    )
+
+    const response = await fetch(`${ctx.baseUrl}/api/validators/${compact}/favicon`)
+    expect(response.status).toBe(200)
+    expect(response.headers.get('x-cache')).toBe('REGISTRY')
+    expect(response.headers.get('content-security-policy')).toBeNull()
+    expect(response.headers.get('content-type')).toMatch(/image\/svg\+xml/)
+    const body = await response.text()
+    expect(body).not.toMatch(/DOCTYPE/i)
+    expect(body).not.toMatch(/zoomAndPan/)
+    expect(body).not.toMatch(/100%/)
+    expect(body).toContain('xmlns="http://www.w3.org/2000/svg"')
+  })
+
   it('returns VALIDATOR_NOT_FOUND for unknown address', async () => {
     const ctx = await startApp(true)
     contexts.push(ctx)

@@ -135,11 +135,14 @@ Full profile: everything from the list item plus `description`, `rewardAddress` 
 ### `GET /api/validators/:address/favicon`
 Serves the validator icon. Prefers the official registry `logo` (custom artwork
 only; default identicons are omitted). If none is stored, fetches the operator
-website: conventional `/favicon.ico`, then HTML-declared icons. The server
-caches website lookups for 24 hours, serves a last-known website icon while
-refreshing, and returns `404` when no usable icon is available. Responses
-advertise the same 24-hour browser cache window. Websites are registry
-declarations only; Steakout does not search the web to invent missing sites.
+website: conventional `/favicon.ico`, then HTML-declared icons. SVG payloads
+are sanitized for `<img>` (external DTD, `zoomAndPan`, percent-sized roots
+stripped). The response is an image, not an HTML document, so it does not
+carry the SPA Content-Security-Policy. The server caches website lookups for
+24 hours, serves a last-known website icon while refreshing, and returns `404`
+when no usable icon is available. Responses advertise the same 24-hour browser
+cache window. Websites are registry declarations only; Steakout does not search
+the web to invent missing sites.
 
 ```jsonc
 "canaryProbe": {

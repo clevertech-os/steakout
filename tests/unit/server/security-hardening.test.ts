@@ -2,9 +2,11 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { createServer, type Server } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import express from 'express'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createApp } from '../../../server/src/app.js'
 import { openDatabase } from '../../../server/src/db.js'
+import { applySecurityHeaders } from '../../../server/src/http-headers.js'
 import { clearRateLimitBuckets } from '../../../server/src/rate-limit.js'
 
 const servers: Server[] = []
@@ -53,10 +55,33 @@ describe('production security boundaries', () => {
     })
     expect(response.status).toBe(401)
     expect(response.headers.get('access-control-allow-origin')).toBeNull()
-    expect(response.headers.get('content-security-policy')).toContain("default-src 'self'")
-    expect(response.headers.get('content-security-policy')).toContain('https://hub.nimiq.com')
-    expect(response.headers.get('content-security-policy')).toContain("'wasm-unsafe-eval'")
-    expect(response.headers.get('content-security-policy')).not.toMatch(/(?:^|\s)'unsafe-eval'(?:\s|;|$)/)
+    expect(response.headers.get('content-security-policy')).toBeNull()
+  })
+
+  it('applies document CSP to the SPA, not to API JSON or images', async () => {
+    const app = express()
+    applySecurityHeaders(app)
+    app.get('/page', (_req, res) => {
+      res.send('ok')
+    })
+    app.get('/api/health', (_req, res) => {
+      res.json({ ok: true })
+    })
+    const server = createServer(app)
+    servers.push(server)
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    const address = server.address()
+    if (!address || typeof address === 'string') throw new Error('expected TCP address')
+    const baseUrl = `http://127.0.0.1:${address.port}`
+
+    const page = await fetch(`${baseUrl}/page`)
+    expect(page.headers.get('content-security-policy')).toContain("default-src 'self'")
+    expect(page.headers.get('content-security-policy')).toContain('https://hub.nimiq.com')
+    expect(page.headers.get('content-security-policy')).toContain("'wasm-unsafe-eval'")
+    expect(page.headers.get('content-security-policy')).not.toMatch(/(?:^|\s)'unsafe-eval'(?:\s|;|$)/)
+
+    const api = await fetch(`${baseUrl}/api/health`)
+    expect(api.headers.get('content-security-policy')).toBeNull()
   })
 
   it('does not allow spoofed forwarded headers to rotate rate-limit identity', async () => {

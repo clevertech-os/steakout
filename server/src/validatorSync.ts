@@ -47,6 +47,7 @@ import {
   FAVICON_CACHE_TTL_MS,
   getFavicon,
   publicValidatorIconUrl,
+  prepareIconForImg,
 } from './favicon.js'
 import {
   fetchValidators,
@@ -910,6 +911,26 @@ function sendApiError(res: Response, status: number, code: string, message: stri
   })
 }
 
+function sendValidatorIcon(
+  res: Response,
+  body: Buffer,
+  contentType: string,
+  cache: string,
+  maxAgeMs: number,
+): void {
+  const icon = prepareIconForImg(contentType, body)
+  // SPA document CSP must not apply: browsers honor it on SVG <img> resources.
+  res.removeHeader('Content-Security-Policy')
+  res.setHeader(
+    'Cache-Control',
+    `public, max-age=${Math.floor(maxAgeMs / 1000)}, stale-while-revalidate=3600`,
+  )
+  res.setHeader('X-Cache', cache)
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.type(icon.contentType)
+  res.send(icon.body)
+}
+
 export function mountValidatorsApi(app: Express, database: Database.Database): void {
   app.get('/api/validators', (req: Request, res: Response) => {
     const sort = parseSort(req.query.sort)
@@ -988,14 +1009,7 @@ export function mountValidatorsApi(app: Express, database: Database.Database): v
     const row = getValidatorRowByAddress(database, address)
     const registryLogo = decodeDataUrlImage(row?.logo_url)
     if (registryLogo) {
-      res.setHeader(
-        'Cache-Control',
-        `public, max-age=${Math.floor(FAVICON_CACHE_TTL_MS / 1000)}, stale-while-revalidate=3600`,
-      )
-      res.setHeader('X-Cache', 'REGISTRY')
-      res.setHeader('X-Content-Type-Options', 'nosniff')
-      res.type(registryLogo.contentType)
-      res.send(registryLogo.body)
+      sendValidatorIcon(res, registryLogo.body, registryLogo.contentType, 'REGISTRY', FAVICON_CACHE_TTL_MS)
       return
     }
 
@@ -1005,16 +1019,14 @@ export function mountValidatorsApi(app: Express, database: Database.Database): v
     }
 
     const favicon = await getFavicon(row.website)
-    const maxAge = favicon.cache === 'HIT' ? Math.floor(FAVICON_CACHE_TTL_MS / 1000) : 0
-    res.setHeader('Cache-Control', `public, max-age=${maxAge}, stale-while-revalidate=3600`)
-    res.setHeader('X-Cache', favicon.cache)
-    res.setHeader('X-Content-Type-Options', 'nosniff')
     if (!favicon.body || !favicon.contentType) {
+      res.setHeader('X-Cache', favicon.cache)
+      res.setHeader('X-Content-Type-Options', 'nosniff')
       res.status(404).end()
       return
     }
-    res.type(favicon.contentType)
-    res.send(favicon.body)
+    const maxAgeMs = favicon.cache === 'HIT' ? FAVICON_CACHE_TTL_MS : 0
+    sendValidatorIcon(res, favicon.body, favicon.contentType, favicon.cache, maxAgeMs)
   })
 
   app.get('/api/validators/:address', (req: Request, res: Response) => {

@@ -3,7 +3,8 @@
  * Ported from VeriLock `server/src/http-headers.ts` (P1-02).
  *
  * API uses helmet defaults (minus CSP/COOP/CORP/frameguard that break Hub popups).
- * SPA gets minimal nosniff + referrer policy so Nimiq Hub redirect RPC still works.
+ * SPA gets a document CSP. That policy must not leak onto `/api` — browsers apply
+ * CSP to SVG-as-`<img>` and blank validator logos.
  */
 
 import type { Express, RequestHandler } from 'express'
@@ -56,6 +57,14 @@ const spaSecurityHeaders: RequestHandler = (_req, res, next) => {
 
 export function applySecurityHeaders(app: Express): void {
   app.use('/api', apiSecurityHeaders)
-  app.use(spaSecurityHeaders)
+  app.use((req, res, next) => {
+    // Document CSP belongs on the SPA HTML, not JSON/image API responses.
+    // Chrome applies CSP on SVG-as-<img>; leaking this policy blanks logos.
+    if (req.path === '/api' || req.path.startsWith('/api/')) {
+      next()
+      return
+    }
+    spaSecurityHeaders(req, res, next)
+  })
   app.disable('x-powered-by')
 }
