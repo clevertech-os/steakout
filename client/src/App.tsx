@@ -5,6 +5,7 @@ import StyleReference from './spike/StyleReference'
 import BottomNav from './components/BottomNav'
 import NetworkBadge from './components/NetworkBadge'
 import OfflineBanner from './components/OfflineBanner'
+import DemoExperience from './demo/DemoExperience'
 import { peekHubRedirectInUrl } from './hubRedirectParse'
 import { HOME_PATH, hashToPath, matchRoute, type RouteId } from './routes'
 import './App.css'
@@ -170,6 +171,10 @@ function App() {
   }
 
   const path = window.location.pathname.replace(/\/+$/, '') || '/'
+
+  if (path === '/demo') {
+    return <DemoExperience />
+  }
 
   if (path === '/spike') {
     if (!import.meta.env.DEV && import.meta.env.VITE_ENABLE_SDK_SPIKE !== 'true') {
