@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react'
 import DataStatusTag, { type DataStatus } from '../components/DataStatusTag'
 import PositionStateBadge from '../components/PositionStateBadge'
-import StatusChip, { type ObservationStatus } from '../components/StatusChip'
+import StatusChip from '../components/StatusChip'
+import { normalizeAddress, shortAddress } from '../addresses'
+import {
+  fetchValidators,
+  type ValidatorListItem,
+} from '../validators/api'
+import { validatorInitials } from '../validators/format'
+import '../validators/Directory.css'
+import '../validators/ValidatorCard.css'
 import './DemoExperience.css'
 
 type DemoTab = 'position' | 'validator' | 'activity'
@@ -135,6 +143,86 @@ function PositionPanel({
   )
 }
 
+function DemoDirectoryPreview() {
+  const [items, setItems] = useState<ValidatorListItem[] | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    void fetchValidators({ listed: true, sort: 'recommended', signal: controller.signal })
+      .then((envelope) => {
+        setItems(envelope.data.validators.slice(0, 6))
+      })
+      .catch(() => {
+        setItems([])
+      })
+    return () => controller.abort()
+  }, [])
+
+  if (!items || items.length === 0) return null
+
+  return (
+    <div className="demo-directory">
+      <p className="nq-label">Live listed validators</p>
+      <ul className="directory-list directory-list--rows shell-card">
+        {items.map((validator) => {
+          const compact = normalizeAddress(validator.address)
+          const displayName = validator.name?.trim() || shortAddress(validator.address)
+          const logoUrl = validator.logoUrl
+          const initials = validatorInitials(validator.name, validator.address)
+          return (
+            <li key={compact}>
+              <a
+                className="validator-card validator-card--row nq-focusable"
+                href={`/#/validators/${compact}`}
+                aria-label={`View record for ${displayName}`}
+              >
+                <div className="validator-card-top">
+                  <div className="validator-card-identity">
+                    {logoUrl ? (
+                      <img
+                        className="validator-card-logo"
+                        src={logoUrl}
+                        alt=""
+                        width={32}
+                        height={32}
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                          const fallback = e.currentTarget.nextElementSibling
+                          if (fallback instanceof HTMLElement) fallback.hidden = false
+                        }}
+                      />
+                    ) : null}
+                    <span
+                      className="validator-card-initials"
+                      aria-hidden="true"
+                      hidden={Boolean(logoUrl)}
+                    >
+                      {initials}
+                    </span>
+                    <div className="validator-card-titles">
+                      <div className="validator-card-name-row">
+                        <h3 className="validator-card-name">{displayName}</h3>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="validator-card-row-end">
+                    <StatusChip status={validator.observation.status} compact />
+                    <span className="validator-card-cta nq-arrow">
+                      <span className="visually-hidden">View record</span>
+                    </span>
+                  </div>
+                </div>
+              </a>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
 function ValidatorPanel() {
   return (
     <section
@@ -192,6 +280,8 @@ function ValidatorPanel() {
           Read the methodology
         </a>
       </div>
+
+      <DemoDirectoryPreview />
     </section>
   )
 }

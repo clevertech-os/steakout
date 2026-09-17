@@ -111,7 +111,28 @@
   line-height: 1.5;
 }
 
-.demo-workspace {
+.demo-page .demo-workspace.nq-card {
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--so-card);
+  background-image: none;
+}
+
+.demo-dialog.nq-card {
+  background-color: var(--so-card);
+  background-image: none;
+}
+
+.demo-directory {
+  margin-top: var(--so-space-6);
+}
+
+.demo-directory > .nq-label {
+  margin: 0 0 var(--so-space-3);
+}
+
+.demo-directory .directory-list--rows {
+  gap: 0;
   padding: 0;
   overflow: hidden;
 }

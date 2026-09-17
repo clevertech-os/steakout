@@ -16,9 +16,9 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS validators (
   address                  TEXT PRIMARY KEY,   -- validator address
   name                     TEXT,
-  website                  TEXT,
+  website                  TEXT,               -- operator site from registry (nullable)
   description              TEXT,
-  logo_url                 TEXT,
+  logo_url                 TEXT,               -- custom registry logo as a data URL; null for default identicons
   fee_declared             TEXT,               -- raw registry string, do not parse into a score
   payout_type_declared     TEXT,               -- 'direct' | 'restake' | 'unknown'
   payout_schedule_declared TEXT,               -- raw registry string

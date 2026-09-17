@@ -109,6 +109,7 @@ describe('validators API normalization', () => {
       '2026-08-03T05:24:27.000Z',
     )
 
+    expect(normalized.logoUrl).toBeNull()
     expect(normalized).toMatchObject({
       fee: null,
       payoutType: 'unknown',
@@ -147,5 +148,39 @@ describe('validators API normalization', () => {
     expect(snapshot.validators).toHaveLength(24)
     expect(snapshot.rewardAddressResolution).toEqual({ attempted: 24, resolved: 24, unavailable: 0 })
     expect(snapshot.validators[0]?.rewardAddress).toBe(snapshot.validators[0]?.address)
+  })
+
+  it('keeps custom registry logos and drops default identicons', () => {
+    const timestamp = '2026-08-03T05:24:27.000Z'
+    const custom = 'data:image/svg+xml;base64,PHN2Zy8+'
+    const withLogo = normalizeValidator(
+      {
+        address: 'NQ00 0000 0000 0000 0000 0000 0000 0000 0000',
+        hasDefaultLogo: false,
+        logo: custom,
+      },
+      timestamp,
+    )
+    const defaultLogo = normalizeValidator(
+      {
+        address: 'NQ00 0000 0000 0000 0000 0000 0000 0000 0001',
+        hasDefaultLogo: true,
+        logo: custom,
+      },
+      timestamp,
+    )
+    expect(withLogo.logoUrl).toBe(custom)
+    expect(defaultLogo.logoUrl).toBeNull()
+    const encoded = 'data:image/svg+xml,%3Csvg%2F%3E'
+    expect(
+      normalizeValidator(
+        {
+          address: 'NQ00 0000 0000 0000 0000 0000 0000 0000 0002',
+          hasDefaultLogo: false,
+          logo: encoded,
+        },
+        timestamp,
+      ).logoUrl,
+    ).toBe(encoded)
   })
 })

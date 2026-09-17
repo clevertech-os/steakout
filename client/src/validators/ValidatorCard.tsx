@@ -118,7 +118,7 @@ export default function ValidatorCard({
       id={`validator-${compact}`}
       className={
         isRow
-          ? 'validator-card validator-card--row nq-hoverable nq-focusable'
+          ? 'validator-card validator-card--row nq-focusable'
           : 'validator-card nq-card shell-card nq-hoverable nq-hoverable-cta nq-focusable'
       }
       href={profileHref}

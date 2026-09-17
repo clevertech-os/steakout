@@ -18,6 +18,12 @@
   border-color: var(--so-info);
 }
 
+/* nq-hoverable defaults to a gray wash at rest. Cards stay on --so-card. */
+.validator-card.nq-hoverable {
+  background-image: none;
+  background-color: var(--so-card);
+}
+
 .validator-card-top {
   display: flex;
   align-items: flex-start;
@@ -128,6 +134,7 @@
 
 /* Observation chips use StatusChip (components/StatusChip.css) as source of truth. */
 
+.validator-card .status-chip--verified,
 .validator-card .status-chip--warn {
   border-color: transparent;
 }
@@ -260,9 +267,11 @@
 /* Compact row: identity + observation only. Full metrics live on the profile. */
 .validator-card--row {
   gap: 0;
+  width: 100%;
   min-height: var(--so-touch);
-  padding: 0.55rem 0.75rem;
+  padding: 0.7rem 1rem;
   border-radius: 0;
+  background: transparent;
 }
 
 .validator-card--row:hover,

@@ -1,4 +1,5 @@
 import { isIP } from 'node:net'
+import { normalizeAddress } from './addresses.js'
 
 export const FAVICON_CACHE_TTL_MS = 24 * 60 * 60_000
 export const FAVICON_STALE_MS = 60 * 60_000
@@ -75,6 +76,36 @@ function safeHttpSource(raw: string): URL | null {
   } catch {
     return null
   }
+}
+
+const DATA_URL_IMAGE =
+  /^data:(image\/[a-z0-9.+-]+)((?:;[\w.=+-]+)*),(.*)$/i
+const DATA_URL_MAX_BYTES = 512 * 1024
+
+/** Decode a registry `logo` data URL into bytes we can send from /favicon. */
+export function decodeDataUrlImage(
+  dataUrl: string | null | undefined,
+): { body: Buffer; contentType: string } | null {
+  if (typeof dataUrl !== 'string') return null
+  const match = dataUrl.trim().match(DATA_URL_IMAGE)
+  if (!match) return null
+  const contentType = match[1]?.toLowerCase()
+  const params = match[2]?.toLowerCase() ?? ''
+  const payload = match[3]
+  if (!contentType || payload == null || payload === '') return null
+  try {
+    const body = params.includes(';base64')
+      ? Buffer.from(payload.replace(/\s+/g, ''), 'base64')
+      : Buffer.from(decodeURIComponent(payload), 'utf8')
+    if (body.length === 0 || body.length > DATA_URL_MAX_BYTES) return null
+    return { body, contentType }
+  } catch {
+    return null
+  }
+}
+
+export function publicValidatorIconUrl(address: string): string {
+  return `/api/validators/${encodeURIComponent(normalizeAddress(address))}/favicon`
 }
 
 export function safeFaviconSource(website: string | null | undefined): URL | null {

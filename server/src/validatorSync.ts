@@ -42,7 +42,12 @@ import {
   canaryConfiguredForValidator,
   type CanaryProbeSummary,
 } from './probeRoster.js'
-import { FAVICON_CACHE_TTL_MS, getFavicon } from './favicon.js'
+import {
+  decodeDataUrlImage,
+  FAVICON_CACHE_TTL_MS,
+  getFavicon,
+  publicValidatorIconUrl,
+} from './favicon.js'
 import {
   fetchValidators,
   type FetchValidatorsOptions,
@@ -214,7 +219,7 @@ function rowFromNormalized(
     name: validator.name,
     website: validator.website,
     description: validator.description,
-    logo_url: null,
+    logo_url: validator.logoUrl,
     fee_declared: validator.fee,
     payout_type_declared: validator.payoutType,
     payout_schedule_declared: validator.payoutSchedule,
@@ -253,7 +258,7 @@ export function upsertValidators(
       name = excluded.name,
       website = excluded.website,
       description = excluded.description,
-      logo_url = COALESCE(excluded.logo_url, validators.logo_url),
+      logo_url = excluded.logo_url,
       fee_declared = excluded.fee_declared,
       payout_type_declared = excluded.payout_type_declared,
       payout_schedule_declared = excluded.payout_schedule_declared,
@@ -684,7 +689,8 @@ export function toListItem(
     address: row.address,
     name: row.name,
     isListed: row.is_listed === 1,
-    logoUrl: row.logo_url,
+    logoUrl:
+      row.logo_url || row.website ? publicValidatorIconUrl(row.address) : null,
     website: row.website,
     // official_score is already null for registry -1/missing (normalizeOfficialScore).
     officialScore: row.official_score,
@@ -980,6 +986,19 @@ export function mountValidatorsApi(app: Express, database: Database.Database): v
     }
 
     const row = getValidatorRowByAddress(database, address)
+    const registryLogo = decodeDataUrlImage(row?.logo_url)
+    if (registryLogo) {
+      res.setHeader(
+        'Cache-Control',
+        `public, max-age=${Math.floor(FAVICON_CACHE_TTL_MS / 1000)}, stale-while-revalidate=3600`,
+      )
+      res.setHeader('X-Cache', 'REGISTRY')
+      res.setHeader('X-Content-Type-Options', 'nosniff')
+      res.type(registryLogo.contentType)
+      res.send(registryLogo.body)
+      return
+    }
+
     if (!row?.website) {
       res.status(404).end()
       return

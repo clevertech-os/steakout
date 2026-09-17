@@ -94,7 +94,7 @@ Each item:
   "address": "NQ..",
   "name": "string | null",
   "isListed": true,
-  "logoUrl": "string | null",
+  "logoUrl": "string | null",        // same-origin `/api/validators/:address/favicon` when a custom registry logo or website exists
   "website": "string | null",        // operator website from registry; directory shows external-link icon when set
   "officialScore": 0.0,              // or null -> client shows "Insufficient data" (registry may use -1)
   "stakeLuna": 0,
@@ -133,10 +133,13 @@ Each item:
 Full profile: everything from the list item plus `description`, `rewardAddress` (+ explorer link), score components if provided by registry, `registryUpdatedAt`, and `canaryProbe` (`website` is already on the list item).
 
 ### `GET /api/validators/:address/favicon`
-Returns the validator website's conventional `/favicon.ico` when available. The
-server caches successful and unavailable lookups for 24 hours, serves a
-last-known icon while refreshing, and returns `404` when no usable icon is
-available. Responses advertise the same 24-hour browser cache window.
+Serves the validator icon. Prefers the official registry `logo` (custom artwork
+only; default identicons are omitted). If none is stored, fetches the operator
+website: conventional `/favicon.ico`, then HTML-declared icons. The server
+caches website lookups for 24 hours, serves a last-known website icon while
+refreshing, and returns `404` when no usable icon is available. Responses
+advertise the same 24-hour browser cache window. Websites are registry
+declarations only; Steakout does not search the web to invent missing sites.
 
 ```jsonc
 "canaryProbe": {

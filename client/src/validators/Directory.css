@@ -215,7 +215,14 @@
 }
 
 .app-main .directory-list--rows.nq-card {
+  gap: 0;
+  padding: 0;
   overflow: hidden;
+}
+
+.directory-list--rows > li {
+  margin: 0;
+  padding: 0;
 }
 
 .directory-list--rows > li + li {
@@ -270,6 +277,10 @@
   flex-direction: column;
   gap: 0.85rem;
   padding: var(--so-space-4) 1.1rem;
+}
+
+.directory-skeleton--row {
+  padding: 0.7rem 1rem;
 }
 
 .directory-skeleton-row {

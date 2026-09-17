@@ -85,7 +85,7 @@
 .status-chip--verified {
   color: var(--so-verified-strong);
   background: var(--so-verified-soft);
-  border-color: var(--so-verified);
+  border-color: transparent;
 }
 
 /* Gold — mostly-on-schedule, irregular (incomplete) (STYLING §3).

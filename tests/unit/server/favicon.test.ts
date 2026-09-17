@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   clearFaviconCache,
+  decodeDataUrlImage,
   FAVICON_CACHE_TTL_MS,
   getFavicon,
+  publicValidatorIconUrl,
   safeFaviconSource,
 } from '../../../server/src/favicon.js'
 
@@ -25,6 +27,19 @@ describe('favicon cache', () => {
     expect(safeFaviconSource('javascript:alert(1)')).toBeNull()
     expect(safeFaviconSource('http://127.0.0.1:8080')).toBeNull()
     expect(safeFaviconSource('http://localhost:8080')).toBeNull()
+  })
+
+  it('decodes registry logo data URLs and builds the public icon path', () => {
+    const decoded = decodeDataUrlImage('data:image/svg+xml;base64,PHN2Zy8+')
+    expect(decoded?.contentType).toBe('image/svg+xml')
+    expect(decoded?.body.toString('utf8')).toBe('<svg/>')
+    expect(decodeDataUrlImage('https://pool.example/logo.png')).toBeNull()
+    const encodedSvg = decodeDataUrlImage('data:image/svg+xml,%3Csvg%2F%3E')
+    expect(encodedSvg?.contentType).toBe('image/svg+xml')
+    expect(encodedSvg?.body.toString('utf8')).toBe('<svg/>')
+    expect(publicValidatorIconUrl('NQ96 X97C 94M1 6MV3 KJ0G JA5U 6VB4 6Y63 EUH4')).toBe(
+      '/api/validators/NQ96X97C94M16MV3KJ0GJA5U6VB46Y63EUH4/favicon',
+    )
   })
 
   it('serves a cached icon until the 24-hour TTL expires', async () => {

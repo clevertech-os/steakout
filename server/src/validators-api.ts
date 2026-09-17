@@ -4,11 +4,18 @@ import { normalizeSchedule } from './payoutClassifier.js'
 export type ValidatorMode = 'known-only' | 'all-observable'
 export type NormalizedPayoutType = 'direct' | 'restake' | 'unknown'
 
+/** Registry custom logos are data URLs; skip default identicons and oversized blobs. */
+const REGISTRY_LOGO_MAX_CHARS = 512 * 1024
+const REGISTRY_LOGO_DATA_URL =
+  /^data:image\/[a-z0-9.+-]+(?:;[\w.=+-]+)*,[\s\S]+$/i
+
 export interface NormalizedValidator {
   address: string
   name: string | null
   website: string | null
   description: string | null
+  /** Registry `logo` data URL when custom; null for default identicons. */
+  logoUrl: string | null
   fee: string | null
   payoutType: NormalizedPayoutType
   /** Raw registry declaration; never replaced by a normalized form. */
@@ -131,6 +138,15 @@ function nullableString(value: unknown): string | null {
   return trimmed.length > 0 ? value : null
 }
 
+/** Keep operator-submitted logos; drop Nimiq default identicons and non-image payloads. */
+export function normalizeRegistryLogo(value: RegistryRecord): string | null {
+  if (value.hasDefaultLogo === true) return null
+  const logo = nullableString(value.logo)?.trim() ?? null
+  if (!logo || logo.length > REGISTRY_LOGO_MAX_CHARS) return null
+  if (!REGISTRY_LOGO_DATA_URL.test(logo)) return null
+  return /;base64,/i.test(logo) ? logo.replace(/\s+/g, '') : logo
+}
+
 function nullableNumber(value: unknown): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value) || value === -1) return null
   return value
@@ -170,6 +186,7 @@ export function normalizeValidator(
     name: nullableString(value.name),
     website: nullableString(value.website),
     description: nullableString(value.description),
+    logoUrl: normalizeRegistryLogo(value),
     fee: fee === '-1' ? null : fee,
     payoutType: normalizePayoutType(value.payoutType),
     payoutSchedule,
