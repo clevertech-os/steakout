@@ -172,7 +172,7 @@ function App() {
 
   const path = window.location.pathname.replace(/\/+$/, '') || '/'
 
-  if (path === '/demo') {
+  if (path === '/d' || path === '/demo') {
     return <DemoExperience />
   }
 

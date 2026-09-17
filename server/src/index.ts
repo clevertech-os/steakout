@@ -148,8 +148,13 @@ mountProfileShareRoutes(app, {
 
 // Public product showcase. It is a client-only, read-only fixture experience,
 // so Demosmith and other browser agents can open it without a wallet session.
-app.get(['/demo', '/demo/'], (_request, response) => {
+app.get(['/d', '/d/'], (_request, response) => {
   response.sendFile(clientIndexHtml)
+})
+
+// Keep the original showcase URL working while making /d the canonical address.
+app.get(['/demo', '/demo/'], (_request, response) => {
+  response.redirect(308, '/d')
 })
 
 app.get(['/demo/texture/warm', '/demo/texture/warm/', '/demo/texture/neutral', '/demo/texture/neutral/'], (_request, response) => {
