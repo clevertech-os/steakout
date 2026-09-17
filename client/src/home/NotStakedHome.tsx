@@ -94,7 +94,7 @@ export default function NotStakedHome({
         </div>
 
         {/* Stake-only QR on connected home — session already active here. */}
-        <OpenInNimiqPayQr linkDesktopSession={false} />
+        <OpenInNimiqPayQr linkDesktopSession={false} className="home-pay-qr" />
       </section>
     </>
   )

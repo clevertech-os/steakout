@@ -270,6 +270,11 @@
   margin-top: var(--so-space-4);
 }
 
+/* Keep the connected-state Pay handoff distinct from the action row above it. */
+.home-pay-qr {
+  margin-top: var(--so-space-5);
+}
+
 .home-retire-progress {
   margin-top: var(--so-space-5);
   padding-top: var(--so-space-5);
