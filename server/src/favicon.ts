@@ -4,6 +4,7 @@ export const FAVICON_CACHE_TTL_MS = 24 * 60 * 60_000
 export const FAVICON_STALE_MS = 60 * 60_000
 const FAVICON_FETCH_TIMEOUT_MS = 5_000
 const FAVICON_MAX_BYTES = 256 * 1024
+const FAVICON_DECLARED_MAX_BYTES = 512 * 1024
 const FAVICON_HTML_MAX_BYTES = 512 * 1024
 
 type FaviconEntry = {
@@ -106,6 +107,7 @@ type ResolvedFaviconOptions = Required<Pick<FaviconOptions, 'fetcher' | 'nowMs' 
 async function fetchImage(
   source: URL,
   options: ResolvedFaviconOptions,
+  maxBytes = FAVICON_MAX_BYTES,
 ): Promise<FaviconEntry | null> {
   const nowMs = options.nowMs()
   const controller = new AbortController()
@@ -122,12 +124,12 @@ async function fetchImage(
     const finalSource = safeHttpSource(response.url || source.href)
     const contentType = imageContentType(response.headers.get('content-type'))
     const declaredLength = Number(response.headers.get('content-length') ?? '')
-    if (!response.ok || !finalSource || !contentType || declaredLength > FAVICON_MAX_BYTES) {
+    if (!response.ok || !finalSource || !contentType || declaredLength > maxBytes) {
       return null
     }
 
     const body = Buffer.from(await response.arrayBuffer())
-    if (body.length === 0 || body.length > FAVICON_MAX_BYTES) return null
+    if (body.length === 0 || body.length > maxBytes) return null
     return {
       body,
       contentType,
@@ -188,7 +190,7 @@ async function discoverDeclaredIcon(
     const finalWebsite = safeHttpSource(response.url || website.href)
     if (!finalWebsite) return null
     for (const source of declaredIconSources(htmlBody.toString('utf8'), finalWebsite)) {
-      const icon = await fetchImage(source, options)
+      const icon = await fetchImage(source, options, FAVICON_DECLARED_MAX_BYTES)
       if (icon) return icon
     }
     return null
