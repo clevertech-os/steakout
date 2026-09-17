@@ -152,6 +152,10 @@ app.get(['/demo', '/demo/'], (_request, response) => {
   response.sendFile(clientIndexHtml)
 })
 
+app.get(['/demo/texture/warm', '/demo/texture/warm/', '/demo/texture/neutral', '/demo/texture/neutral/'], (_request, response) => {
+  response.sendStatus(404)
+})
+
 // Hashed Vite assets: long-cache. HTML entry must revalidate so deploys pick up new hashes.
 app.use(
   express.static(clientDist.pathname, {
