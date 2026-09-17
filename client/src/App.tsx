@@ -131,7 +131,13 @@ function RoutedShell() {
   return (
     <div className="app">
       <main className="app-main">
-        <NetworkBadge />
+        <div className="app-topbar">
+          <a className="app-brand" href={`#${HOME_PATH}`} aria-label="Steakout home">
+            <img className="app-brand-mark" src="/assets/logo-v1.png" alt="" />
+            <span>Steakout</span>
+          </a>
+          <NetworkBadge />
+        </div>
         <OfflineBanner />
         <Suspense fallback={<RouteFallback />}>
           {screenFor(match.id, match.param)}

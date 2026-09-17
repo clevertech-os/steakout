@@ -31,7 +31,6 @@ export default function DisconnectedHome({
   return (
     <>
       <header className="shell-header page-header">
-        <p className="eyebrow eyebrow--brand">Steakout</p>
         <h1 className="page-title">Your NIM may be idle</h1>
         <p className="page-lede">Stake and track payouts. Keys stay in your wallet.</p>
       </header>

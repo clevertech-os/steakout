@@ -17,11 +17,67 @@
   padding: 2.5rem 0 calc(var(--bottom-nav-height, 4rem) + env(safe-area-inset-bottom, 0px) + 1.5rem);
 }
 
+.app-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--so-space-4);
+  margin-bottom: var(--so-space-5);
+}
+
+.app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--so-space-2);
+  min-height: var(--so-touch);
+  margin-bottom: var(--so-space-5);
+  color: var(--so-ink);
+  font-size: var(--so-text-lg);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-decoration: none;
+}
+
+.app-topbar .app-brand,
+.app-topbar .network-badge {
+  margin-bottom: 0;
+}
+
+.app-brand:visited,
+.app-brand:hover,
+.app-brand:focus-visible {
+  color: var(--so-ink);
+  text-decoration: none;
+}
+
+.app-brand-mark {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+}
+
+.app-brand:focus-visible {
+  border-radius: var(--so-space-2);
+  outline: 2px solid var(--so-focus);
+  outline-offset: 3px;
+}
+
 /* 320px: slightly tighter horizontal margin so cards keep usable width. */
 @media (max-width: 359px) {
   .app-main {
     width: min(100% - 1.25rem, 44rem);
     padding-top: 1.75rem;
+  }
+
+  .app-brand {
+    margin-bottom: var(--so-space-4);
+  }
+
+  .app-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--so-space-3);
   }
 }
 
