@@ -1,13 +1,31 @@
 /* App shell layout (P1-07 / P3-06). Spike screens keep their own .shell layout. */
 
 .app {
+  position: relative;
+  isolation: isolate;
   min-height: 100vh;
   max-width: 100%;
+  background-color: var(--so-surface);
+  background-image: url('/assets/paper-texture-neutral-v2.png');
+  background-repeat: repeat;
+  background-size: 1024px 1024px;
   /* Clip any long shell headings/copy at 320px rather than scroll sideways. */
   overflow-x: hidden;
 }
 
+.app::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: var(--so-card);
+  content: '';
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .app-main {
+  position: relative;
+  z-index: 1;
   width: min(100% - 2rem, 44rem);
   max-width: 100%;
   min-width: 0;
