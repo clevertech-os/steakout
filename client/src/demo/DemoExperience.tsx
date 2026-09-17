@@ -257,7 +257,6 @@ function ReviewPreview({ onClose }: { onClose: () => void }) {
             <h2 id="demo-review-title">Stake 5,000.00 NIM</h2>
           </div>
           <button type="button" className="nq-close-btn" aria-label="Close review preview" onClick={onClose}>
-            ×
           </button>
         </div>
 
