@@ -36,7 +36,7 @@ type LoadState =
     }
 
 const RECOMMENDED_EXPLAINER =
-  'This order prioritizes validators that are easier to understand: a clear payout schedule, payouts you can observe on-chain (direct before restake), Steakout’s observation status when we have it, then lower network share, and finally the official Nimiq Validator Trust Score. It is not financial advice and not a ranking of who is “best.”'
+  'Recommended sort favors payout transparency, observed activity, lower network share, and the official trust score.'
 
 function SkeletonCard() {
   return (
@@ -161,8 +161,7 @@ export default function Directory() {
       <header className="shell-header page-header">
         <h1 className="page-title">Validators</h1>
         <p className="page-lede">
-          Compare listed registry metadata and Steakout observation status. No
-          wallet connection required.
+          Compare listed registry metadata and Steakout observation status.
         </p>
       </header>
 

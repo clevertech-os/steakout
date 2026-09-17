@@ -125,46 +125,11 @@
   white-space: nowrap;
 }
 
-.validator-card-badges {
-  flex: 0 0 auto;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.35rem;
-}
-
-.validator-chip {
-  display: inline-flex;
-  align-items: center;
-  max-width: 100%;
-  padding: 0.3rem 0.65rem;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  font-size: var(--so-text-2xs);
-  font-weight: 600;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.validator-chip--listed {
-  color: var(--so-info-strong);
-  background: var(--so-info-soft);
-  border-color: var(--so-info);
-}
-
-.validator-chip--unlisted {
-  color: var(--so-disabled-ink);
-  background: var(--so-disabled-soft);
-  border-color: var(--so-disabled);
-}
-
-.validator-chip--canary {
-  color: var(--so-ink);
-  background: var(--so-surface-raised, var(--so-disabled-soft));
-  border-color: var(--so-rule);
-}
-
 /* Observation chips use StatusChip (components/StatusChip.css) as source of truth. */
+
+.validator-card .status-chip--warn {
+  border-color: transparent;
+}
 
 .validator-card-metrics {
   display: grid;

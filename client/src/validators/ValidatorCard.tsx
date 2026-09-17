@@ -39,6 +39,13 @@ export function safeHttpUrl(raw: string | null | undefined): string | null {
   }
 }
 
+/** Use the validator website's conventional favicon as a logo fallback. */
+function faviconUrlFromWebsite(website: string | null | undefined): string | null {
+  const safeWebsite = safeHttpUrl(website)
+  if (!safeWebsite) return null
+  return new URL('/favicon.ico', safeWebsite).href
+}
+
 function ExternalLinkIcon() {
   return (
     <svg
@@ -73,6 +80,7 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
   const profileHref = `#/validators/${compact}`
   const displayName = validator.name?.trim() || shortAddress(validator.address)
   const websiteUrl = safeHttpUrl(validator.website)
+  const logoUrl = validator.logoUrl || faviconUrlFromWebsite(validator.website)
   const scoreLabel = formatOfficialScore(validator.officialScore)
   const stakeLabel = formatStakeNim(validator.stakeLuna)
   const dominanceLabel = formatDominance(validator.dominanceRatio)
@@ -106,10 +114,10 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
     >
       <div className="validator-card-top">
         <div className="validator-card-identity">
-          {validator.logoUrl ? (
+          {logoUrl ? (
             <img
               className="validator-card-logo"
-              src={validator.logoUrl}
+              src={logoUrl}
               alt=""
               width={40}
               height={40}
@@ -126,7 +134,7 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
           <span
             className="validator-card-initials"
             aria-hidden="true"
-            hidden={Boolean(validator.logoUrl)}
+            hidden={Boolean(logoUrl)}
           >
             {initials}
           </span>
@@ -151,16 +159,6 @@ export default function ValidatorCard({ validator }: ValidatorCardProps) {
             </div>
             <p className="validator-card-address">{shortAddress(validator.address)}</p>
           </div>
-        </div>
-        <div className="validator-card-badges">
-          {validator.canaryConfigured ? (
-            <span
-              className="validator-chip validator-chip--canary"
-              title="Steakout runs a small canary stake on this validator for payout observation. Fields stay pending until history accumulates."
-            >
-              Canary
-            </span>
-          ) : null}
         </div>
       </div>
 
