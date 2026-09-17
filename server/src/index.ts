@@ -148,9 +148,12 @@ mountProfileShareRoutes(app, {
 
 // Public product showcase. It is a client-only, read-only fixture experience,
 // so Demosmith and other browser agents can open it without a wallet session.
-app.get(['/demo', '/demo/'], (_request, response) => {
-  response.sendFile(clientIndexHtml)
-})
+app.get(
+  ['/demo', '/demo/', '/demo/texture/warm', '/demo/texture/warm/', '/demo/texture/neutral', '/demo/texture/neutral/'],
+  (_request, response) => {
+    response.sendFile(clientIndexHtml)
+  },
+)
 
 // Hashed Vite assets: long-cache. HTML entry must revalidate so deploys pick up new hashes.
 app.use(

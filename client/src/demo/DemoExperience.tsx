@@ -5,6 +5,7 @@ import StatusChip, { type ObservationStatus } from '../components/StatusChip'
 import './DemoExperience.css'
 
 type DemoTab = 'position' | 'validator' | 'activity'
+export type DemoTextureVariant = 'warm' | 'neutral'
 
 interface DemoMetricProps {
   label: string
@@ -294,55 +295,61 @@ function ReviewPreview({ onClose }: { onClose: () => void }) {
   )
 }
 
-export default function DemoExperience() {
+export default function DemoExperience({ texture }: { texture?: DemoTextureVariant } = {}) {
   const [activeTab, setActiveTab] = useState<DemoTab>('position')
   const [reviewOpen, setReviewOpen] = useState(false)
+  const textureLabel = texture === 'warm' ? 'Warm cotton paper' : 'Neutral vellum paper'
 
   return (
-    <main className="demo-page">
-      <div className="demo-topbar">
-        <a className="demo-brand" href="/" aria-label="Return to Steakout home">
-          <img src="/assets/logo-v1.png" alt="" />
-          <span>Steakout</span>
-        </a>
-        <span className="demo-mode-pill">Demo mode</span>
-      </div>
-
-      <header className="demo-page-header">
-        <p className="card-kicker">Product preview</p>
-        <h1>See Steakout in use</h1>
-        <p>
-          Explore the connected staking cockpit, validator evidence, and review-before-confirm flow without a Nimiq account.
-        </p>
-      </header>
-
-      <section className="demo-notice" role="note" aria-label="Demo data notice">
-        <span className="demo-notice-mark" aria-hidden="true">i</span>
-        <div>
-          <strong>Illustrative demo data</strong>
-          <p>This is a fixed product preview. No wallet is connected, no chain state is read, and no transaction can be sent.</p>
+    <div className={`demo-page-shell${texture ? ` demo-page-shell--texture-${texture}` : ''}`}>
+      <main className="demo-page">
+        <div className="demo-topbar">
+          <a className="demo-brand" href="/" aria-label="Return to Steakout home">
+            <img src="/assets/logo-v1.png" alt="" />
+            <span>Steakout</span>
+          </a>
+          <div className="demo-topbar-status">
+            <span className="demo-mode-pill">Demo mode</span>
+            {texture ? <span className="demo-texture-pill">{textureLabel}</span> : null}
+          </div>
         </div>
-      </section>
 
-      <section className="demo-workspace nq-card nq-card-lg" aria-label="Steakout product preview">
-        <DemoTabs active={activeTab} onChange={setActiveTab} />
-        {activeTab === 'position' ? (
-          <PositionPanel
-            onReview={() => setReviewOpen(true)}
-            onViewValidator={() => setActiveTab('validator')}
-          />
-        ) : null}
-        {activeTab === 'validator' ? <ValidatorPanel /> : null}
-        {activeTab === 'activity' ? <ActivityPanel /> : null}
-      </section>
+        <header className="demo-page-header">
+          <p className="card-kicker">Product preview</p>
+          <h1>See Steakout in use</h1>
+          <p>
+            Explore the connected staking cockpit, validator evidence, and review-before-confirm flow without a Nimiq account.
+          </p>
+        </header>
 
-      <footer className="demo-footer">
-        <a href="/#/validators">Explore live public records</a>
-        <span>or</span>
-        <a href="/">Return to Steakout</a>
-      </footer>
+        <section className="demo-notice" role="note" aria-label="Demo data notice">
+          <span className="demo-notice-mark" aria-hidden="true">i</span>
+          <div>
+            <strong>Illustrative demo data</strong>
+            <p>This is a fixed product preview. No wallet is connected, no chain state is read, and no transaction can be sent.</p>
+          </div>
+        </section>
 
-      {reviewOpen ? <ReviewPreview onClose={() => setReviewOpen(false)} /> : null}
-    </main>
+        <section className="demo-workspace nq-card nq-card-lg" aria-label="Steakout product preview">
+          <DemoTabs active={activeTab} onChange={setActiveTab} />
+          {activeTab === 'position' ? (
+            <PositionPanel
+              onReview={() => setReviewOpen(true)}
+              onViewValidator={() => setActiveTab('validator')}
+            />
+          ) : null}
+          {activeTab === 'validator' ? <ValidatorPanel /> : null}
+          {activeTab === 'activity' ? <ActivityPanel /> : null}
+        </section>
+
+        <footer className="demo-footer">
+          <a href="/#/validators">Explore live public records</a>
+          <span>or</span>
+          <a href="/">Return to Steakout</a>
+        </footer>
+
+        {reviewOpen ? <ReviewPreview onClose={() => setReviewOpen(false)} /> : null}
+      </main>
+    </div>
   )
 }

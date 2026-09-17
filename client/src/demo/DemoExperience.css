@@ -1,3 +1,22 @@
+.demo-page-shell {
+  min-height: 100vh;
+  background: var(--so-surface);
+}
+
+.demo-page-shell--texture-warm {
+  background-color: var(--so-surface);
+  background-image: url('/assets/paper-texture-warm-v1.png');
+  background-repeat: repeat;
+  background-size: 1024px 1024px;
+}
+
+.demo-page-shell--texture-neutral {
+  background-color: var(--so-surface);
+  background-image: url('/assets/paper-texture-neutral-v1.png');
+  background-repeat: repeat;
+  background-size: 1024px 1024px;
+}
+
 .demo-page {
   width: min(100% - 2rem, 46rem);
   min-height: 100vh;
@@ -21,6 +40,13 @@
   justify-content: space-between;
   gap: var(--so-space-4);
   margin-bottom: 3rem;
+}
+
+.demo-topbar-status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--so-space-2);
 }
 
 .demo-brand {
@@ -53,6 +79,7 @@
 }
 
 .demo-mode-pill,
+.demo-texture-pill,
 .demo-example-pill {
   display: inline-flex;
   align-items: center;
@@ -65,6 +92,11 @@
   font-size: var(--so-text-xs);
   font-weight: 700;
   white-space: nowrap;
+}
+
+.demo-texture-pill {
+  background: var(--so-card);
+  color: var(--so-muted);
 }
 
 .demo-page-header {

@@ -176,6 +176,14 @@ function App() {
     return <DemoExperience />
   }
 
+  if (path === '/demo/texture/warm') {
+    return <DemoExperience texture="warm" />
+  }
+
+  if (path === '/demo/texture/neutral') {
+    return <DemoExperience texture="neutral" />
+  }
+
   if (path === '/spike') {
     if (!import.meta.env.DEV && import.meta.env.VITE_ENABLE_SDK_SPIKE !== 'true') {
       return (
