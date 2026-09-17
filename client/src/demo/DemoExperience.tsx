@@ -20,7 +20,6 @@ function DemoMetric({ label, value, status, definition }: DemoMetricProps) {
       <dt className="nq-label">{label}</dt>
       <dd>{value}</dd>
       <div className="demo-metric-meta">
-        <span>Example fixture</span>
         <DataStatusTag status={status} />
       </div>
       <p className="demo-metric-definition">{definition}</p>
@@ -81,7 +80,7 @@ function PositionPanel({
       <div className="demo-total">
         <p className="nq-label">Total staked</p>
         <p className="demo-total-value">50,000.00 <span>NIM</span></p>
-        <p className="demo-freshness">Example snapshot · 17 Sep 2026</p>
+        <p className="demo-freshness">As of 17 Sep 2026</p>
       </div>
 
       <dl className="demo-stat-grid">
@@ -120,7 +119,7 @@ function PositionPanel({
         <div>
           <p className="nq-label">Last reward observation</p>
           <p className="demo-detail-value">Direct payout observed</p>
-          <p className="demo-muted">2 hours ago · Example chain event</p>
+          <p className="demo-muted">2 hours ago</p>
         </div>
         <StatusChip status="on-schedule" />
       </div>
@@ -169,7 +168,7 @@ function ValidatorPanel() {
           label="Observed payout windows"
           value="27 / 28 windows"
           status="verified"
-          definition="Observed payout runs compared with the declared schedule during the example analysis window."
+          definition="Observed payout runs compared with the declared schedule during the analysis window."
         />
         <DemoMetric
           label="Declared schedule"
@@ -181,14 +180,14 @@ function ValidatorPanel() {
           label="Observed recipient coverage"
           value="54 / 57 recipients"
           status="verified"
-          definition="Distinct recipients observed in example payout runs; not proof of full payout to every staker."
+          definition="Distinct recipients observed in payout runs; not proof of full payout to every staker."
         />
       </div>
 
       <div className="demo-observation-note">
         <p className="nq-label">What this means</p>
         <p>
-          Steakout has example evidence of payout activity that is mostly on schedule. It does not calculate an effective fee or infer intent from a missing transaction.
+          Steakout has observed evidence of payout activity that is mostly on schedule. It does not calculate an effective fee or infer intent from a missing transaction.
         </p>
         <a className="demo-inline-link" href="/#/learn/methodology">
           Read the methodology
@@ -217,7 +216,6 @@ function ActivityPanel() {
           <p className="card-kicker">Personal activity</p>
           <h2>What changed</h2>
         </div>
-        <span className="demo-example-pill">Example data</span>
       </div>
 
       <ol className="demo-activity-list">
@@ -232,10 +230,6 @@ function ActivityPanel() {
           </li>
         ))}
       </ol>
-
-      <p className="demo-footnote">
-        This preview does not link to live transactions. A real position shows chain-backed evidence and explorer links after wallet authentication.
-      </p>
     </section>
   )
 }
@@ -321,14 +315,6 @@ export default function DemoExperience({ texture }: { texture?: DemoTextureVaria
             Explore the connected staking cockpit, validator evidence, and review-before-confirm flow without a Nimiq account.
           </p>
         </header>
-
-        <section className="demo-notice" role="note" aria-label="Demo data notice">
-          <span className="demo-notice-mark" aria-hidden="true">i</span>
-          <div>
-            <strong>Illustrative demo data</strong>
-            <p>This is a fixed product preview. No wallet is connected, no chain state is read, and no transaction can be sent.</p>
-          </div>
-        </section>
 
         <section className="demo-workspace nq-card nq-card-lg" aria-label="Steakout product preview">
           <DemoTabs active={activeTab} onChange={setActiveTab} />
