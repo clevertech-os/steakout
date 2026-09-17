@@ -137,6 +137,34 @@ describe('favicon cache', () => {
     const second = await getFavicon('https://pool.example', { fetcher, ttlMs: 100 })
     expect(first.body).toBeNull()
     expect(second.body).toBeNull()
-    expect(fetches).toBe(1)
+    expect(fetches).toBe(2)
+  })
+
+  it('discovers a declared icon when the conventional favicon is unavailable', async () => {
+    const requests: string[] = []
+    const fetcher = async (input: string | URL): Promise<Response> => {
+      const url = String(input)
+      requests.push(url)
+      if (url.endsWith('/favicon.ico')) return new Response('missing', { status: 404 })
+      if (url === 'https://pool.example' || url === 'https://pool.example/') {
+        return new Response('<link rel="icon" type="image/png" href="/brand.png">', {
+          status: 200,
+          headers: { 'content-type': 'text/html' },
+        })
+      }
+      return new Response('declared icon', {
+        status: 200,
+        headers: { 'content-type': 'image/png' },
+      })
+    }
+
+    const result = await getFavicon('https://pool.example', { fetcher })
+    expect(result.body).not.toBeNull()
+    expect(result.contentType).toBe('image/png')
+    expect(requests).toEqual([
+      'https://pool.example/favicon.ico',
+      'https://pool.example/',
+      'https://pool.example/brand.png',
+    ])
   })
 })

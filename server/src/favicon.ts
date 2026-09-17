@@ -4,6 +4,7 @@ export const FAVICON_CACHE_TTL_MS = 24 * 60 * 60_000
 export const FAVICON_STALE_MS = 60 * 60_000
 const FAVICON_FETCH_TIMEOUT_MS = 5_000
 const FAVICON_MAX_BYTES = 256 * 1024
+const FAVICON_HTML_MAX_BYTES = 512 * 1024
 
 type FaviconEntry = {
   body: Buffer | null
@@ -64,16 +65,21 @@ function isPrivateHostname(hostname: string): boolean {
 }
 
 /** Registry websites are external input, so only public HTTP(S) origins are fetched. */
-export function safeFaviconSource(website: string | null | undefined): URL | null {
-  if (typeof website !== 'string' || website.trim() === '') return null
+function safeHttpSource(raw: string): URL | null {
   try {
-    const url = new URL(website.trim())
+    const url = new URL(raw)
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
     if (url.username || url.password || isPrivateHostname(url.hostname)) return null
-    return new URL('/favicon.ico', url)
+    return url
   } catch {
     return null
   }
+}
+
+export function safeFaviconSource(website: string | null | undefined): URL | null {
+  if (typeof website !== 'string' || website.trim() === '') return null
+  const source = safeHttpSource(website.trim())
+  return source ? new URL('/favicon.ico', source) : null
 }
 
 function imageContentType(value: string | null): string | null {
@@ -95,12 +101,13 @@ function emptyEntry(nowMs: number, ttlMs: number, staleMs: number): FaviconEntry
   }
 }
 
-async function fetchFavicon(
+type ResolvedFaviconOptions = Required<Pick<FaviconOptions, 'fetcher' | 'nowMs' | 'ttlMs' | 'staleMs'>>
+
+async function fetchImage(
   source: URL,
-  options: Required<Pick<FaviconOptions, 'fetcher' | 'nowMs' | 'ttlMs' | 'staleMs'>>,
-): Promise<FaviconEntry> {
+  options: ResolvedFaviconOptions,
+): Promise<FaviconEntry | null> {
   const nowMs = options.nowMs()
-  const fallback = emptyEntry(nowMs, options.ttlMs, options.staleMs)
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FAVICON_FETCH_TIMEOUT_MS)
 
@@ -112,15 +119,15 @@ async function fetchFavicon(
       redirect: 'follow',
       signal: controller.signal,
     })
-    const finalSource = safeFaviconSource(response.url || source.href)
+    const finalSource = safeHttpSource(response.url || source.href)
     const contentType = imageContentType(response.headers.get('content-type'))
     const declaredLength = Number(response.headers.get('content-length') ?? '')
     if (!response.ok || !finalSource || !contentType || declaredLength > FAVICON_MAX_BYTES) {
-      return fallback
+      return null
     }
 
     const body = Buffer.from(await response.arrayBuffer())
-    if (body.length === 0 || body.length > FAVICON_MAX_BYTES) return fallback
+    if (body.length === 0 || body.length > FAVICON_MAX_BYTES) return null
     return {
       body,
       contentType,
@@ -128,25 +135,96 @@ async function fetchFavicon(
       staleUntil: nowMs + options.ttlMs + options.staleMs,
     }
   } catch {
-    return fallback
+    return null
   } finally {
     clearTimeout(timeout)
   }
 }
 
-async function refresh(source: URL, key: string, options: FaviconOptions): Promise<FaviconEntry> {
+function readHtmlAttribute(tag: string, name: string): string | null {
+  const match = tag.match(new RegExp(`${name}\\s*=\\s*(['"])(.*?)\\1`, 'i'))
+  return match?.[2]?.trim() || null
+}
+
+function declaredIconSources(html: string, website: URL): URL[] {
+  const sources: URL[] = []
+  for (const tag of html.match(/<link\b[^>]*>/gi) ?? []) {
+    const rel = readHtmlAttribute(tag, 'rel')?.toLowerCase().split(/\s+/) ?? []
+    if (!rel.includes('icon') && !rel.includes('shortcut') && !rel.includes('apple-touch-icon')) {
+      continue
+    }
+    const href = readHtmlAttribute(tag, 'href')?.replace(/&amp;/gi, '&')
+    if (!href) continue
+    try {
+      const source = safeHttpSource(new URL(href, website).href)
+      if (source && !sources.some((item) => item.href === source.href)) sources.push(source)
+    } catch {
+      // Ignore malformed declarations and continue to the next link.
+    }
+  }
+  return sources
+}
+
+async function discoverDeclaredIcon(
+  website: URL,
+  options: ResolvedFaviconOptions,
+): Promise<FaviconEntry | null> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), FAVICON_FETCH_TIMEOUT_MS)
+  try {
+    const response = await options.fetcher(website, {
+      headers: { accept: 'text/html,application/xhtml+xml' },
+      redirect: 'follow',
+      signal: controller.signal,
+    })
+    const contentType = response.headers.get('content-type')?.toLowerCase() ?? ''
+    const declaredLength = Number(response.headers.get('content-length') ?? '')
+    if (!response.ok || (!contentType.includes('text/html') && !contentType.includes('application/xhtml'))
+      || declaredLength > FAVICON_HTML_MAX_BYTES) {
+      return null
+    }
+    const htmlBody = Buffer.from(await response.arrayBuffer())
+    if (htmlBody.length === 0 || htmlBody.length > FAVICON_HTML_MAX_BYTES) return null
+    const finalWebsite = safeHttpSource(response.url || website.href)
+    if (!finalWebsite) return null
+    for (const source of declaredIconSources(htmlBody.toString('utf8'), finalWebsite)) {
+      const icon = await fetchImage(source, options)
+      if (icon) return icon
+    }
+    return null
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+async function fetchFavicon(
+  source: URL,
+  website: URL,
+  options: ResolvedFaviconOptions,
+): Promise<FaviconEntry> {
+  const nowMs = options.nowMs()
+  const direct = await fetchImage(source, options)
+  const declared = direct ? null : await discoverDeclaredIcon(website, options)
+  const icon = direct ?? declared
+  if (icon) return icon
+  return emptyEntry(nowMs, options.ttlMs, options.staleMs)
+}
+
+async function refresh(source: URL, website: URL, key: string, options: FaviconOptions): Promise<FaviconEntry> {
   const existing = inflight.get(key)
   if (existing) return existing
 
   const previous = cache.get(key)
 
-  const resolved: Required<Pick<FaviconOptions, 'fetcher' | 'nowMs' | 'ttlMs' | 'staleMs'>> = {
+  const resolved: ResolvedFaviconOptions = {
     fetcher: options.fetcher ?? fetch,
     nowMs: options.nowMs ?? Date.now,
     ttlMs: options.ttlMs ?? FAVICON_CACHE_TTL_MS,
     staleMs: options.staleMs ?? FAVICON_STALE_MS,
   }
-  const request = fetchFavicon(source, resolved)
+  const request = fetchFavicon(source, website, resolved)
   inflight.set(key, request)
   try {
     const entry = await request
@@ -175,7 +253,8 @@ export async function getFavicon(
   options: FaviconOptions = {},
 ): Promise<FaviconLookup> {
   const source = safeFaviconSource(website)
-  if (!source) return { body: null, contentType: null, cache: 'MISS' }
+  const websiteSource = typeof website === 'string' ? safeHttpSource(website.trim()) : null
+  if (!source || !websiteSource) return { body: null, contentType: null, cache: 'MISS' }
 
   const nowMs = options.nowMs ?? Date.now
   const key = source.href
@@ -185,11 +264,11 @@ export async function getFavicon(
   }
 
   if (entry && entry.staleUntil > nowMs()) {
-    void refresh(source, key, options)
+    void refresh(source, websiteSource, key, options)
     return { body: entry.body, contentType: entry.contentType, cache: 'STALE' }
   }
 
-  const refreshed = await refresh(source, key, options)
+  const refreshed = await refresh(source, websiteSource, key, options)
   return { body: refreshed.body, contentType: refreshed.contentType, cache: 'MISS' }
 }
 
